@@ -16,6 +16,28 @@ npm run build    # type-check + bundle for production (output goes to dist/)
 > Tip: if `npm` says "command not found", open a **new** terminal window —
 > Node is loaded by `~/.zshrc`, which only runs when a terminal starts.
 
+## Working with Git (the everyday loop)
+
+This project is version-controlled and backed up to a **private** GitHub repo
+(github.com/office751/utility-workbench). After you make changes you're happy
+with, take a snapshot and back it up — three commands:
+
+```bash
+git add -A                  # stage everything you changed
+git commit -m "what I did"  # save a snapshot locally (your undo point)
+git push                    # send those snapshots up to GitHub (backup)
+```
+
+Useful checks:
+
+```bash
+git status     # what's changed since the last commit?
+git log        # the list of snapshots (press q to exit)
+```
+
+You don't have to push after every commit — commit often (it's free and local),
+push when you want the cloud backup updated.
+
 ## What every file/folder is
 
 ```

@@ -9,8 +9,8 @@ this file is the to-do list, the code is the truth.
 
 ## Up next (high value)
 
-- [ ] **Git + GitHub** — version snapshots + off-machine backup; prerequisite
-      for any deploy. ~an evening, no app code changes.
+- [x] **Git + GitHub** — version snapshots + off-machine backup. *(June 2026)*
+      Private repo at github.com/office751/utility-workbench.
 - [ ] **SECO/Duke application packet generator** — port from the original
       HTML: ready-to-paste packet with legal description (Lot/Block/Sec/Twp/
       Rge), model sqft + tonnage (whole numbers for Duke), OH/UG, copy
