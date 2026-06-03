@@ -24,6 +24,11 @@ Permitting, then in-app notifications (needs the timestamp change below).
       page** link + a **Documents** upload UI (names-only placeholder until file
       storage is restructured). Permit status seeded by inferring from the
       permit number's format (numeric = issued, BLDR-/PB- = in review).
+- [x] **Permit issued/expiration dates + expiry alert** *(June 2026)*. Issued
+      & expiration date fields per permit; `lib/permitExpiry.ts` (twin of
+      shutoff.ts) computes days-left; expiring-within-7-days (or expired) shows
+      as a detail banner, a top "⏰ Permit expiring (≤7 days)" dashboard bucket,
+      and an ⏰ marker in the permit list. Groundwork for full notifications.
 - [ ] **In-app notifications / stale-status flags.** A "⚠ Needs attention /
       overdue" dashboard bucket + header count badge for projects parked too
       long at a stage. Add per-stage expected-duration thresholds as config
@@ -46,11 +51,6 @@ Permitting, then in-app notifications (needs the timestamp change below).
       (push/email/SMS). Swap the internals of `useProjects()` for API calls;
       UI stays. A few sessions. Trigger: when Export/Import shuffling annoys, or
       when in-app notifications aren't enough because you're not at the desk.
-
-- [ ] **Phone / multi-device access (the "Full" spec)** — hosted URL +
-      shared database so field and office see the same data. Swap the
-      internals of `useProjects()` for API calls; UI stays. A few sessions.
-      Trigger: when Export/Import shuffling starts to annoy.
 - [ ] **Tests for the brains** — Vitest tests for `lib/shutoff.ts` (business-
       day math) and `lib/nextAction.ts` (bucket logic). ~an hour, great
       learning value. (Bonus: the stale-status math is another great test
@@ -74,6 +74,14 @@ Permitting, then in-app notifications (needs the timestamp change below).
       migration *(June 2026)*
 - [x] Git + GitHub — version snapshots + off-machine backup; private repo at
       github.com/office751/utility-workbench *(June 2026)*
+- [x] Permit links from the SharePoint list export *(June 2026)* — generated
+      `data/sharepoint.ts` (57 portal + 57 docs links, keyed by permit#) from
+      the Construction Job List CSV; auto-fills the permit page + folder fields.
+      Regenerate with `node scripts/gen-sharepoint.mjs "<exported csv>" src/data/sharepoint.ts`.
+- [x] Permit issued/expiry dates + live status *(June 2026)* — read all 44
+      permit portal pages via Claude in Chrome into `data/permitDates.ts`;
+      auto-fills the Issued/Expires fields, drives the expiry alert, and makes
+      the permit checklist reflect the county's authoritative status.
 
 ## Ideas parking lot
 
@@ -83,7 +91,9 @@ Permitting, then in-app notifications (needs the timestamp change below).
 - Auto-reminder to export a backup every N days
 - **Real document storage for the permit tab** — the upload UI keeps file
   NAMES only right now. Wire to actual storage (ties into the planned file
-  restructure / the Full-spec backend), and auto-fill the remaining
-  per-project SharePoint folder links.
-- Per-project SharePoint folders for the other ~41 projects (only ~8 matched
-  so far; the rest need looking up per parcel under their owner entity).
+  restructure / the Full-spec backend).
+- **Refresh permit dates/status** — `data/permitDates.ts` is a snapshot read
+  from the county portal (2026-06-03) via Claude in Chrome. Re-read the portal
+  pages to refresh; the checklist auto-syncs from it on load unless a step was
+  manually toggled. (One BS&A-portal permit, PB26-0218 / 10530 SE 50th, wasn't
+  readable — different jurisdiction site; enter its dates manually.)

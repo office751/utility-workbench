@@ -13,6 +13,7 @@
  */
 import type { ProjectState, StepState, WorkbenchState } from '../types'
 import { PROJECTS, WELL_INSTALLED } from './projects'
+import { PERMIT_DATES } from './permitDates'
 
 /** A blank slate for one project — no steps done, no notes. */
 export function emptyProjectState(): ProjectState {
@@ -23,14 +24,23 @@ export function emptyProjectState(): ProjectState {
 }
 
 /**
- * Guess permit progress from the permit number's FORMAT (shared by the
- * fresh-install seed AND the migration backfill, so they never disagree):
- *   - all-digits (e.g. 2025070270) = an ISSUED Marion County permit
- *   - "BLDR-…"/"PB…" = a building application still in review
- *   - blank = not submitted
- * Just a starting guess — correct it per project in the app.
+ * Decide which permit steps are done. BEST source = the live county portal
+ * data we read into permitDates.ts (keyed by permit#):
+ *   - has an issue date → submitted → review → approved → issued (issued!)
+ *   - portal record but no issue date → submitted + review (under review)
+ * If there's NO portal record, fall back to guessing from the permit number's
+ * format (all-digits = issued; "BLDR-…"/"PB…" = in review). Either way it's a
+ * starting point you can adjust per project.
  */
 export function inferPermitSteps(permit: string): Record<string, StepState> {
+  const info = PERMIT_DATES[permit]
+  if (info) {
+    const stamp: StepState = { done: true, date: '(county)' }
+    return info.issued
+      ? { submitted: stamp, review: stamp, approved: stamp, issued: stamp }
+      : { submitted: stamp, review: stamp }
+  }
+  // no portal data → fall back to the permit-number format
   const stamp: StepState = { done: true, date: '(inferred)' }
   if (/^\d+$/.test(permit)) {
     return { submitted: stamp, review: stamp, approved: stamp, issued: stamp }

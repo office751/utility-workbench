@@ -94,6 +94,8 @@ export interface ProjectState {
 
   // --- permit tab ---
   permitResponsible?: PermitResponsible // who's handling it (Us / Owner / GC)
+  permitIssuedDate?: string // YYYY-MM-DD the permit was issued
+  permitExpiresDate?: string // YYYY-MM-DD the permit expires (drives the alert)
   sharepointUrl?: string // link to this project's SharePoint folder
   permitUrl?: string // link to the county permit record/page
   permitDocs?: ProjectDoc[] // attached document names (placeholder storage)

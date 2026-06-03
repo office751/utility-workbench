@@ -22,6 +22,7 @@ import {
   waterSourceOf,
 } from '../lib/nextAction'
 import { shutoffFor } from '../lib/shutoff'
+import { permitExpiryFor } from '../lib/permitExpiry'
 import { PermitBadge, SepticBadge, UtilityBadge, WaterBadge } from './Badges'
 
 interface Props {
@@ -236,11 +237,33 @@ function PermitDashboard({ rows, onSelect }: DashProps) {
     />
   )
 
+  // Permits expiring within a week (or already expired), soonest first.
+  // Shown across ALL permits — a deadline matters whoever's handling it.
+  const expiring = rows
+    .map((r) => ({ r, e: permitExpiryFor(r.p, r.ps) }))
+    .filter((x) => x.e !== null && x.e.daysLeft <= 7)
+    .sort((a, b) => a.e!.daysLeft - b.e!.daysLeft)
+
   return (
     <section className="detail dashboard">
       <h2>📋 Permitting dashboard</h2>
       <p className="meta">Submitted → review → corrections → approved → issued. Click a tile to open it.</p>
 
+      <Bucket
+        title="⏰ Permit expiring (≤7 days)"
+        items={expiring.map(({ r, e }) => (
+          <Tile
+            key={r.p.id}
+            row={r}
+            badge={
+              <span className={e!.daysLeft <= 7 ? 'due' : 'warn'}>
+                ⏰ {e!.daysLeft < 0 ? 'EXPIRED' : `${e!.daysLeft}d`} · {e!.date}
+              </span>
+            }
+            onSelect={onSelect}
+          />
+        ))}
+      />
       <Bucket title="🔴 Not submitted" items={notSubmitted.map(tile)} />
       <Bucket title="🏛 Under county review" items={underReview.map(tile)} />
       <Bucket title="✏️ Corrections requested" items={corrections.map(tile)} />

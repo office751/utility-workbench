@@ -25,6 +25,9 @@ import {
   nextPermitAction,
   nextSepticAction,
   nextWaterAction,
+  permitCountyStatusOf,
+  permitIssuedOf,
+  permitPortalOf,
   permitResponsibleOf,
   septicSourceOf,
   septicSystemOf,
@@ -33,6 +36,7 @@ import {
   waterSourceOf,
 } from '../lib/nextAction'
 import { shutoffFor } from '../lib/shutoff'
+import { permitExpiresOf, permitExpiryFor } from '../lib/permitExpiry'
 import { GEORGES } from '../data/contacts'
 import Checklist from './Checklist'
 import ContactLinks from './ContactLinks'
@@ -333,8 +337,10 @@ function SepticBody({ project: p, ps, toggleStep, setStepNote, setField }: Props
 
 function PermitBody({ project: p, ps, toggleStep, setStepNote, setField, addDocuments, removeDocument }: Props) {
   const next = nextPermitAction(ps)
-  const folder = sharepointFolderOf(p, ps) // matched default, unless overridden
-  const permitUrl = ps.permitUrl ?? ''
+  const folder = sharepointFolderOf(p, ps) // CSV default, unless overridden
+  const permitUrl = permitPortalOf(p, ps) // CSV default, unless overridden
+  const expiry = permitExpiryFor(p, ps) // null until an expiration date is known
+  const countyStatus = permitCountyStatusOf(p) // live status from the portal, if read
 
   return (
     <>
@@ -388,6 +394,43 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, setField, addDocu
           )}
         </div>
       )}
+
+      {/* The county's authoritative status, read live from the portal. */}
+      {countyStatus && (
+        <p className="provider">🏛 County status (live): <b>{countyStatus}</b></p>
+      )}
+
+      {/* Issued + expiration dates, with the expiry reminder. Same layout as
+          the electric closing/shut-off block — and the same urgency colors.
+          The values default to what we read from the portal; typing overrides. */}
+      <div className="closing">
+        <label>
+          Permit issued
+          <input
+            type="date"
+            value={permitIssuedOf(p, ps)}
+            onChange={(e) => setField(p.id, 'permitIssuedDate', e.target.value)}
+          />
+        </label>
+        <label>
+          Permit expires
+          <input
+            type="date"
+            value={permitExpiresOf(p, ps)}
+            onChange={(e) => setField(p.id, 'permitExpiresDate', e.target.value)}
+          />
+        </label>
+
+        {expiry && (
+          <span className={'shutoff' + (expiry.daysLeft <= 7 ? ' due' : expiry.daysLeft <= 30 ? ' warn' : '')}>
+            {expiry.daysLeft < 0 ? (
+              <>⏰ Permit EXPIRED <b>{expiry.date}</b> ({-expiry.daysLeft} days ago)</>
+            ) : (
+              <>⏰ Permit expires <b>{expiry.date}</b> ({expiry.daysLeft} days)</>
+            )}
+          </span>
+        )}
+      </div>
 
       <p className="next-line">
         Next: <b>{next.label}</b>

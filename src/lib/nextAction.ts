@@ -21,7 +21,8 @@ import type {
   WaterSource,
 } from '../types'
 import { PERMIT_STEPS, septicStepsFor, waterStepsFor } from '../data/lifecycles'
-import { PROJECT_FOLDERS } from '../data/sharepoint'
+import { PERMIT_PORTALS, PROJECT_FOLDERS } from '../data/sharepoint'
+import { PERMIT_DATES } from '../data/permitDates'
 import { shutoffFor } from './shutoff'
 
 /**
@@ -183,9 +184,24 @@ export function permitResponsibleOf(ps: ProjectState): PermitResponsible {
   return ps.permitResponsible ?? 'Us'
 }
 
-/** The SharePoint folder: a typed-in URL wins over the matched default. */
+/** The SharePoint folder: a typed-in URL wins over the CSV default (by permit#). */
 export function sharepointFolderOf(p: Project, ps: ProjectState): string {
-  return ps.sharepointUrl ?? PROJECT_FOLDERS[p.parcel] ?? ''
+  return ps.sharepointUrl ?? PROJECT_FOLDERS[p.permit] ?? ''
+}
+
+/** The county permit-portal page: a typed-in URL wins over the CSV default. */
+export function permitPortalOf(p: Project, ps: ProjectState): string {
+  return ps.permitUrl ?? PERMIT_PORTALS[p.permit] ?? ''
+}
+
+/** The effective issued date: a typed-in value wins over the live portal data. */
+export function permitIssuedOf(p: Project, ps: ProjectState): string {
+  return ps.permitIssuedDate ?? PERMIT_DATES[p.permit]?.issued ?? ''
+}
+
+/** The county's authoritative status string (e.g. "Issued", "In Review"), if known. */
+export function permitCountyStatusOf(p: Project): string {
+  return PERMIT_DATES[p.permit]?.status ?? ''
 }
 
 /** Report the next REQUIRED permit milestone. */

@@ -59,12 +59,15 @@ function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
   const projects: Record<number, ProjectState> = {}
   for (const [id, ps] of Object.entries(parsed.projects ?? {})) {
     const norm = normalize(ps as ProjectState)
-    // One-time backfill: if a project's permit checklist was never touched
-    // (e.g. this save predates the Permitting tab), infer its status from the
-    // permit number — same guess a fresh install would make.
-    if (Object.keys(norm.steps.permit).length === 0) {
-      norm.steps.permit = inferPermitSteps(permitById.get(Number(id)) ?? '')
-    }
+    // Permit checklist follows the county portal (via inferPermitSteps), so
+    // re-derive it on load — UNLESS you've manually toggled a step. We treat a
+    // step as manual when its date is a real date, not our '(inferred)' /
+    // '(county)' marker. That keeps your edits while staying in sync with the
+    // portal data we captured.
+    const manual = Object.values(norm.steps.permit).some(
+      (s) => s.date && s.date !== '(inferred)' && s.date !== '(county)',
+    )
+    if (!manual) norm.steps.permit = inferPermitSteps(permitById.get(Number(id)) ?? '')
     projects[Number(id)] = norm
   }
   return { roster, projects }

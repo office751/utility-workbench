@@ -28,6 +28,7 @@ import {
   waterNeedsAction,
   waterSourceOf,
 } from '../lib/nextAction'
+import { permitExpiryFor } from '../lib/permitExpiry'
 import { DoneChip, PermitBadge, SepticBadge, UtilityBadge, WaterBadge } from './Badges'
 import Filters, { NO_FILTERS, countActive, type FilterState } from './Filters'
 
@@ -67,9 +68,14 @@ function rowInfo(stream: Stream, p: Project, ps: ProjectState): RowInfo {
     }
   }
   if (stream === 'permit') {
+    // An expiring permit takes over the "next" line so it stands out in the list.
+    const exp = permitExpiryFor(p, ps)
+    const expiringSoon = exp !== null && exp.daysLeft <= 7
     return {
       badge: <PermitBadge ps={ps} />,
-      next: nextPermitAction(ps).label,
+      next: expiringSoon
+        ? `⏰ ${exp!.daysLeft < 0 ? 'EXPIRED' : `Expires in ${exp!.daysLeft}d`} · ${exp!.date}`
+        : nextPermitAction(ps).label,
       done: isPermitDone(ps),
       needsAction: permitNeedsAction(ps),
     }
