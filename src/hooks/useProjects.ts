@@ -17,24 +17,57 @@
  *                (here: save to localStorage)
  */
 import { useEffect, useState } from 'react'
-import type { Project, ProjectState, StepState, Stream, WorkbenchState } from '../types'
-import { buildInitialState, emptyProjectState } from '../data/seed'
+import type { Project, ProjectDoc, ProjectState, StepState, Stream, WorkbenchState } from '../types'
+import { buildInitialState, emptyProjectState, inferPermitSteps } from '../data/seed'
 import { PROJECTS } from '../data/projects'
 
 /** The key our data is filed under in the browser's localStorage. */
 const STORAGE_KEY = 'isc_workbench_v1'
 
+/** The streams every saved project must have step/note buckets for. */
+const STREAMS: Stream[] = ['electric', 'water', 'septic', 'permit']
+
+/**
+ * Make sure one saved ProjectState has a bucket for every stream. Older saves
+ * (made before the Permitting tab existed) have electric/water/septic but no
+ * `permit` — without this, reading ps.steps.permit would crash. This is the
+ * heart of a migration: gently upgrade old data to today's shape.
+ */
+function normalize(ps: ProjectState): ProjectState {
+  const steps = { ...ps.steps } as ProjectState['steps']
+  const notes = { ...ps.notes } as ProjectState['notes']
+  for (const s of STREAMS) {
+    if (!steps[s]) steps[s] = {}
+    if (notes[s] == null) notes[s] = ''
+  }
+  return { ...ps, steps, notes }
+}
+
 /**
  * MIGRATION: upgrade older saved data to the current shape.
- * Saves from before the Add-project feature have no `roster` — patch one in
- * from the built-in list. (Every app that stores data needs a story for
- * "what about data saved by last month's version?" — this is ours.)
+ *  - Saves from before the Add-project feature have no `roster` — patch one in.
+ *  - Saves from before the Permitting tab lack the `permit` stream — normalize
+ *    every project so all four streams exist.
+ * (Every app that stores data needs a story for "what about data saved by an
+ * older version?" — this is ours.)
  */
 function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
-  return {
-    roster: Array.isArray(parsed.roster) ? parsed.roster : PROJECTS,
-    projects: parsed.projects ?? {},
+  const roster = Array.isArray(parsed.roster) ? parsed.roster : PROJECTS
+  // permit number per project id, so we can backfill permit status below
+  const permitById = new Map(roster.map((p) => [p.id, p.permit]))
+
+  const projects: Record<number, ProjectState> = {}
+  for (const [id, ps] of Object.entries(parsed.projects ?? {})) {
+    const norm = normalize(ps as ProjectState)
+    // One-time backfill: if a project's permit checklist was never touched
+    // (e.g. this save predates the Permitting tab), infer its status from the
+    // permit number — same guess a fresh install would make.
+    if (Object.keys(norm.steps.permit).length === 0) {
+      norm.steps.permit = inferPermitSteps(permitById.get(Number(id)) ?? '')
+    }
+    projects[Number(id)] = norm
   }
+  return { roster, projects }
 }
 
 /** Read saved state, or build the seeded starting state on first ever run. */
@@ -148,9 +181,23 @@ export function useProjects() {
     })
   }
 
+  /** Add one or more documents (by name) to a project's permit doc list. */
+  function addDocuments(id: number, names: string[]) {
+    const ps = getProjectState(id)
+    const today = new Date().toLocaleDateString()
+    const additions: ProjectDoc[] = names.map((name) => ({ name, addedAt: today }))
+    updateProject(id, { permitDocs: [...(ps.permitDocs ?? []), ...additions] })
+  }
+
+  /** Remove the document at the given index from a project's doc list. */
+  function removeDocument(id: number, index: number) {
+    const ps = getProjectState(id)
+    updateProject(id, { permitDocs: (ps.permitDocs ?? []).filter((_, i) => i !== index) })
+  }
+
   /** Replace EVERYTHING with an imported state (the Import button). */
   function replaceState(next: WorkbenchState) {
-    setState(migrate(next)) // migrate: older export files have no roster
+    setState(migrate(next)) // migrate: older export files have no roster/permit
   }
 
   // Whatever we return here is what components receive from useProjects().
@@ -163,6 +210,8 @@ export function useProjects() {
     setField,
     addProject,
     deleteProject,
+    addDocuments,
+    removeDocument,
     replaceState,
   }
 }

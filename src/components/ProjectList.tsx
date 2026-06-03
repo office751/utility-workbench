@@ -12,19 +12,23 @@ import {
   electricNeedsAction,
   engineerOf,
   isElectricDone,
+  isPermitDone,
   isSepticDone,
   isWaterDone,
   needsVerify,
   nextElectricAction,
+  nextPermitAction,
   nextSepticAction,
   nextWaterAction,
+  permitNeedsAction,
+  permitResponsibleOf,
   septicNeedsAction,
   septicSourceOf,
   utilityOf,
   waterNeedsAction,
   waterSourceOf,
 } from '../lib/nextAction'
-import { DoneChip, SepticBadge, UtilityBadge, WaterBadge } from './Badges'
+import { DoneChip, PermitBadge, SepticBadge, UtilityBadge, WaterBadge } from './Badges'
 import Filters, { NO_FILTERS, countActive, type FilterState } from './Filters'
 
 interface Props {
@@ -60,6 +64,14 @@ function rowInfo(stream: Stream, p: Project, ps: ProjectState): RowInfo {
       next: nextWaterAction(p, ps).label,
       done: isWaterDone(p, ps),
       needsAction: waterNeedsAction(p, ps),
+    }
+  }
+  if (stream === 'permit') {
+    return {
+      badge: <PermitBadge ps={ps} />,
+      next: nextPermitAction(ps).label,
+      done: isPermitDone(ps),
+      needsAction: permitNeedsAction(ps),
     }
   }
   return {
@@ -99,6 +111,7 @@ function ProjectList({ stream, projects, selectedId, onSelect, onAdd, getProject
     if (stream === 'electric' && filters.engineer && engineerOf(p, ps) !== filters.engineer) return false
     if (stream === 'water' && filters.waterSource && waterSourceOf(p, ps) !== filters.waterSource) return false
     if (stream === 'septic' && filters.septicSource && septicSourceOf(ps) !== filters.septicSource) return false
+    if (stream === 'permit' && filters.permitResponsible && permitResponsibleOf(ps) !== filters.permitResponsible) return false
 
     // Shared checkboxes:
     if (filters.needsActionOnly && !info.needsAction) return false

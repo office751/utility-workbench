@@ -4,7 +4,7 @@
  * septic type is displayed, so the two views can never drift apart.
  */
 import type { Project, ProjectState } from '../types'
-import { septicSourceOf, utilityOf, waterSourceOf } from '../lib/nextAction'
+import { permitResponsibleOf, septicSourceOf, utilityOf, waterSourceOf } from '../lib/nextAction'
 
 /** SECO / Duke / Clay pill (or "utility?" when unknown). */
 export function UtilityBadge({ p, ps }: { p: Project; ps: ProjectState }) {
@@ -23,6 +23,12 @@ export function WaterBadge({ p, ps }: { p: Project; ps: ProjectState }) {
 export function SepticBadge({ ps }: { ps: ProjectState }) {
   const s = septicSourceOf(ps)
   return <span className={`badge s-${s}`}>{s === 'Sewer' ? 'City Sewer' : 'Septic'}</span>
+}
+
+/** Who's handling the permit — Us / Owner / GC pill. */
+export function PermitBadge({ ps }: { ps: ProjectState }) {
+  const who = permitResponsibleOf(ps)
+  return <span className={`badge r-${who || 'Us'}`}>{who || 'Us'}</span>
 }
 
 /** Small green "done" chip shown next to finished projects in the list. */

@@ -11,6 +11,7 @@
  * without copy-pasting.
  */
 import type {
+  PermitResponsible,
   Project,
   ProjectState,
   SepticSource,
@@ -19,7 +20,8 @@ import type {
   Utility,
   WaterSource,
 } from '../types'
-import { septicStepsFor, waterStepsFor } from '../data/lifecycles'
+import { PERMIT_STEPS, septicStepsFor, waterStepsFor } from '../data/lifecycles'
+import { PROJECT_FOLDERS } from '../data/sharepoint'
 import { shutoffFor } from './shutoff'
 
 /**
@@ -172,4 +174,45 @@ export function isSepticDone(ps: ProjectState): boolean {
 
 export function septicNeedsAction(ps: ProjectState): boolean {
   return nextSepticAction(ps).key !== 'done'
+}
+
+/* ====================== PERMITTING ====================== */
+
+/** Who's handling the permit (defaults to Us until set otherwise). */
+export function permitResponsibleOf(ps: ProjectState): PermitResponsible {
+  return ps.permitResponsible ?? 'Us'
+}
+
+/** The SharePoint folder: a typed-in URL wins over the matched default. */
+export function sharepointFolderOf(p: Project, ps: ProjectState): string {
+  return ps.sharepointUrl ?? PROJECT_FOLDERS[p.parcel] ?? ''
+}
+
+/** Report the next REQUIRED permit milestone. */
+export function nextPermitAction(ps: ProjectState): NextAction {
+  if (isPermitDone(ps)) return { key: 'done', label: 'Permit issued ✓' }
+  // No steps done yet → it hasn't been submitted.
+  if (!ps.steps.permit['submitted']?.done) return { key: 'submitted', label: 'Not submitted' }
+  // "corrections" is an OPTIONAL aside (only when the county requests them),
+  // so it never counts as the thing you're waiting on — skip it here.
+  for (const step of PERMIT_STEPS) {
+    if (step.id === 'corrections') continue
+    if (!ps.steps.permit[step.id]?.done) return { key: step.id, label: step.label }
+  }
+  return { key: 'done', label: 'Permit issued ✓' }
+}
+
+/** Permit is done once it's been issued / picked up. */
+export function isPermitDone(ps: ProjectState): boolean {
+  return Boolean(ps.steps.permit['issued']?.done)
+}
+
+/**
+ * "Needs my action" = not issued yet AND we're the ones handling it.
+ * If the owner or a GC is responsible, we still track it but it's not on us.
+ */
+export function permitNeedsAction(ps: ProjectState): boolean {
+  if (isPermitDone(ps)) return false
+  const who = permitResponsibleOf(ps)
+  return who !== 'Owner' && who !== 'GC'
 }

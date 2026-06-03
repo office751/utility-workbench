@@ -11,15 +11,34 @@
  *      few city-water projects had progress recorded from MCU emails.
  *   3. Septic: DEP permit progress recorded from email correspondence.
  */
-import type { ProjectState, WorkbenchState } from '../types'
+import type { ProjectState, StepState, WorkbenchState } from '../types'
 import { PROJECTS, WELL_INSTALLED } from './projects'
 
 /** A blank slate for one project — no steps done, no notes. */
 export function emptyProjectState(): ProjectState {
   return {
-    steps: { electric: {}, water: {}, septic: {} },
-    notes: { electric: '', water: '', septic: '' },
+    steps: { electric: {}, water: {}, septic: {}, permit: {} },
+    notes: { electric: '', water: '', septic: '', permit: '' },
   }
+}
+
+/**
+ * Guess permit progress from the permit number's FORMAT (shared by the
+ * fresh-install seed AND the migration backfill, so they never disagree):
+ *   - all-digits (e.g. 2025070270) = an ISSUED Marion County permit
+ *   - "BLDR-…"/"PB…" = a building application still in review
+ *   - blank = not submitted
+ * Just a starting guess — correct it per project in the app.
+ */
+export function inferPermitSteps(permit: string): Record<string, StepState> {
+  const stamp: StepState = { done: true, date: '(inferred)' }
+  if (/^\d+$/.test(permit)) {
+    return { submitted: stamp, review: stamp, approved: stamp, issued: stamp }
+  }
+  if (permit) {
+    return { submitted: stamp, review: stamp }
+  }
+  return {}
 }
 
 /* ------------------------------------------------------------------ */
@@ -118,6 +137,9 @@ export function buildInitialState(): WorkbenchState {
       }
       ps.notes.septic = s.note
     }
+
+    // 4. permit progress inferred from the permit number's format
+    ps.steps.permit = inferPermitSteps(p.permit)
 
     projects[p.id] = ps
   }

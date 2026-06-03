@@ -13,7 +13,7 @@
  */
 import type { Project, ProjectState, Stream } from '../types'
 import { septicSourceOf, utilityOf, waterSourceOf } from '../lib/nextAction'
-import { DUKE_EMAIL, GEORGES, MCU, OFFICE_CC, SECO_EMAIL, SIGNATURE, UTILITY_PHONES } from '../data/contacts'
+import { DUKE_EMAIL, GEORGES, MARION_PERMITTING, MCU, OFFICE_CC, SECO_EMAIL, SIGNATURE, UTILITY_PHONES } from '../data/contacts'
 
 interface Props {
   stream: Stream
@@ -98,6 +98,13 @@ function ContactLinks({ stream, p, ps }: Props) {
     } else {
       links.push({ href: tel(MCU.phone), label: `📞 Call MCU — ${MCU.phone}` })
     }
+  }
+
+  if (stream === 'permit') {
+    links.push({
+      href: tel(MARION_PERMITTING.phone),
+      label: `📞 Call ${MARION_PERMITTING.name} — ${MARION_PERMITTING.phone}`,
+    })
   }
 
   if (links.length === 0) return null

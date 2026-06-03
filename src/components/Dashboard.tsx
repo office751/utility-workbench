@@ -10,19 +10,22 @@ import type { ReactNode } from 'react'
 import type { Project, ProjectState } from '../types'
 import {
   engineerOf,
+  isPermitDone,
   isSepticDone,
   nextElectricAction,
+  nextPermitAction,
   nextSepticAction,
   nextWaterAction,
+  permitResponsibleOf,
   septicSourceOf,
   septicSystemOf,
   waterSourceOf,
 } from '../lib/nextAction'
 import { shutoffFor } from '../lib/shutoff'
-import { SepticBadge, UtilityBadge, WaterBadge } from './Badges'
+import { PermitBadge, SepticBadge, UtilityBadge, WaterBadge } from './Badges'
 
 interface Props {
-  stream: 'electric' | 'water' | 'septic'
+  stream: 'electric' | 'water' | 'septic' | 'permit'
   projects: Project[] // the live roster from saved state
   getProjectState: (id: number) => ProjectState
   onSelect: (id: number) => void
@@ -71,6 +74,7 @@ function Dashboard({ stream, projects, getProjectState, onSelect }: Props) {
 
   if (stream === 'electric') return <ElectricDashboard rows={rows} onSelect={onSelect} />
   if (stream === 'water') return <WaterDashboard rows={rows} onSelect={onSelect} />
+  if (stream === 'permit') return <PermitDashboard rows={rows} onSelect={onSelect} />
   return <SepticDashboard rows={rows} onSelect={onSelect} />
 }
 
@@ -204,6 +208,44 @@ function SepticDashboard({ rows, onSelect }: DashProps) {
       <Bucket title="📣 Notify Vicki (well / water / SOD)" items={needNotify.map(tile)} />
       <Bucket title="✅ Final inspection / DEP approval" items={needApproval.map(tile)} />
       <Bucket title="🚰 City sewer — in progress" items={sewerOpen.map(tile)} />
+    </section>
+  )
+}
+
+function PermitDashboard({ rows, onSelect }: DashProps) {
+  const dn = (r: Row, id: string) => Boolean(r.ps.steps.permit[id]?.done)
+  const isUs = (r: Row) => permitResponsibleOf(r.ps) === 'Us'
+
+  // Our open permits, split by where they are in the lifecycle.
+  const ours = rows.filter((r) => isUs(r) && !isPermitDone(r.ps))
+  const notSubmitted = ours.filter((r) => !dn(r, 'submitted'))
+  const underReview = ours.filter((r) => dn(r, 'submitted') && !dn(r, 'corrections') && !dn(r, 'approved'))
+  const corrections = ours.filter((r) => dn(r, 'corrections') && !dn(r, 'approved'))
+  const approvedPending = ours.filter((r) => dn(r, 'approved') && !dn(r, 'issued'))
+
+  // Permits someone else is handling — visibility, not our action.
+  const othersOpen = rows.filter((r) => !isUs(r) && !isPermitDone(r.ps))
+
+  const tile = (r: Row) => (
+    <Tile
+      key={r.p.id}
+      row={r}
+      badge={<PermitBadge ps={r.ps} />}
+      sub={nextPermitAction(r.ps).label}
+      onSelect={onSelect}
+    />
+  )
+
+  return (
+    <section className="detail dashboard">
+      <h2>📋 Permitting dashboard</h2>
+      <p className="meta">Submitted → review → corrections → approved → issued. Click a tile to open it.</p>
+
+      <Bucket title="🔴 Not submitted" items={notSubmitted.map(tile)} />
+      <Bucket title="🏛 Under county review" items={underReview.map(tile)} />
+      <Bucket title="✏️ Corrections requested" items={corrections.map(tile)} />
+      <Bucket title="📋 Approved — awaiting issue / pickup" items={approvedPending.map(tile)} />
+      <Bucket title="👥 Handled by owner / GC" items={othersOpen.map(tile)} />
     </section>
   )
 }

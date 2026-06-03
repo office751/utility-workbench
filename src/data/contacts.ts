@@ -31,6 +31,13 @@ export const GEORGES = {
   email: 'vicki@georgesplumbingflorida.com',
 }
 
+/** Marion County permitting / Building Safety office. */
+export const MARION_PERMITTING = {
+  name: 'Marion County Building Safety',
+  phone: '352-438-2400',
+  address: '2710 E. Silver Springs Blvd, Ocala, FL 34470',
+}
+
 /** CC'd on outgoing application emails. */
 export const OFFICE_CC = 'office@ironshieldconstruction.com'
 

@@ -6,23 +6,37 @@
  * this file — ElectricBody / WaterBody / SepticBody — and they all lean on
  * the same building blocks: Checklist.tsx and lifecycles.ts.
  */
-import type { Project, ProjectState, SepticSource, SepticSystem, ServiceType, Stream, Utility, WaterSource } from '../types'
-import { ELECTRIC_STEPS, septicStepsFor, waterStepsFor } from '../data/lifecycles'
+import type {
+  PermitResponsible,
+  Project,
+  ProjectState,
+  SepticSource,
+  SepticSystem,
+  ServiceType,
+  Stream,
+  Utility,
+  WaterSource,
+} from '../types'
+import { ELECTRIC_STEPS, PERMIT_STEPS, septicStepsFor, waterStepsFor } from '../data/lifecycles'
 import {
   engineerOf,
   needsVerify,
   nextElectricAction,
+  nextPermitAction,
   nextSepticAction,
   nextWaterAction,
+  permitResponsibleOf,
   septicSourceOf,
   septicSystemOf,
   serviceTypeOf,
+  sharepointFolderOf,
   waterSourceOf,
 } from '../lib/nextAction'
 import { shutoffFor } from '../lib/shutoff'
 import { GEORGES } from '../data/contacts'
 import Checklist from './Checklist'
 import ContactLinks from './ContactLinks'
+import DocumentsBox from './DocumentsBox'
 
 /** The updater functions every body needs — grouped to avoid repetition. */
 interface Updaters {
@@ -30,6 +44,8 @@ interface Updaters {
   setStepNote: (id: number, stream: Stream, stepId: string, note: string) => void
   setNote: (id: number, stream: Stream, text: string) => void
   setField: <K extends keyof ProjectState>(id: number, field: K, value: ProjectState[K]) => void
+  addDocuments: (id: number, names: string[]) => void
+  removeDocument: (id: number, index: number) => void
 }
 
 interface Props extends Updaters {
@@ -45,6 +61,7 @@ const NOTE_LABEL: Record<Stream, string> = {
   electric: 'Electric notes',
   water: 'Water notes',
   septic: 'Septic / sewer notes',
+  permit: 'Permit notes',
 }
 
 function Detail(props: Props) {
@@ -69,6 +86,7 @@ function Detail(props: Props) {
       {stream === 'electric' && <ElectricBody {...props} />}
       {stream === 'water' && <WaterBody {...props} />}
       {stream === 'septic' && <SepticBody {...props} />}
+      {stream === 'permit' && <PermitBody {...props} />}
 
       <label className="notes-label">
         {NOTE_LABEL[stream]}
@@ -84,7 +102,7 @@ function Detail(props: Props) {
       <button
         className="mini danger"
         onClick={() => {
-          if (confirm(`Remove ${p.address} and ALL its progress (electric, water, septic)?`)) {
+          if (confirm(`Remove ${p.address} and ALL its progress (electric, water, septic, permit)?`)) {
             onDelete()
           }
         }}
@@ -306,6 +324,88 @@ function SepticBody({ project: p, ps, toggleStep, setStepNote, setField }: Props
         ps={ps}
         toggleStep={toggleStep}
         setStepNote={setStepNote}
+      />
+    </>
+  )
+}
+
+/* ===================== PERMITTING ===================== */
+
+function PermitBody({ project: p, ps, toggleStep, setStepNote, setField, addDocuments, removeDocument }: Props) {
+  const next = nextPermitAction(ps)
+  const folder = sharepointFolderOf(p, ps) // matched default, unless overridden
+  const permitUrl = ps.permitUrl ?? ''
+
+  return (
+    <>
+      <div className="settings">
+        <label>
+          Responsible
+          <select
+            value={permitResponsibleOf(ps)}
+            onChange={(e) => setField(p.id, 'permitResponsible', e.target.value as PermitResponsible)}
+          >
+            <option value="Us">Us (Iron Shield)</option>
+            <option value="Owner">Owner</option>
+            <option value="GC">General contractor</option>
+          </select>
+        </label>
+
+        {/* These two URLs are editable per project. The folder is pre-filled
+            for the projects we could match from SharePoint; paste the rest. */}
+        <label className="grow">
+          SharePoint folder
+          <input
+            value={folder}
+            onChange={(e) => setField(p.id, 'sharepointUrl', e.target.value)}
+            placeholder="https://…sharepoint.com/…/<parcel>"
+          />
+        </label>
+
+        <label className="grow">
+          County permit page
+          <input
+            value={permitUrl}
+            onChange={(e) => setField(p.id, 'permitUrl', e.target.value)}
+            placeholder="https://…marionfl.org/…"
+          />
+        </label>
+      </div>
+
+      {/* Quick-open links (only show when a URL exists). encodeURI handles the
+          spaces in the SharePoint folder names. target=_blank opens a new tab. */}
+      {(folder || permitUrl) && (
+        <div className="contact-row">
+          {folder && (
+            <a className="contact" href={encodeURI(folder)} target="_blank" rel="noreferrer">
+              📁 Open project folder
+            </a>
+          )}
+          {permitUrl && (
+            <a className="contact" href={permitUrl} target="_blank" rel="noreferrer">
+              🔗 Open permit record
+            </a>
+          )}
+        </div>
+      )}
+
+      <p className="next-line">
+        Next: <b>{next.label}</b>
+      </p>
+
+      <Checklist
+        projectId={p.id}
+        stream="permit"
+        steps={PERMIT_STEPS}
+        ps={ps}
+        toggleStep={toggleStep}
+        setStepNote={setStepNote}
+      />
+
+      <DocumentsBox
+        docs={ps.permitDocs ?? []}
+        onAdd={(names) => addDocuments(p.id, names)}
+        onRemove={(i) => removeDocument(p.id, i)}
       />
     </>
   )

@@ -12,8 +12,11 @@
  *      (checked-off steps, notes... things that change as you work)
  */
 
-/** The three workstreams every house has. */
-export type Stream = 'electric' | 'water' | 'septic'
+/** The workstreams every house has. */
+export type Stream = 'electric' | 'water' | 'septic' | 'permit'
+
+/** Who's handling the building permit — tracked even when it isn't us. */
+export type PermitResponsible = 'Us' | 'Owner' | 'GC' | ''
 
 /** Electric utility companies we deal with. '' = not known/verified yet. */
 export type Utility = 'SECO' | 'DUKE' | 'CLAY' | ''
@@ -65,6 +68,16 @@ export interface StepState {
 }
 
 /**
+ * One attached document. NOTE: for now we store only the file's NAME (not its
+ * contents) — a placeholder until file storage is restructured. The upload UI
+ * is real; the bytes aren't kept yet.
+ */
+export interface ProjectDoc {
+  name: string
+  addedAt: string // display date it was added to the list
+}
+
+/**
  * Everything that CHANGES for one project — this is what localStorage holds.
  * Fields marked `?` are optional overrides: e.g. if `electricCo` is set here,
  * it wins over the roster value (you verified/changed the utility).
@@ -78,6 +91,12 @@ export interface ProjectState {
   septicSystem?: SepticSystem
   closingDate?: string // YYYY-MM-DD; drives the shut-off reminder
   transferred?: boolean // electric account transferred after sale
+
+  // --- permit tab ---
+  permitResponsible?: PermitResponsible // who's handling it (Us / Owner / GC)
+  sharepointUrl?: string // link to this project's SharePoint folder
+  permitUrl?: string // link to the county permit record/page
+  permitDocs?: ProjectDoc[] // attached document names (placeholder storage)
 
   /** Checked-off steps, per stream, keyed by step id (e.g. "meter", "snrb"). */
   steps: Record<Stream, Record<string, StepState>>

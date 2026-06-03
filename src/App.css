@@ -56,15 +56,35 @@
 
 .layout {
   display: grid;
-  grid-template-columns: 330px 1fr; /* fixed sidebar, flexible detail */
-  gap: 16px;
+  /* sidebar | drag-handle | detail. The sidebar width comes from a CSS
+     variable that App.tsx sets (and the drag hook updates live); it falls
+     back to 330px if unset. */
+  grid-template-columns: var(--sidebar-w, 330px) 14px 1fr;
   align-items: start;
 }
 
-/* On narrow windows, stack the columns instead */
+/* The draggable divider between the two panels. It's a 14px-wide hit area
+   with a thin line drawn down the middle (via a gradient), so it's easy to
+   grab but visually subtle. */
+.resizer {
+  align-self: stretch; /* span the full height of the taller panel */
+  cursor: col-resize;
+  border-radius: 2px;
+  background: linear-gradient(var(--border), var(--border)) center / 2px 100% no-repeat;
+}
+
+.resizer:hover {
+  background: linear-gradient(var(--accent), var(--accent)) center / 2px 100% no-repeat;
+}
+
+/* On narrow windows, stack everything in one column and hide the handle
+   (this full-property rule overrides the variable-based one above). */
 @media (max-width: 800px) {
   .layout {
     grid-template-columns: 1fr;
+  }
+  .resizer {
+    display: none;
   }
 }
 
@@ -157,6 +177,11 @@
 .badge.s-Septic { background: #eee6d8; color: #7a6a4f; }
 .badge.s-Sewer  { background: #d8e6f2; color: #4a6b8a; }
 
+/* permit "responsible" badges */
+.badge.r-Us    { background: #e6e2f2; color: #5b3a9b; }
+.badge.r-Owner { background: #f6e7c6; color: #8a6414; }
+.badge.r-GC    { background: #d8e6f2; color: #2d5d8a; }
+
 /* the green "done" chip */
 .badge.done { background: #d9ecd9; color: #2f6b2f; }
 
@@ -231,6 +256,80 @@ textarea {
   margin: 6px 0 12px;
   font-size: 14px;
   color: var(--accent);
+}
+
+/* settings fields that should stretch to fill the row (the permit URLs) */
+.settings label.grow {
+  flex: 1 1 240px;
+}
+.settings label.grow input {
+  width: 100%;
+}
+
+/* ---------- permit documents box ---------- */
+.docs {
+  margin: 4px 0 18px;
+}
+.docs-head {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 6px;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+.docs-note {
+  font-weight: 400;
+  font-style: italic;
+}
+.dropzone {
+  border: 1.5px dashed var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--accent);
+  cursor: pointer;
+}
+.dropzone.over {
+  border-color: var(--accent);
+  background: var(--bg);
+}
+.doc-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.doc-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.doc-name {
+  flex: 1;
+}
+.doc-date {
+  font-size: 11px;
+}
+.doc-x {
+  font: inherit;
+  font-size: 12px;
+  line-height: 1;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+}
+.doc-x:hover {
+  color: #c0492f;
+  border-color: #c0492f55;
 }
 
 /* ---------- the checklist ---------- */
@@ -618,6 +717,43 @@ button.danger:hover {
   background: #c0492f14;
 }
 
+/* ---------- COMPACT DENSITY ----------
+ * These rules only apply when <html data-density="compact"> (set by the
+ * useDensity hook). They tighten the list rows and dashboard tiles so more
+ * fits on screen; comfortable mode is just the absence of these.
+ */
+
+/* sidebar rows */
+[data-density='compact'] .item {
+  padding: 5px 8px;
+}
+[data-density='compact'] .item-addr {
+  font-size: 13px;
+}
+[data-density='compact'] .item-sub,
+[data-density='compact'] .item-next {
+  font-size: 11px;
+}
+
+/* dashboard cards + tiles — smaller tiles means more per row */
+[data-density='compact'] .dashboard .card {
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+[data-density='compact'] .tiles {
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 7px;
+}
+[data-density='compact'] .tile {
+  padding: 7px 9px;
+}
+[data-density='compact'] .tile-addr {
+  font-size: 12px;
+}
+[data-density='compact'] .tile-meta {
+  font-size: 10.5px;
+}
+
 /* ---------- dark-mode adjustments ----------
  * Most colors flip automatically via the variables in index.css. The few
  * hard-coded pastel chips need explicit dark versions, listed here.
@@ -633,6 +769,9 @@ button.danger:hover {
 [data-theme='dark'] .badge.w-NONE   { background: #4a2b24; color: #f0a892; }
 [data-theme='dark'] .badge.s-Septic { background: #3a3320; color: #e8cf9a; }
 [data-theme='dark'] .badge.s-Sewer  { background: #22304d; color: #9cc0ff; }
+[data-theme='dark'] .badge.r-Us     { background: #312647; color: #c3aef0; }
+[data-theme='dark'] .badge.r-Owner  { background: #403714; color: #e6c860; }
+[data-theme='dark'] .badge.r-GC     { background: #22304d; color: #9cc0ff; }
 [data-theme='dark'] .badge.done     { background: #1f3a29; color: #86dba6; }
 [data-theme='dark'] .flag { background: #3a3320; border-color: #5a4d2a; color: #e8cf9a; }
 [data-theme='dark'] .banner       { background: #42291d; color: #f0b285; }

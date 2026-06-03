@@ -6,22 +6,25 @@
  * When two components need the same state, it lives in their closest shared
  * parent — here — and flows down to each as props.
  */
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import './App.css'
 import type { Stream } from './types'
 import { useProjects } from './hooks/useProjects'
 import { useTheme } from './hooks/useTheme'
+import { useDensity } from './hooks/useDensity'
+import { useResizableSidebar } from './hooks/useResizableSidebar'
 import ProjectList from './components/ProjectList'
 import Detail from './components/Detail'
 import Dashboard from './components/Dashboard'
 import ExportImport from './components/ExportImport'
 import AddProject from './components/AddProject'
 
-// The three tabs. Pure config, so adding a tab = adding a line.
+// The tabs. Pure config, so adding a tab = adding a line.
 const TABS: { key: Stream; label: string }[] = [
   { key: 'electric', label: '⚡ Electric' },
   { key: 'water', label: '💧 Water' },
   { key: 'septic', label: '🚽 Septic' },
+  { key: 'permit', label: '📋 Permit' },
 ]
 
 function App() {
@@ -35,11 +38,19 @@ function App() {
     setField,
     addProject,
     deleteProject,
+    addDocuments,
+    removeDocument,
     replaceState,
   } = useProjects()
 
   // Dark mode (persists per device — see hooks/useTheme.ts).
   const { theme, toggle: toggleTheme } = useTheme()
+
+  // Compact/comfortable spacing (same pattern as dark mode).
+  const { density, toggle: toggleDensity } = useDensity()
+
+  // Draggable list/detail divider; remembers its width.
+  const { width: sidebarWidth, layoutRef, startDrag } = useResizableSidebar()
 
   // Shared UI state, lifted up to App:
   const [tab, setTab] = useState<Stream>('electric')
@@ -74,6 +85,10 @@ function App() {
               {t.label}
             </button>
           ))}
+          {/* density toggle — ⊟ collapses to compact, ⊞ expands back */}
+          <button onClick={toggleDensity} title="Toggle compact / comfortable spacing">
+            {density === 'comfortable' ? '⊟' : '⊞'}
+          </button>
           {/* dark mode toggle — show the thing you'd switch TO */}
           <button onClick={toggleTheme} title="Toggle dark mode">
             {theme === 'light' ? '🌙' : '☀️'}
@@ -83,7 +98,17 @@ function App() {
         </nav>
       </header>
 
-      <div className="layout">
+      {/* The layout is a 3-column grid: list | drag-handle | detail.
+          We set the FIRST column's width through a CSS variable (--sidebar-w)
+          rather than hard-coding it, so the dragging hook can change it live
+          and the responsive "stack on narrow screens" rule in App.css can
+          still override it. The `as CSSProperties` cast just tells TypeScript
+          we know a custom --variable is allowed here. */}
+      <div
+        className="layout"
+        ref={layoutRef}
+        style={{ '--sidebar-w': `${sidebarWidth}px` } as CSSProperties}
+      >
         {/* key={tab} is a React trick: a new key = a brand-new component,
             so each tab gets fresh search/filter state automatically. */}
         <ProjectList
@@ -101,6 +126,9 @@ function App() {
           }}
           getProjectState={getProjectState}
         />
+
+        {/* the drag handle — grab it to resize the two panels */}
+        <div className="resizer" onMouseDown={startDrag} title="Drag to resize" />
 
         {adding ? (
           <AddProject
@@ -120,6 +148,8 @@ function App() {
             setStepNote={setStepNote}
             setNote={setNote}
             setField={setField}
+            addDocuments={addDocuments}
+            removeDocument={removeDocument}
             onBack={() => setSelectedId(null)}
             onDelete={() => {
               deleteProject(selected.id)

@@ -70,6 +70,17 @@ export const SEWER_STEPS: StepDef[] = [
   { id: 'swerconn', label: 'Connected to public sewer' },
 ]
 
+/* ------------------------- PERMITTING ----------------------- */
+/* The building permit lifecycle. Same steps for every project, so there's
+   no branching helper like water/septic have. */
+export const PERMIT_STEPS: StepDef[] = [
+  { id: 'submitted', label: 'Permit application submitted to county' },
+  { id: 'review', label: 'Under review by county' },
+  { id: 'corrections', label: 'Corrections requested / resubmitted (if any)' },
+  { id: 'approved', label: 'Permit approved' },
+  { id: 'issued', label: 'Permit issued / picked up' },
+]
+
 /**
  * Which water steps apply to a project? Depends on its source:
  *   Well → the well steps; City → city steps minus the WM-extension ones;

@@ -12,13 +12,14 @@
  * the relevant ones. Irrelevant fields just sit unused — simpler than three
  * separate filter types.
  */
-import type { SepticSource, Stream, Utility, WaterSource } from '../types'
+import type { PermitResponsible, SepticSource, Stream, Utility, WaterSource } from '../types'
 
 export interface FilterState {
   utility: Utility | '' // electric tab; '' = all
   engineer: string // electric tab; '' = all
   waterSource: WaterSource | '' // water tab
   septicSource: SepticSource | '' // septic tab
+  permitResponsible: PermitResponsible // permit tab; '' = all
   needsActionOnly: boolean
   hideDone: boolean
 }
@@ -29,6 +30,7 @@ export const NO_FILTERS: FilterState = {
   engineer: '',
   waterSource: '',
   septicSource: '',
+  permitResponsible: '',
   needsActionOnly: false,
   hideDone: false,
 }
@@ -40,6 +42,7 @@ export function countActive(f: FilterState, stream: Stream): number {
   if (stream === 'electric' && f.engineer) n++
   if (stream === 'water' && f.waterSource) n++
   if (stream === 'septic' && f.septicSource) n++
+  if (stream === 'permit' && f.permitResponsible) n++
   if (f.needsActionOnly) n++
   if (f.hideDone) n++
   return n
@@ -99,6 +102,18 @@ function Filters({ stream, filters, onChange, engineers }: Props) {
           <option value="">Septic & sewer</option>
           <option value="Septic">Septic only</option>
           <option value="Sewer">Sewer only</option>
+        </select>
+      )}
+
+      {stream === 'permit' && (
+        <select
+          value={filters.permitResponsible}
+          onChange={(e) => set({ permitResponsible: e.target.value as PermitResponsible })}
+        >
+          <option value="">Anyone responsible</option>
+          <option value="Us">Us (Iron Shield)</option>
+          <option value="Owner">Owner</option>
+          <option value="GC">General contractor</option>
         </select>
       )}
 
