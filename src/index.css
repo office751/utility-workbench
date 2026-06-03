@@ -1,0 +1,58 @@
+/*
+ * index.css — GLOBAL styles: things that apply to the entire page
+ * (fonts, colors, resets). Component-specific styles go in App.css.
+ *
+ * The `:root { --name: value }` lines are CSS variables. Anywhere else in
+ * our CSS we can write `var(--bg)` and get that value. This is exactly how
+ * the original Workbench HTML does its dark mode: flipping one attribute
+ * on <html> swaps every variable at once. We'll wire that toggle up in
+ * Milestone 4 — for now we just define the light palette.
+ */
+:root {
+  color-scheme: light;  /* tells the browser to draw native widgets light */
+  --bg: #f6f4f0;        /* page background — warm off-white */
+  --panel: #ffffff;     /* cards / panels */
+  --text: #2a2723;      /* main text — warm near-black */
+  --muted: #8a8378;     /* secondary text */
+  --border: #e3ded6;    /* hairline borders */
+  --accent: #b3541e;    /* Iron Shield rust-orange accent */
+}
+
+/*
+ * DARK MODE — same palette as the original workbench (warm near-black).
+ * The useTheme() hook sets data-theme="dark" on the <html> element; when it
+ * does, every var() below replaces its light twin, everywhere, instantly.
+ * No component needs to know dark mode exists.
+ */
+:root[data-theme='dark'] {
+  color-scheme: dark;   /* native widgets (checkboxes, date pickers) go dark */
+  --bg: #262624;
+  --panel: #30302e;
+  --text: #f2f0ea;
+  --muted: #a6a39b;
+  --border: #3d3d39;
+  --accent: #e8741c;    /* a brighter rust pops better on dark */
+}
+
+/* A tiny "reset" so all browsers start from the same baseline */
+* {
+  box-sizing: border-box; /* width includes padding+border — saner math */
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+code {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  background: var(--border);
+  padding: 2px 6px;
+  border-radius: 4px;
+}

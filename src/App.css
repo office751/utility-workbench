@@ -1,0 +1,642 @@
+/*
+ * App.css — styles for the app shell and the Electric tab.
+ * Class names match the className="" values in the components.
+ */
+
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px 24px;
+}
+
+/* ---------- header + tabs ---------- */
+
+.app-header {
+  display: flex;
+  justify-content: space-between; /* title left, tabs right */
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.app-header .tagline {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.tabs button {
+  font: inherit;
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.tabs button.act {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* ---------- two-column layout: sidebar | detail ---------- */
+
+.layout {
+  display: grid;
+  grid-template-columns: 330px 1fr; /* fixed sidebar, flexible detail */
+  gap: 16px;
+  align-items: start;
+}
+
+/* On narrow windows, stack the columns instead */
+@media (max-width: 800px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- sidebar ---------- */
+
+.sidebar {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.search {
+  width: 100%;
+  padding: 8px 10px;
+  font: inherit;
+  color: inherit;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.list {
+  max-height: calc(100vh - 240px); /* keep the list scrollable, not the page */
+  overflow-y: auto;
+}
+
+.item {
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.item:hover {
+  background: var(--bg);
+}
+
+.item.sel {
+  background: var(--bg);
+  border-color: var(--accent);
+}
+
+.item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.item-addr {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.item-sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.item-next {
+  font-size: 12px;
+  color: var(--accent);
+}
+
+/* utility badges */
+.badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: var(--border);
+  color: var(--muted);
+}
+.badge.u-SECO { background: #d9ecd9; color: #2f6b2f; }
+.badge.u-DUKE { background: #d8e6f2; color: #2d5d8a; }
+.badge.u-CLAY { background: #eadff2; color: #6a4a8a; }
+.badge.u-NONE { background: #f3d9d3; color: #8c3b22; }
+.badge.warn   { background: #f3d9d3; color: #8c3b22; }
+
+/* water source badges */
+.badge.w-Well   { background: #d8e6f2; color: #2d5d8a; }
+.badge.w-City   { background: #d2ecec; color: #0b6e6e; }
+.badge.w-CityWM { background: #eadff2; color: #6a4a8a; }
+.badge.w-NONE   { background: #f3d9d3; color: #8c3b22; }
+
+/* septic / sewer badges */
+.badge.s-Septic { background: #eee6d8; color: #7a6a4f; }
+.badge.s-Sewer  { background: #d8e6f2; color: #4a6b8a; }
+
+/* the green "done" chip */
+.badge.done { background: #d9ecd9; color: #2f6b2f; }
+
+/* ---------- detail panel ---------- */
+
+.detail {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 24px;
+}
+
+.detail.placeholder {
+  min-height: 200px;
+  display: grid;
+  place-items: center; /* center the hint text */
+}
+
+.detail h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.meta {
+  margin: 4px 0 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.banner {
+  background: #f3d9d3;
+  color: #8c3b22;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  margin-bottom: 14px;
+}
+
+/* settings row: utility / OH-UG / engineer */
+.settings {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.settings label,
+.closing label,
+.notes-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.settings select,
+.settings input,
+.closing input[type='date'],
+textarea {
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.next-line {
+  margin: 6px 0 12px;
+  font-size: 14px;
+  color: var(--accent);
+}
+
+/* ---------- the checklist ---------- */
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 18px;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 1fr 220px; /* label | note box */
+  gap: 10px;
+  align-items: center;
+  padding: 7px 10px;
+  border-radius: 8px;
+}
+
+.step:hover {
+  background: var(--bg);
+}
+
+.step-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.step-main input[type='checkbox'] {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--accent); /* colors the checkbox itself */
+}
+
+/* completed steps fade out */
+.step.done .step-label {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.step-date {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.step-note {
+  font: inherit;
+  font-size: 12px;
+  color: inherit;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+.step-note:focus,
+.search:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* ---------- closing / shut-off row ---------- */
+
+.closing {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.shutoff {
+  font-size: 14px;
+}
+.shutoff.warn { color: #8a6414; }
+.shutoff.due  { color: #b03020; font-weight: 700; }
+
+.closing .transfer {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+/* ---------- notes ---------- */
+
+.notes-label textarea {
+  resize: vertical; /* user can drag it taller */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Reusable helper for secondary/quiet text */
+.muted {
+  color: var(--muted);
+}
+
+.pad {
+  padding: 10px;
+}
+
+/* small utility button (back link, clear filters) */
+button.mini {
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.detail .back {
+  margin-bottom: 10px;
+}
+
+/* ---------- Milestone 4: search row + filter panel ---------- */
+
+.search-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.search-row .search {
+  margin-bottom: 0;
+  flex: 1;
+}
+
+.filter-btn {
+  font: inherit;
+  font-size: 13px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.filter-btn.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  margin-bottom: 8px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+}
+
+.filters select {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+.filters .check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* ---------- Milestone 4: dashboard cards + tiles ---------- */
+
+.dashboard .card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+
+.dashboard .card h3 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-left: 3px solid var(--accent);
+  padding-left: 8px;
+}
+
+.tiles {
+  display: grid;
+  /* as many 215px-wide tiles as fit per row */
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+  gap: 10px;
+}
+
+.tile {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.tile:hover {
+  border-color: var(--accent);
+}
+
+.tile-addr {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.tile-meta {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+.tile-badges {
+  margin-top: 7px;
+  font-size: 12px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* urgency colors (shut-off tiles, verify badge) */
+.due  { color: #c0492f; font-weight: 700; }
+.warn { color: #a06a00; font-weight: 700; }
+
+/* yellow info flag (INRB notice, "set the source first", WM extension) */
+.flag {
+  background: #fff4e5;
+  border: 1px solid #ffd9a8;
+  color: #8a5a00;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+/* private-provider line on the septic tab */
+.provider {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ---------- Milestone 6: contact links + export/import ---------- */
+
+.contact-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 14px;
+}
+
+a.contact {
+  display: inline-block;
+  text-decoration: none;
+  font-size: 13px;
+  padding: 7px 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+}
+
+a.contact:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.io {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* ---------- Add-project form ---------- */
+
+.add-btn {
+  width: 100%;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px;
+  margin-bottom: 8px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.add-btn:hover {
+  border-color: var(--accent);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* two columns of fields */
+  gap: 14px 18px;
+  margin-bottom: 18px;
+}
+
+/* a field that should span both columns (address, subdivision) */
+.form-grid .span2 {
+  grid-column: span 2;
+}
+
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.form-grid input,
+.form-grid select {
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+}
+
+.form-grid input:focus,
+.form-grid select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+button.primary {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 18px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+button.primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* the quiet-but-red remove button at the bottom of the detail view */
+button.danger {
+  margin-top: 16px;
+  color: #c0492f;
+  border-color: #c0492f55; /* translucent red border */
+}
+
+button.danger:hover {
+  background: #c0492f14;
+}
+
+/* ---------- dark-mode adjustments ----------
+ * Most colors flip automatically via the variables in index.css. The few
+ * hard-coded pastel chips need explicit dark versions, listed here.
+ */
+[data-theme='dark'] .badge.u-SECO { background: #43301f; color: #f0a868; }
+[data-theme='dark'] .badge.u-DUKE { background: #1f3a2c; color: #7fd6a8; }
+[data-theme='dark'] .badge.u-CLAY { background: #3a3a36; color: #cdcbc3; }
+[data-theme='dark'] .badge.u-NONE { background: #4a2b24; color: #f0a892; }
+[data-theme='dark'] .badge.warn   { background: #4a2b24; color: #f0a892; }
+[data-theme='dark'] .badge.w-Well   { background: #22304d; color: #9cc0ff; }
+[data-theme='dark'] .badge.w-City   { background: #1c3a3a; color: #7fd6d6; }
+[data-theme='dark'] .badge.w-CityWM { background: #312647; color: #c3aef0; }
+[data-theme='dark'] .badge.w-NONE   { background: #4a2b24; color: #f0a892; }
+[data-theme='dark'] .badge.s-Septic { background: #3a3320; color: #e8cf9a; }
+[data-theme='dark'] .badge.s-Sewer  { background: #22304d; color: #9cc0ff; }
+[data-theme='dark'] .badge.done     { background: #1f3a29; color: #86dba6; }
+[data-theme='dark'] .flag { background: #3a3320; border-color: #5a4d2a; color: #e8cf9a; }
+[data-theme='dark'] .banner       { background: #42291d; color: #f0b285; }
+[data-theme='dark'] .due  { color: #f0876c; }
+[data-theme='dark'] .warn { color: #e6c860; }
+[data-theme='dark'] .shutoff.warn { color: #e6c860; }
+[data-theme='dark'] .shutoff.due  { color: #f0876c; }
