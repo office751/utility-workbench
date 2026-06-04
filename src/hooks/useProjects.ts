@@ -129,6 +129,7 @@ export function useProjects() {
   // never waits on the network. These two effects layer the cloud on top.
   const cloudReady = useRef(false) // have we reconciled with the cloud yet?
   const skipNextSave = useRef(false) // don't echo a fresh cloud-load back up
+  const lastPushed = useRef<string | null>(null) // JSON we last sent up (to ignore our own realtime echo)
 
   // 1) On first mount, reconcile with the cloud. If the cloud has data, it
   //    WINS (it's the shared source of truth across your devices). If it's
@@ -151,9 +152,11 @@ export function useProjects() {
         if (error) throw error
         if (data?.data) {
           skipNextSave.current = true // we're loading FROM the cloud — don't write it back
+          lastPushed.current = JSON.stringify(data.data)
           setState(migrate(data.data as Partial<WorkbenchState>))
         } else {
           // Cloud is empty → seed it with whatever this browser currently has.
+          lastPushed.current = JSON.stringify(state)
           await supabase
             .from('workbench')
             .upsert({ id: 'main', data: state, updated_at: new Date().toISOString() })
@@ -180,7 +183,9 @@ export function useProjects() {
       return
     }
     const sb = supabase // capture the non-null client for the deferred callback
+    const payload = JSON.stringify(state)
     const timer = setTimeout(() => {
+      lastPushed.current = payload // remember what we sent, so its realtime echo is ignored
       sb
         .from('workbench')
         .upsert({ id: 'main', data: state, updated_at: new Date().toISOString() })
@@ -190,6 +195,32 @@ export function useProjects() {
     }, 600)
     return () => clearTimeout(timer)
   }, [state])
+
+  // 3) Live-sync: when ANOTHER device writes, apply that change here in real time
+  //    (Supabase Realtime). We ignore the echo of our own writes via lastPushed.
+  useEffect(() => {
+    if (!supabase) return
+    const sb = supabase
+    const channel = sb
+      .channel('workbench-sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'workbench', filter: 'id=eq.main' },
+        (payload) => {
+          const next = (payload.new as { data?: WorkbenchState } | null)?.data
+          if (!next) return
+          const incoming = JSON.stringify(next)
+          if (incoming === lastPushed.current) return // our own write echoed back — ignore it
+          lastPushed.current = incoming
+          skipNextSave.current = true // remote change — apply it, don't bounce it back up
+          setState(migrate(next as Partial<WorkbenchState>))
+        },
+      )
+      .subscribe()
+    return () => {
+      sb.removeChannel(channel)
+    }
+  }, [])
 
   /** Get one project's progress (never undefined — falls back to blank). */
   function getProjectState(id: number): ProjectState {
