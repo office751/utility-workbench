@@ -32,12 +32,16 @@ function safeName(name: string): string {
 /**
  * Upload ONE file for a project. Returns the pointer we save in app state.
  * Throws if there's no cloud connection or the upload fails (the caller shows
- * the message). The storage path is `<projectId>/<random>-<filename>` — the
- * random prefix means two files with the same name never collide.
+ * the message).
+ *
+ * Path shape: `<projectId>/<random>/<filename>`. The random part is its OWN
+ * folder, NOT a name prefix — that keeps two files with the same name from
+ * colliding while leaving the LAST path segment a clean filename. So a shared
+ * link previews as "Energy_Calcs.pdf", not "<long-random-id>-Energy_Calcs.pdf".
  */
 export async function uploadProjectFile(projectId: number, file: File): Promise<ProjectDoc> {
   if (!supabase) throw new Error('No cloud connection — files need the Supabase backend.')
-  const path = `${projectId}/${crypto.randomUUID()}-${safeName(file.name)}`
+  const path = `${projectId}/${crypto.randomUUID()}/${safeName(file.name)}`
   const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
     contentType: file.type || undefined,
     upsert: false,
