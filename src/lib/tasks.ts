@@ -49,6 +49,19 @@ export function isUrgentTask(t: Task): boolean {
   return d !== null && d <= 3
 }
 
+/** Open tasks that are time-urgent: overdue or due within `days` (default 2). */
+export function dueSoonTasks(tasks: Task[], days = 2): Task[] {
+  return openTasks(tasks).filter((t) => {
+    const d = daysUntilDue(t)
+    return d !== null && d <= days
+  })
+}
+
+/** Open tasks where someone is blocked waiting on you. */
+export function waitingOnTasks(tasks: Task[]): Task[] {
+  return openTasks(tasks).filter((t) => Boolean(t.waitingOn && t.waitingOn.trim()))
+}
+
 /** Group open tasks by hat id, preserving the order they were added. */
 export function tasksByHat(tasks: Task[]): Map<string, Task[]> {
   const map = new Map<string, Task[]>()
