@@ -1531,3 +1531,115 @@ button.danger:hover {
 .signout {
   color: var(--muted);
 }
+
+/* ============================================================
+   MOBILE / PHONE (≤640px) — make the whole thing thumb-friendly
+   ============================================================ */
+@media (max-width: 640px) {
+  .app {
+    padding: 12px 14px;
+  }
+
+  /* Header: title on top, the full nav wraps below so NOTHING gets cut off. */
+  .app-header {
+    gap: 10px;
+  }
+  .app-header h1 {
+    font-size: 19px;
+  }
+  .app-header .tagline {
+    font-size: 12px;
+  }
+  .tabs {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .tabs button {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+
+  /* Today hero: stack the greeting over an even 4-up stat strip. */
+  .today-hero {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 18px;
+    gap: 14px;
+  }
+  .today-greet h2 {
+    font-size: 20px;
+  }
+  .today-greet p {
+    font-size: 13px;
+  }
+  .today-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .stat {
+    min-width: 0;
+    padding: 8px 4px;
+  }
+  .stat-n {
+    font-size: 20px;
+  }
+  .stat-l {
+    font-size: 9.5px;
+  }
+
+  /* Detail + checklist + materials rows: stack instead of cramming columns. */
+  .detail {
+    padding: 16px;
+  }
+  .step {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .step-note {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .order {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Task capture: fields go full-width down the screen, not squeezed side-by-side. */
+  .ta-fields {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .ta-fields label {
+    width: 100%;
+  }
+  .ta-fields select,
+  .ta-fields input {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .ta-fields .primary {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  /* Inputs at 16px so iOS doesn't auto-zoom when you tap them. */
+  .ta-text,
+  .ta-fields input,
+  .ta-fields select,
+  .tp-text,
+  .search,
+  .login-card input {
+    font-size: 16px;
+  }
+
+  /* A little more height on tappable action rows. */
+  .action-row {
+    padding: 12px;
+  }
+}
