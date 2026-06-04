@@ -16,7 +16,7 @@
  *   useEffect — "after the screen updates, run this side-effect"
  *                (here: save to localStorage)
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type {
   OrderItem,
   Project,
@@ -29,6 +29,7 @@ import type {
 } from '../types'
 import { buildInitialState, emptyProjectState, inferPermitSteps } from '../data/seed'
 import { PROJECTS } from '../data/projects'
+import { supabase } from '../lib/supabase'
 
 /** The key our data is filed under in the browser's localStorage. */
 const STORAGE_KEY = 'isc_workbench_v1'
@@ -123,10 +124,72 @@ export function useProjects() {
   // means "only run this on the very first render").
   const [state, setState] = useState<WorkbenchState>(load)
 
-  // After every change, write the whole state back to localStorage.
+  // --- Cloud sync (Supabase) ---------------------------------------------
+  // `state` still initializes instantly from localStorage (load()), so the UI
+  // never waits on the network. These two effects layer the cloud on top.
+  const cloudReady = useRef(false) // have we reconciled with the cloud yet?
+  const skipNextSave = useRef(false) // don't echo a fresh cloud-load back up
+
+  // 1) On first mount, reconcile with the cloud. If the cloud has data, it
+  //    WINS (it's the shared source of truth across your devices). If it's
+  //    empty, seed it from this browser. No cloud (no keys / offline) → we
+  //    just keep running on localStorage.
+  useEffect(() => {
+    if (!supabase) {
+      cloudReady.current = true
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const { data, error } = await supabase
+          .from('workbench')
+          .select('data')
+          .eq('id', 'main')
+          .maybeSingle()
+        if (cancelled) return
+        if (error) throw error
+        if (data?.data) {
+          skipNextSave.current = true // we're loading FROM the cloud — don't write it back
+          setState(migrate(data.data as Partial<WorkbenchState>))
+        } else {
+          // Cloud is empty → seed it with whatever this browser currently has.
+          await supabase
+            .from('workbench')
+            .upsert({ id: 'main', data: state, updated_at: new Date().toISOString() })
+        }
+      } catch (e) {
+        console.warn('[workbench] cloud load failed — running on local data', e)
+      } finally {
+        if (!cancelled) cloudReady.current = true
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, []) // once, on mount
+
+  // 2) On every change: always cache to localStorage (instant + offline safety
+  //    net), and once we've reconciled, push to the cloud — debounced so a
+  //    flurry of edits collapses into a single write.
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-  }, [state]) // "[state]" = re-run only when `state` changes
+    if (!supabase || !cloudReady.current) return
+    if (skipNextSave.current) {
+      skipNextSave.current = false
+      return
+    }
+    const sb = supabase // capture the non-null client for the deferred callback
+    const timer = setTimeout(() => {
+      sb
+        .from('workbench')
+        .upsert({ id: 'main', data: state, updated_at: new Date().toISOString() })
+        .then(({ error }) => {
+          if (error) console.warn('[workbench] cloud save failed', error)
+        })
+    }, 600)
+    return () => clearTimeout(timer)
+  }, [state])
 
   /** Get one project's progress (never undefined — falls back to blank). */
   function getProjectState(id: number): ProjectState {
