@@ -10,6 +10,8 @@ import { useState, type CSSProperties } from 'react'
 import './App.css'
 import type { Stream } from './types'
 import { useProjects } from './hooks/useProjects'
+import { streamActionCounts } from './lib/actionCenter'
+import { daysUntilDue, dueSoonTasks, waitingOnTasks } from './lib/tasks'
 import { useTheme } from './hooks/useTheme'
 import { useDensity } from './hooks/useDensity'
 import { useResizableSidebar } from './hooks/useResizableSidebar'
@@ -85,6 +87,21 @@ function App() {
   // Find the selected project object (or undefined if nothing selected).
   const selected = projects.find((p) => p.id === selectedId)
 
+  // Per-tab badges (M3): how many projects need me in each stream, plus a count
+  // of due-soon / waiting tasks for the ✓ Tasks tab. `fire` → red badge.
+  const streamBadges = streamActionCounts(projects, getProjectState)
+  const taskFires = dueSoonTasks(state.tasks)
+  const taskWaiting = waitingOnTasks(state.tasks)
+  const taskBadge = {
+    count: new Set([...taskFires, ...taskWaiting].map((t) => t.id)).size,
+    fire: taskFires.some((t) => (daysUntilDue(t) ?? 1) < 0),
+  }
+  const tabBadge = (key: View): { count: number; fire: boolean } | null => {
+    if (key === 'today') return null
+    if (key === 'tasks') return taskBadge
+    return streamBadges[key]
+  }
+
   return (
     <div className="app">
       <header className="app-header">
@@ -93,20 +110,26 @@ function App() {
           <p className="tagline">Electric · Water · Septic — Marion County, FL</p>
         </div>
         <nav className="tabs">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              className={tab === t.key ? 'act' : ''}
-              // Switching tabs also clears the selection, so each tab
-              // greets you with its own dashboard (same as the old tool).
-              onClick={() => {
-                setTab(t.key)
-                setSelectedId(null)
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
+          {TABS.map((t) => {
+            const badge = tabBadge(t.key)
+            return (
+              <button
+                key={t.key}
+                className={tab === t.key ? 'act' : ''}
+                // Switching tabs also clears the selection, so each tab
+                // greets you with its own dashboard (same as the old tool).
+                onClick={() => {
+                  setTab(t.key)
+                  setSelectedId(null)
+                }}
+              >
+                {t.label}
+                {badge && badge.count > 0 && (
+                  <span className={'tab-badge' + (badge.fire ? ' fire' : '')}>{badge.count}</span>
+                )}
+              </button>
+            )
+          })}
           {/* density toggle — ⊟ collapses to compact, ⊞ expands back */}
           <button onClick={toggleDensity} title="Toggle compact / comfortable spacing">
             {density === 'comfortable' ? '⊟' : '⊞'}
@@ -192,6 +215,7 @@ function App() {
             addOrder={addOrder}
             updateOrder={updateOrder}
             removeOrder={removeOrder}
+            onSwitchStream={(s) => setTab(s)}
             onBack={() => setSelectedId(null)}
             onDelete={() => {
               deleteProject(selected.id)

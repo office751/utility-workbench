@@ -181,3 +181,47 @@ export function buildActionCenter(
     },
   }
 }
+
+/** Per-stream "how many projects need me here" + whether any are on fire. */
+export interface StreamCount {
+  count: number // distinct projects with an actionable item in this stream
+  fire: boolean // any deadline/stale fire in this stream (→ red badge)
+}
+
+/**
+ * Roll the command center up into a count per stream, for the tab badges.
+ * `count` = distinct projects needing action (a fire OR an our-court move);
+ * `fire` = at least one true fire (expiry / shut-off / stale) in that stream.
+ */
+export function streamActionCounts(
+  projects: Project[],
+  getProjectState: (id: number) => ProjectState,
+): Record<Stream, StreamCount> {
+  const ac = buildActionCenter(projects, getProjectState)
+  const proj: Record<Stream, Set<number>> = {
+    electric: new Set(),
+    water: new Set(),
+    septic: new Set(),
+    permit: new Set(),
+    materials: new Set(),
+  }
+  const fire: Record<Stream, boolean> = {
+    electric: false,
+    water: false,
+    septic: false,
+    permit: false,
+    materials: false,
+  }
+  for (const it of ac.attention) {
+    proj[it.stream].add(it.projectId)
+    fire[it.stream] = true
+  }
+  for (const it of ac.moves) proj[it.stream].add(it.projectId)
+  return {
+    electric: { count: proj.electric.size, fire: fire.electric },
+    water: { count: proj.water.size, fire: fire.water },
+    septic: { count: proj.septic.size, fire: fire.septic },
+    permit: { count: proj.permit.size, fire: fire.permit },
+    materials: { count: proj.materials.size, fire: fire.materials },
+  }
+}

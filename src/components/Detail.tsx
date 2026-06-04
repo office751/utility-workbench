@@ -16,6 +16,10 @@ import type { OrderItem, OrderStatus, Project, ProjectState, Stream } from '../t
 import { ELECTRIC_STEPS, PERMIT_STEPS, septicStepsFor, waterStepsFor } from '../data/lifecycles'
 import {
   engineerOf,
+  isElectricDone,
+  isPermitDone,
+  isSepticDone,
+  isWaterDone,
   needsVerify,
   nextElectricAction,
   nextPermitAction,
@@ -34,6 +38,7 @@ import {
 } from '../lib/nextAction'
 import { shutoffFor } from '../lib/shutoff'
 import { permitExpiresOf, permitExpiryFor } from '../lib/permitExpiry'
+import { isMaterialsDone, ordersSummary } from '../lib/orders'
 import { GEORGES } from '../data/contacts'
 import Checklist from './Checklist'
 import ContactLinks from './ContactLinks'
@@ -61,6 +66,8 @@ interface Props extends Updaters {
   onBack: () => void
   /** Permanently remove this project (App deletes + returns to dashboard). */
   onDelete: () => void
+  /** Switch which stream's detail shows, keeping THIS project selected. */
+  onSwitchStream: (stream: Stream) => void
 }
 
 const NOTE_LABEL: Record<Stream, string> = {
@@ -80,8 +87,26 @@ const WATER_LABEL: Record<string, string> = {
   '': 'source?',
 }
 
+/** The five streams, for the per-project overview strip at the top of Detail. */
+const STREAM_TABS: { key: Stream; icon: string; name: string }[] = [
+  { key: 'electric', icon: '⚡', name: 'Electric' },
+  { key: 'water', icon: '💧', name: 'Water' },
+  { key: 'septic', icon: '🚽', name: 'Septic' },
+  { key: 'permit', icon: '📋', name: 'Permit' },
+  { key: 'materials', icon: '🛒', name: 'Materials' },
+]
+
+/** One project's status in a single stream: its next action + whether it's done. */
+function streamStatus(key: Stream, p: Project, ps: ProjectState): { label: string; done: boolean } {
+  if (key === 'electric') return { label: nextElectricAction(p, ps).label, done: isElectricDone(ps) }
+  if (key === 'water') return { label: nextWaterAction(p, ps).label, done: isWaterDone(p, ps) }
+  if (key === 'septic') return { label: nextSepticAction(ps).label, done: isSepticDone(ps) }
+  if (key === 'permit') return { label: nextPermitAction(ps).label, done: isPermitDone(ps) }
+  return { label: ordersSummary(ps), done: isMaterialsDone(ps) }
+}
+
 function Detail(props: Props) {
-  const { stream, project: p, ps, setField, setNote, onBack, onDelete } = props
+  const { stream, project: p, ps, setField, setNote, onBack, onDelete, onSwitchStream } = props
 
   // Is the ⚙️ settings panel open? Local UI state — nobody else needs it.
   const [showSettings, setShowSettings] = useState(false)
@@ -107,6 +132,27 @@ function Detail(props: Props) {
         {p.permit && <> · permit {p.permit}</>}
         {p.workOrder && <> · WO# {p.workOrder}</>}
       </p>
+
+      {/* Project overview: all five streams at a glance — click one to jump to it. */}
+      <div className="stream-strip">
+        {STREAM_TABS.map(({ key, icon, name }) => {
+          const st = streamStatus(key, p, ps)
+          return (
+            <button
+              key={key}
+              className={'ss-chip' + (key === stream ? ' active' : '') + (st.done ? ' done' : '')}
+              onClick={() => onSwitchStream(key)}
+              title={`${name}: ${st.label}`}
+            >
+              <span className="ss-name">
+                {icon} {name}
+                {st.done ? ' ✓' : ''}
+              </span>
+              <span className="ss-label">{st.label}</span>
+            </button>
+          )
+        })}
+      </div>
 
       {/* The gear panel: all editable config for the whole project, any tab. */}
       {showSettings && (
