@@ -1421,3 +1421,45 @@ button.danger:hover {
   text-overflow: ellipsis;
   max-width: 100%;
 }
+
+/* ---------- stream lens row (inside the Projects tab) ---------- */
+.lens-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.lens-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+}
+.lens-chip:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.lens-chip.act {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.lens-chip.act .tab-badge {
+  background: rgba(255, 255, 255, 0.28);
+  color: #fff;
+}
+.lens-chip.act .tab-badge.fire {
+  background: #fff;
+  color: #c0492f;
+}
+[data-density='compact'] .lens-chip {
+  padding: 4px 10px;
+  font-size: 12px;
+}
