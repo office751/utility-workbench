@@ -89,13 +89,20 @@ export interface StepState {
 }
 
 /**
- * One attached document. NOTE: for now we store only the file's NAME (not its
- * contents) — a placeholder until file storage is restructured. The upload UI
- * is real; the bytes aren't kept yet.
+ * One attached file. The bytes live in Supabase Storage (the 'project-files'
+ * bucket — see lib/files.ts); this is just the pointer we keep in saved state.
  */
 export interface ProjectDoc {
   name: string
   addedAt: string // display date it was added to the list
+  /**
+   * Where the real file lives in the storage bucket. ABSENT on legacy entries
+   * that were saved name-only (before real uploads existed) — those still show
+   * in the list but can't be opened or shared.
+   */
+  path?: string
+  size?: number // bytes — powers the "1.2 MB" hint
+  type?: string // MIME type (e.g. "application/pdf"), when the browser knows it
 }
 
 /**
@@ -119,7 +126,14 @@ export interface ProjectState {
   permitExpiresDate?: string // YYYY-MM-DD the permit expires (drives the alert)
   sharepointUrl?: string // link to this project's SharePoint folder
   permitUrl?: string // link to the county permit record/page
-  permitDocs?: ProjectDoc[] // attached document names (placeholder storage)
+  permitDocs?: ProjectDoc[] // LEGACY: old name-only list, migrated into `docs`
+
+  /**
+   * Files attached to this project — usable from ANY stream, not just permit.
+   * The bytes live in Supabase Storage; this holds only the pointers. Each one
+   * can be shared by text/email via a signed link (see lib/files.ts).
+   */
+  docs?: ProjectDoc[]
 
   /** Material orders for this project (trusses, slab, cabinets, …). */
   orders?: OrderItem[]

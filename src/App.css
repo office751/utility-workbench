@@ -266,7 +266,7 @@ textarea {
   width: 100%;
 }
 
-/* ---------- permit documents box ---------- */
+/* ---------- project files box (upload + share) ---------- */
 .docs {
   margin: 4px 0 18px;
 }
@@ -297,6 +297,20 @@ textarea {
   border-color: var(--accent);
   background: var(--bg);
 }
+.dropzone.busy {
+  opacity: 0.7;
+  cursor: progress;
+  border-style: solid;
+}
+.docs-error {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #c0492f;
+  background: #c0492f12;
+  border: 1px solid #c0492f33;
+  border-radius: 8px;
+  padding: 7px 9px;
+}
 .doc-list {
   list-style: none;
   margin: 8px 0 0;
@@ -304,32 +318,74 @@ textarea {
 }
 .doc-list li {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 8px;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
   border-bottom: 1px solid var(--border);
   font-size: 13px;
 }
+.doc-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .doc-name {
   flex: 1;
+  word-break: break-word;
 }
-.doc-date {
+.doc-meta {
   font-size: 11px;
+  white-space: nowrap;
 }
-.doc-x {
+.doc-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.doc-legacy {
+  flex: 1;
+  font-size: 11px;
+  font-style: italic;
+}
+/* shared pill-button look for Share / Open / Copy / Email / Text / Remove */
+.doc-btn {
   font: inherit;
   font-size: 12px;
   line-height: 1;
-  padding: 2px 6px;
+  padding: 5px 9px;
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: 6px;
   background: var(--panel);
-  color: var(--muted);
+  color: var(--text);
   cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
 }
-.doc-x:hover {
+.doc-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.doc-btn.x {
+  color: var(--muted);
+  margin-left: auto;
+}
+.doc-btn.x:hover {
   color: #c0492f;
   border-color: #c0492f55;
+}
+.doc-share-menu {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
 }
 
 /* ---------- the checklist ---------- */

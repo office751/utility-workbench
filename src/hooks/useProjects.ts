@@ -20,7 +20,6 @@ import { useEffect, useRef, useState } from 'react'
 import type {
   OrderItem,
   Project,
-  ProjectDoc,
   ProjectState,
   StepState,
   Stream,
@@ -30,6 +29,7 @@ import type {
 import { buildInitialState, emptyProjectState, inferPermitSteps } from '../data/seed'
 import { PROJECTS } from '../data/projects'
 import { supabase } from '../lib/supabase'
+import { deleteProjectFile, uploadProjectFile } from '../lib/files'
 
 /** The key our data is filed under in the browser's localStorage. */
 const STORAGE_KEY = 'isc_workbench_v1'
@@ -74,7 +74,14 @@ function normalize(ps: ProjectState): ProjectState {
   }
   // Older saves predate material orders — ensure it's an array.
   const orders = Array.isArray(ps.orders) ? ps.orders : []
-  return { ...ps, steps, notes, orders }
+  // Files: a project-level list now. Older saves kept names under `permitDocs`
+  // — fold those in once (they're legacy name-only entries with no real file).
+  const docs = Array.isArray(ps.docs)
+    ? ps.docs
+    : Array.isArray(ps.permitDocs)
+      ? ps.permitDocs
+      : []
+  return { ...ps, steps, notes, orders, docs }
 }
 
 /**
@@ -316,18 +323,59 @@ export function useProjects() {
     })
   }
 
-  /** Add one or more documents (by name) to a project's permit doc list. */
-  function addDocuments(id: number, names: string[]) {
-    const ps = getProjectState(id)
-    const today = new Date().toLocaleDateString()
-    const additions: ProjectDoc[] = names.map((name) => ({ name, addedAt: today }))
-    updateProject(id, { permitDocs: [...(ps.permitDocs ?? []), ...additions] })
+  /**
+   * Upload one or more REAL files to a project's locker (Supabase Storage),
+   * then save their pointers in state. Uploads run one at a time; each pointer
+   * is appended as it lands — and we append INSIDE setState(prev => …) so a
+   * burst of files can't clobber each other (same lesson as addOrder). Returns
+   * how many succeeded plus the names of any that failed, so the UI can report.
+   */
+  async function addProjectFiles(
+    id: number,
+    files: File[],
+  ): Promise<{ ok: number; failed: string[] }> {
+    const failed: string[] = []
+    let ok = 0
+    for (const file of files) {
+      try {
+        const doc = await uploadProjectFile(id, file)
+        setState((prev) => {
+          const cur = prev.projects[id] ?? emptyProjectState()
+          return {
+            ...prev,
+            projects: { ...prev.projects, [id]: { ...cur, docs: [...(cur.docs ?? []), doc] } },
+          }
+        })
+        ok++
+      } catch (e) {
+        console.warn('[files] upload failed:', file.name, e)
+        failed.push(file.name)
+      }
+    }
+    return { ok, failed }
   }
 
-  /** Remove the document at the given index from a project's doc list. */
-  function removeDocument(id: number, index: number) {
-    const ps = getProjectState(id)
-    updateProject(id, { permitDocs: (ps.permitDocs ?? []).filter((_, i) => i !== index) })
+  /** Remove a file: drop its pointer from state, then delete the bytes. */
+  async function removeProjectFile(id: number, index: number) {
+    const doc = (state.projects[id]?.docs ?? [])[index]
+    setState((prev) => {
+      const cur = prev.projects[id] ?? emptyProjectState()
+      return {
+        ...prev,
+        projects: {
+          ...prev.projects,
+          [id]: { ...cur, docs: (cur.docs ?? []).filter((_, i) => i !== index) },
+        },
+      }
+    })
+    // Legacy name-only entries have no `path` — nothing to delete in storage.
+    if (doc?.path) {
+      try {
+        await deleteProjectFile(doc.path)
+      } catch (e) {
+        console.warn('[files] storage delete failed (pointer already removed):', e)
+      }
+    }
   }
 
   /**
@@ -408,8 +456,8 @@ export function useProjects() {
     setField,
     addProject,
     deleteProject,
-    addDocuments,
-    removeDocument,
+    addProjectFiles,
+    removeProjectFile,
     addOrder,
     updateOrder,
     removeOrder,

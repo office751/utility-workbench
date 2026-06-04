@@ -62,8 +62,8 @@ function App() {
     setField,
     addProject,
     deleteProject,
-    addDocuments,
-    removeDocument,
+    addProjectFiles,
+    removeProjectFile,
     addOrder,
     updateOrder,
     removeOrder,
@@ -246,8 +246,8 @@ function App() {
                 setStepNote={setStepNote}
                 setNote={setNote}
                 setField={setField}
-                addDocuments={addDocuments}
-                removeDocument={removeDocument}
+                addProjectFiles={addProjectFiles}
+                removeProjectFile={removeProjectFile}
                 addOrder={addOrder}
                 updateOrder={updateOrder}
                 removeOrder={removeOrder}

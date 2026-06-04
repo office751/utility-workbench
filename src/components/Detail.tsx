@@ -52,8 +52,8 @@ interface Updaters {
   setStepNote: (id: number, stream: Stream, stepId: string, note: string) => void
   setNote: (id: number, stream: Stream, text: string) => void
   setField: <K extends keyof ProjectState>(id: number, field: K, value: ProjectState[K]) => void
-  addDocuments: (id: number, names: string[]) => void
-  removeDocument: (id: number, index: number) => void
+  addProjectFiles: (id: number, files: File[]) => Promise<{ ok: number; failed: string[] }>
+  removeProjectFile: (id: number, index: number) => void
   addOrder: (id: number, order: { category: string; status: OrderStatus }) => void
   updateOrder: (id: number, orderId: string, patch: Partial<OrderItem>) => void
   removeOrder: (id: number, orderId: string) => void
@@ -191,6 +191,14 @@ function Detail(props: Props) {
           placeholder="Anything worth remembering…"
         />
       </label>
+
+      {/* Files for this whole project (any stream) — upload + share by text/email. */}
+      <DocumentsBox
+        projectId={p.id}
+        docs={ps.docs ?? []}
+        onAddFiles={(files) => props.addProjectFiles(p.id, files)}
+        onRemove={(i) => props.removeProjectFile(p.id, i)}
+      />
 
       {/* Danger zone — confirm() forces a deliberate yes before deleting. */}
       <button
@@ -361,7 +369,7 @@ function SepticBody({ project: p, ps, toggleStep, setStepNote }: Props) {
 
 /* ===================== PERMITTING ===================== */
 
-function PermitBody({ project: p, ps, toggleStep, setStepNote, addDocuments, removeDocument }: Props) {
+function PermitBody({ project: p, ps, toggleStep, setStepNote }: Props) {
   const next = nextPermitAction(ps)
   const folder = sharepointFolderOf(p, ps) // hidden link — opened via the button below
   const permitUrl = permitPortalOf(p, ps)
@@ -419,12 +427,6 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, addDocuments, rem
         ps={ps}
         toggleStep={toggleStep}
         setStepNote={setStepNote}
-      />
-
-      <DocumentsBox
-        docs={ps.permitDocs ?? []}
-        onAdd={(names) => addDocuments(p.id, names)}
-        onRemove={(i) => removeDocument(p.id, i)}
       />
     </>
   )
