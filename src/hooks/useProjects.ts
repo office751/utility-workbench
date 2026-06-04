@@ -24,6 +24,7 @@ import type {
   ProjectState,
   StepState,
   Stream,
+  Task,
   WorkbenchState,
 } from '../types'
 import { buildInitialState, emptyProjectState, inferPermitSteps } from '../data/seed'
@@ -41,11 +42,33 @@ const STREAMS: Stream[] = ['electric', 'water', 'septic', 'permit', 'materials']
  * `permit` — without this, reading ps.steps.permit would crash. This is the
  * heart of a migration: gently upgrade old data to today's shape.
  */
+/**
+ * Best-effort upgrade for older saves: give already-completed steps a machine
+ * timestamp (`doneAt`) so the stale-status math has something to measure. We
+ * derive it from the friendly `date` string the step already has — BUT only
+ * when that string is a real date. Seeded / county-inferred steps use sentinel
+ * markers like "(county)" or "(from list)" that don't parse to a date; those
+ * keep `doneAt` undefined, because we genuinely don't know when they happened.
+ */
+function backfillDoneAt(bucket: Record<string, StepState>): Record<string, StepState> {
+  const out: Record<string, StepState> = {}
+  for (const [stepId, st] of Object.entries(bucket)) {
+    if (st.done && !st.doneAt && st.date) {
+      const ms = Date.parse(st.date) // "6/3/2026" → a number; "(county)" → NaN
+      out[stepId] = Number.isNaN(ms) ? st : { ...st, doneAt: new Date(ms).toISOString() }
+    } else {
+      out[stepId] = st // already has doneAt, not done, or no date to derive from
+    }
+  }
+  return out
+}
+
 function normalize(ps: ProjectState): ProjectState {
   const steps = { ...ps.steps } as ProjectState['steps']
   const notes = { ...ps.notes } as ProjectState['notes']
   for (const s of STREAMS) {
-    if (!steps[s]) steps[s] = {}
+    // Ensure every stream has a bucket, AND backfill doneAt on old completed steps.
+    steps[s] = backfillDoneAt(steps[s] ?? {})
     if (notes[s] == null) notes[s] = ''
   }
   // Older saves predate material orders — ensure it's an array.
@@ -80,7 +103,8 @@ function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
     if (!manual) norm.steps.permit = inferPermitSteps(permitById.get(Number(id)) ?? '')
     projects[Number(id)] = norm
   }
-  return { roster, projects }
+  // Tasks arrived after the first releases — older saves won't have them.
+  return { roster, projects, tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [] }
 }
 
 /** Read saved state, or build the seeded starting state on first ever run. */
@@ -137,8 +161,12 @@ export function useProjects() {
           [stepId]: {
             ...existing,
             done,
-            // Stamp the date the first time it's checked off.
+            // Stamp BOTH date fields the first time it's checked off, and keep
+            // them if it's later unchecked (same behavior as before):
+            //   date   → friendly string shown next to the step in the UI
+            //   doneAt → exact machine timestamp the stale-status math reads
             date: done ? (existing.date ?? new Date().toLocaleDateString()) : existing.date,
+            doneAt: done ? (existing.doneAt ?? new Date().toISOString()) : existing.doneAt,
           },
         },
       },
@@ -190,7 +218,7 @@ export function useProjects() {
     setState((prev) => {
       const projects = { ...prev.projects }
       delete projects[id]
-      return { roster: prev.roster.filter((p) => p.id !== id), projects }
+      return { ...prev, roster: prev.roster.filter((p) => p.id !== id), projects }
     })
   }
 
@@ -246,6 +274,31 @@ export function useProjects() {
     updateProject(id, { orders: (ps.orders ?? []).filter((o) => o.id !== orderId) })
   }
 
+  /* ----------------------------- TASKS ------------------------------ */
+  /* Free-form cross-role tasks (IT / office / supplies / …) live at the TOP
+     level of state — they aren't tied to any one project. Each updater reads
+     `prev` inside setState so rapid successive adds can't clobber each other
+     (same lesson as addOrder above). */
+
+  /** Capture a new task (starts not-done). */
+  function addTask(t: Omit<Task, 'id' | 'createdAt' | 'done' | 'doneAt'>) {
+    const newTask: Task = { ...t, id: crypto.randomUUID(), createdAt: new Date().toISOString() }
+    setState((prev) => ({ ...prev, tasks: [...(prev.tasks ?? []), newTask] }))
+  }
+
+  /** Patch one task — mark done, toggle the ⭐ focus, edit any field. */
+  function updateTask(id: string, patch: Partial<Task>) {
+    setState((prev) => ({
+      ...prev,
+      tasks: (prev.tasks ?? []).map((t) => (t.id === id ? { ...t, ...patch } : t)),
+    }))
+  }
+
+  /** Delete a task for good. */
+  function removeTask(id: string) {
+    setState((prev) => ({ ...prev, tasks: (prev.tasks ?? []).filter((t) => t.id !== id) }))
+  }
+
   /** Replace EVERYTHING with an imported state (the Import button). */
   function replaceState(next: WorkbenchState) {
     setState(migrate(next)) // migrate: older export files have no roster/permit
@@ -266,6 +319,9 @@ export function useProjects() {
     addOrder,
     updateOrder,
     removeOrder,
+    addTask,
+    updateTask,
+    removeTask,
     replaceState,
   }
 }

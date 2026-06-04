@@ -9,7 +9,9 @@
  *   3. Decodes the newer "attributedBody" messages (whose text isn't in the
  *      plain text column).
  *   4. Scans each for a PROJECT (address/house number) + an ITEM keyword.
- *   5. Prints proposed orders + ready-to-paste Quick-Add lines for you to confirm.
+ *   5. Prints proposed ORDERS (→ 🛒 Materials tab) AND proposed TASKS — the
+ *      questions/asks where someone needs something from you (→ ✓ Tasks tab),
+ *      each with its own ready-to-paste lines.
  *
  * Usage:
  *   node scripts/read-josh-orders.mjs                # last 7 days
@@ -153,28 +155,46 @@ const ORDER_SIGNAL = /\border\b|\bneeds?\b|no .{0,25}on site|still no|never orde
 const NOT_ORDER = /\?|did (you|we) order|delivery date|update on|already ordered|went ahead and ordered|being delivered|delivered on|confirmation|\bcorrect\b|do we have|did we (get|receive)|what.?s the delivery|any update/
 // Tapback reactions ("Loved …", "Liked …") aren't real messages.
 const REACTION = /^(Loved|Liked|Emphasized|Laughed at|Questioned|Disliked)\s[“"]/
+// A message that's a request/ask aimed at you → propose it as a TASK.
+const TASK_SIGNAL =
+  /\?|can you|could you|\bplease\b|need (you|to)|call me|\bemail\b|send me|let me know|any update|update on|confirm|did (we|you)|where('?s| is| are)?|when (will|is)/i
+// Words that mean "do this today".
+const URGENT_SIGNAL = /asap|right away|immediately|urgent|\btoday\b|by eod|end of day/i
 
 const clearMap = new Map() // projectId|category -> entry (dedup, latest wins)
-const review = []
+const tasks = [] // request/question messages → proposed Tasks
 for (const r of rows) {
   const text = (r.text && r.text.trim()) || decodeAttributedBody(r.abhex)
   if (!text || REACTION.test(text)) continue
   const lc = text.toLowerCase()
   const cats = matchCategories(lc)
-  if (cats.length === 0) continue // no item mentioned → not an order
   const matches = matchProjects(text)
   const when = new Date((Number(r.d) / 1e9 + 978307200) * 1000).toLocaleDateString()
   const who = SENDERS[r.sender] || r.sender
-  const quote = text.replace(/\s+/g, ' ').slice(0, 90)
+  const full = text.replace(/\s+/g, ' ').trim()
+  const quote = full.slice(0, 90)
   const isOrder = ORDER_SIGNAL.test(lc) && !NOT_ORDER.test(lc)
 
-  // "Clear" = a real order request, for exactly one project. Everything else
-  // (questions, status updates, multi-project, no match) goes to CONFIRM.
-  if (matches.length === 1 && isOrder) {
+  // 1) A clear material order for exactly one project → Materials Quick-Add.
+  if (cats.length && matches.length === 1 && isOrder) {
     const p = matches[0].p
     for (const c of cats) clearMap.set(`${p.id}|${c}`, { p, c, when, who, quote })
-  } else {
-    review.push({ matches, cats, when, who, quote, why: !isOrder ? 'question/status' : matches.length === 0 ? 'no project' : 'multiple projects' })
+    continue
+  }
+
+  // 2) Anything else that's a request/ask, or an item-related question/status,
+  //    is "someone needs something from you" → propose it as a Task (you
+  //    confirm). The sender becomes "waiting on you"; ASAP/today → due today.
+  const isRequest = TASK_SIGNAL.test(lc)
+  if (cats.length || isRequest) {
+    tasks.push({
+      full,
+      quote,
+      who,
+      when,
+      due: URGENT_SIGNAL.test(lc) ? 'today' : '',
+      hint: matches[0]?.p?.address || '',
+    })
   }
 }
 const clear = [...clearMap.values()]
@@ -194,18 +214,26 @@ if (clear.length) {
   }
 }
 
-if (review.length) {
-  console.log('\n❓ CONFIRM (question/status, multiple projects, or no project match)')
-  for (const e of review) {
-    const where = e.matches.length ? e.matches.map((m) => m.p.address).join(' / ') : '⚠ no project matched'
-    console.log(`   • [${where}] → ${e.cats.join(', ')}  (${e.why})`)
-    console.log(`       ⤷ "${e.quote}" — ${e.who}, ${e.when}`)
+if (pasteLines.size) {
+  console.log('\n📥 Materials Quick-Add — paste into the 🛒 Materials tab:')
+  for (const l of pasteLines) console.log(`   ${l}`)
+}
+
+if (tasks.length) {
+  console.log('\n🗂️  PROPOSED TASKS (someone needs something from you)')
+  for (const t of tasks) {
+    const tags = [`⏳ ${t.who}`, t.due ? 'due today' : '', t.hint].filter(Boolean).join(' · ')
+    console.log(`   • "${t.quote}"  — ${tags}`)
+  }
+  console.log('\n📥 Tasks — paste into the ✓ Tasks tab (the “Paste from a text scan” box):')
+  for (const t of tasks) {
+    const safe = t.full.replace(/\s*\|\s*/g, ' / ') // protect our " | " delimiter
+    const segs = [safe, `waiting:${t.who}`]
+    if (t.due) segs.push('due:today')
+    segs.push('hat:office')
+    console.log(`   ${segs.join(' | ')}`)
   }
 }
 
-if (pasteLines.size) {
-  console.log('\n📥 Quick-Add lines for the clear ones (paste into the Materials tab):')
-  for (const l of pasteLines) console.log(`   ${l}`)
-}
-if (!clear.length && !review.length) console.log('No order-related messages found in that window.')
+if (!clear.length && !tasks.length) console.log('No order- or task-related messages found in that window.')
 console.log('')

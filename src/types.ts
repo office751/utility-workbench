@@ -80,7 +80,11 @@ export interface Project {
 /** One checklist step's saved state: checked or not, when, optional note. */
 export interface StepState {
   done: boolean
-  date?: string // when it was checked off (display string)
+  date?: string // when it was checked off — a friendly DISPLAY string ("6/3/2026")
+  // when it was checked off — a machine ISO timestamp ("2026-06-03T14:05:00.000Z").
+  // Unlike `date`, this is exact and sortable, so the stale-status math can ask
+  // "how many days has this project been parked at its current stage?"
+  doneAt?: string
   note?: string
 }
 
@@ -127,6 +131,25 @@ export interface ProjectState {
   notes: Record<Stream, string>
 }
 
+/**
+ * A free-form to-do that ISN'T tied to one project's lifecycle — your IT,
+ * office-manager, supply-ordering, and research work, across any company.
+ * This is what turns the app from a construction tracker into a whole-day
+ * command center.
+ */
+export interface Task {
+  id: string
+  text: string // what needs doing
+  category: string // a "hat" id from data/hats.ts ('it', 'office', 'supplies'…)
+  company?: string // which company it's for (free text), optional
+  dueDate?: string // YYYY-MM-DD, optional — drives urgency
+  waitingOn?: string // who's blocked waiting on you, optional — also drives urgency
+  focus?: boolean // starred into "Today's Focus" (your daily Top few)
+  done?: boolean
+  doneAt?: string // ISO timestamp when completed
+  createdAt: string // ISO timestamp when captured
+}
+
 /** The whole saved blob. */
 export interface WorkbenchState {
   /**
@@ -138,4 +161,6 @@ export interface WorkbenchState {
   roster: Project[]
   /** Progress per project id (checked steps, notes, overrides). */
   projects: Record<number, ProjectState>
+  /** Free-form cross-role tasks (IT, office, supplies…) — not project-bound. */
+  tasks: Task[]
 }

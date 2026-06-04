@@ -157,5 +157,5 @@ export function buildInitialState(): WorkbenchState {
 
   // The roster starts as a copy of the built-in list; from here on the
   // saved state owns it (so the Add-project form can grow it).
-  return { roster: PROJECTS, projects }
+  return { roster: PROJECTS, projects, tasks: [] }
 }

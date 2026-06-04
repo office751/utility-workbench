@@ -16,12 +16,19 @@ import { useResizableSidebar } from './hooks/useResizableSidebar'
 import ProjectList from './components/ProjectList'
 import Detail from './components/Detail'
 import Dashboard from './components/Dashboard'
+import Today from './components/Today'
+import TasksView from './components/TasksView'
 import ExportImport from './components/ExportImport'
 import AddProject from './components/AddProject'
 import QuickAdd from './components/QuickAdd'
 
+/** A "view" is the Today command center, the Tasks tab, OR a project stream. */
+type View = 'today' | 'tasks' | Stream
+
 // The tabs. Pure config, so adding a tab = adding a line.
-const TABS: { key: Stream; label: string }[] = [
+const TABS: { key: View; label: string }[] = [
+  { key: 'today', label: '🏠 Today' },
+  { key: 'tasks', label: '✓ Tasks' },
   { key: 'electric', label: '⚡ Electric' },
   { key: 'water', label: '💧 Water' },
   { key: 'septic', label: '🚽 Septic' },
@@ -45,6 +52,9 @@ function App() {
     addOrder,
     updateOrder,
     removeOrder,
+    addTask,
+    updateTask,
+    removeTask,
     replaceState,
   } = useProjects()
 
@@ -58,9 +68,16 @@ function App() {
   const { width: sidebarWidth, layoutRef, startDrag } = useResizableSidebar()
 
   // Shared UI state, lifted up to App:
-  const [tab, setTab] = useState<Stream>('electric')
+  // Default view is the Today command center — the "what's the goal today" home.
+  const [tab, setTab] = useState<View>('today')
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [adding, setAdding] = useState(false) // is the Add form open?
+
+  /** Jump from a Today item straight to that project's relevant stream tab. */
+  const openProject = (id: number, stream: Stream) => {
+    setTab(stream)
+    setSelectedId(id)
+  }
 
   // The roster now lives in saved state (so added projects persist).
   const projects = state.roster
@@ -108,12 +125,24 @@ function App() {
         <QuickAdd projects={projects} getProjectState={getProjectState} addOrder={addOrder} />
       )}
 
-      {/* The layout is a 3-column grid: list | drag-handle | detail.
-          We set the FIRST column's width through a CSS variable (--sidebar-w)
-          rather than hard-coding it, so the dragging hook can change it live
-          and the responsive "stack on narrow screens" rule in App.css can
-          still override it. The `as CSSProperties` cast just tells TypeScript
-          we know a custom --variable is allowed here. */}
+      {/* The Today command center is a full-width view; every other tab uses
+          the 3-column grid below. */}
+      {tab === 'today' ? (
+        <Today
+          projects={projects}
+          getProjectState={getProjectState}
+          tasks={state.tasks}
+          onOpen={openProject}
+          onCompleteTask={(id) => updateTask(id, { done: true, doneAt: new Date().toISOString() })}
+          onGoTasks={() => setTab('tasks')}
+        />
+      ) : tab === 'tasks' ? (
+        <TasksView tasks={state.tasks} addTask={addTask} updateTask={updateTask} removeTask={removeTask} />
+      ) : (
+      /* The layout is a 3-column grid: list | drag-handle | detail. We set the
+         FIRST column's width through a CSS variable (--sidebar-w) so the drag
+         hook can change it live; the `as CSSProperties` cast tells TypeScript a
+         custom --variable is allowed here. */
       <div
         className="layout"
         ref={layoutRef}
@@ -179,6 +208,7 @@ function App() {
           />
         )}
       </div>
+      )}
     </div>
   )
 }
