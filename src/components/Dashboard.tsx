@@ -23,10 +23,12 @@ import {
 } from '../lib/nextAction'
 import { shutoffFor } from '../lib/shutoff'
 import { permitExpiryFor } from '../lib/permitExpiry'
+import { ordersOf } from '../lib/orders'
+import type { OrderStatus, Stream } from '../types'
 import { PermitBadge, SepticBadge, UtilityBadge, WaterBadge } from './Badges'
 
 interface Props {
-  stream: 'electric' | 'water' | 'septic' | 'permit'
+  stream: Stream
   projects: Project[] // the live roster from saved state
   getProjectState: (id: number) => ProjectState
   onSelect: (id: number) => void
@@ -76,6 +78,7 @@ function Dashboard({ stream, projects, getProjectState, onSelect }: Props) {
   if (stream === 'electric') return <ElectricDashboard rows={rows} onSelect={onSelect} />
   if (stream === 'water') return <WaterDashboard rows={rows} onSelect={onSelect} />
   if (stream === 'permit') return <PermitDashboard rows={rows} onSelect={onSelect} />
+  if (stream === 'materials') return <MaterialsDashboard rows={rows} onSelect={onSelect} />
   return <SepticDashboard rows={rows} onSelect={onSelect} />
 }
 
@@ -269,6 +272,57 @@ function PermitDashboard({ rows, onSelect }: DashProps) {
       <Bucket title="✏️ Corrections requested" items={corrections.map(tile)} />
       <Bucket title="📋 Approved — awaiting issue / pickup" items={approvedPending.map(tile)} />
       <Bucket title="👥 Handled by owner / GC" items={othersOpen.map(tile)} />
+    </section>
+  )
+}
+
+function MaterialsDashboard({ rows, onSelect }: DashProps) {
+  // Flatten to one entry per ORDER (with its project), so the action list is
+  // "things to order," not "projects." Group by status.
+  type OrderRow = { r: Row; orderId: string; category: string; vendor?: string }
+  const byStatus = (status: OrderStatus): OrderRow[] =>
+    rows.flatMap((r) =>
+      ordersOf(r.ps)
+        .filter((o) => o.status === status)
+        .map((o) => ({ r, orderId: o.id, category: o.category, vendor: o.vendor })),
+    )
+
+  const toOrder = byStatus('toOrder')
+  const ordered = byStatus('ordered')
+  const delivered = byStatus('delivered')
+
+  // A flat clickable row (jumps to the project's Materials detail).
+  const line = (or: OrderRow) => (
+    <div key={or.orderId} className="orderline" onClick={() => onSelect(or.r.p.id)}>
+      <span className="ol-cat">{or.category}</span>
+      <span className="ol-addr">{or.r.p.address}</span>
+      {or.vendor && <span className="muted">{or.vendor}</span>}
+    </div>
+  )
+
+  const section = (title: string, items: OrderRow[]) =>
+    items.length > 0 && (
+      <div className="card">
+        <h3>
+          {title} ({items.length})
+        </h3>
+        <div className="orderlines">{items.map(line)}</div>
+      </div>
+    )
+
+  const nothing = toOrder.length + ordered.length + delivered.length === 0
+
+  return (
+    <section className="detail dashboard">
+      <h2>🛒 Materials dashboard</h2>
+      <p className="meta">
+        Capture orders up top; they land in “To order.” Click any line to open that project.
+      </p>
+
+      {nothing && <p className="muted">No orders yet — use the Quick-Add bar above to capture one.</p>}
+      {section('🟠 To order', toOrder)}
+      {section('📦 Ordered — awaiting delivery', ordered)}
+      {section('🚚 Delivered — to install', delivered)}
     </section>
   )
 }

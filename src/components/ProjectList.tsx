@@ -29,6 +29,7 @@ import {
   waterSourceOf,
 } from '../lib/nextAction'
 import { permitExpiryFor } from '../lib/permitExpiry'
+import { isMaterialsDone, materialsNeedsAction, ordersSummary, toOrderCount } from '../lib/orders'
 import { DoneChip, PermitBadge, SepticBadge, UtilityBadge, WaterBadge } from './Badges'
 import Filters, { NO_FILTERS, countActive, type FilterState } from './Filters'
 
@@ -78,6 +79,15 @@ function rowInfo(stream: Stream, p: Project, ps: ProjectState): RowInfo {
         : nextPermitAction(ps).label,
       done: isPermitDone(ps),
       needsAction: permitNeedsAction(ps),
+    }
+  }
+  if (stream === 'materials') {
+    const toOrder = toOrderCount(ps)
+    return {
+      badge: <span className={'badge' + (toOrder > 0 ? ' warn' : '')}>🛒 {toOrder || '✓'}</span>,
+      next: ordersSummary(ps),
+      done: isMaterialsDone(ps),
+      needsAction: materialsNeedsAction(ps),
     }
   }
   return {

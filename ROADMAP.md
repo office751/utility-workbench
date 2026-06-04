@@ -63,8 +63,8 @@ Permitting, then in-app notifications (needs the timestamp change below).
 - [ ] Keyboard navigation — ↑/↓ moves through the project list
 - [ ] "Reset to built-in roster" escape hatch (since localStorage owns the
       roster now)
-- [ ] Edit a project's fixed facts (address/parcel/permit) from the detail
-      view — today only progress fields are editable in-app
+- [ ] Edit a project's fixed facts (address/parcel/permit) — natural home is
+      now the ⚙️ Project settings panel (add a "Project info" section to it)
 
 ## Done
 
@@ -82,6 +82,30 @@ Permitting, then in-app notifications (needs the timestamp change below).
       permit portal pages via Claude in Chrome into `data/permitDates.ts`;
       auto-fills the Issued/Expires fields, drives the expiry alert, and makes
       the permit checklist reflect the county's authoritative status.
+- [x] ⚙️ Project settings panel *(June 2026)* — a gear in the detail header
+      opens `ProjectSettings.tsx`, a project-wide editor for all four streams'
+      config (utility/service/engineer, water source, septic type, permit
+      responsible/links/dates). Detail bodies are now read-only summaries +
+      action buttons; the raw SharePoint/permit URLs stay hidden behind the gear.
+
+## Materials / project-hub (in progress)
+
+- [x] **Materials/Orders tab + Quick-Add** *(June 2026)* — 5th tab. Per-project
+      orders list (category · status · vendor), a 🛒 dashboard grouped by
+      To order / Ordered / Delivered, and a **Quick-Add bar**: paste Josh's
+      text or type shorthand → it matches the project + item(s) and creates
+      "To order". Config in `data/orders.ts`, parser in `lib/orders.ts`.
+- [ ] **Lead-time "order now" alerts** — per-category lead times + a needed-by
+      date so trusses/cabinets flag before they're late (fold into Action Center).
+- [ ] **Model order templates** — seed a model's standard order list when a
+      project is added (spec homes repeat: A/B/E2/F…).
+- [ ] **Vendor directory + order email shortcuts** — supplier per category with
+      click-to-call / pre-filled order email (reuse the ContactLinks pattern).
+- [ ] **"Claude pulls from Messages"** capture path — on request, read Josh's
+      recent texts on this Mac and create orders to confirm (no typing). Needs
+      Messages access; fully-automatic version needs the backend.
+- [ ] **Action Center** — one "needs attention" home aggregating permit expiry,
+      electric shut-offs, and materials to order / overdue across all projects.
 
 ## Ideas parking lot
 

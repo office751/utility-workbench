@@ -1,22 +1,18 @@
 /**
  * Detail.tsx — the right-hand panel for ONE project, on the current tab.
  *
- * Structure: a thin shared shell (back button, address header, notes box)
- * plus one "body" per stream. Each body is its own small component lower in
- * this file — ElectricBody / WaterBody / SepticBody — and they all lean on
- * the same building blocks: Checklist.tsx and lifecycles.ts.
+ * Two layers:
+ *   1. A thin shared shell: back button, ⚙️ gear, address, notes, delete.
+ *   2. One read-only "body" per stream (Electric/Water/Septic/Permit) showing
+ *      a one-line config SUMMARY, the checklist, action buttons, and alerts.
+ *
+ * All the EDITABLE config (utility, engineer, water source, septic type,
+ * permit responsible/links/dates) now lives behind the ⚙️ gear, in
+ * ProjectSettings.tsx — so the everyday view stays clean and the raw links
+ * stay hidden until you open settings.
  */
-import type {
-  PermitResponsible,
-  Project,
-  ProjectState,
-  SepticSource,
-  SepticSystem,
-  ServiceType,
-  Stream,
-  Utility,
-  WaterSource,
-} from '../types'
+import { useState } from 'react'
+import type { OrderItem, OrderStatus, Project, ProjectState, Stream } from '../types'
 import { ELECTRIC_STEPS, PERMIT_STEPS, septicStepsFor, waterStepsFor } from '../data/lifecycles'
 import {
   engineerOf,
@@ -33,6 +29,7 @@ import {
   septicSystemOf,
   serviceTypeOf,
   sharepointFolderOf,
+  utilityOf,
   waterSourceOf,
 } from '../lib/nextAction'
 import { shutoffFor } from '../lib/shutoff'
@@ -41,6 +38,8 @@ import { GEORGES } from '../data/contacts'
 import Checklist from './Checklist'
 import ContactLinks from './ContactLinks'
 import DocumentsBox from './DocumentsBox'
+import ProjectSettings from './ProjectSettings'
+import MaterialsBody from './MaterialsBody'
 
 /** The updater functions every body needs — grouped to avoid repetition. */
 interface Updaters {
@@ -50,6 +49,9 @@ interface Updaters {
   setField: <K extends keyof ProjectState>(id: number, field: K, value: ProjectState[K]) => void
   addDocuments: (id: number, names: string[]) => void
   removeDocument: (id: number, index: number) => void
+  addOrder: (id: number, order: { category: string; status: OrderStatus }) => void
+  updateOrder: (id: number, orderId: string, patch: Partial<OrderItem>) => void
+  removeOrder: (id: number, orderId: string) => void
 }
 
 interface Props extends Updaters {
@@ -66,22 +68,55 @@ const NOTE_LABEL: Record<Stream, string> = {
   water: 'Water notes',
   septic: 'Septic / sewer notes',
   permit: 'Permit notes',
+  materials: 'Materials / order notes',
+}
+
+// Small label lookups for the read-only summaries.
+const SERVICE_LABEL: Record<string, string> = { OH: 'Overhead', UG: 'Underground', '': 'service?' }
+const WATER_LABEL: Record<string, string> = {
+  Well: 'Well',
+  City: 'City Water',
+  CityWM: 'City Water + main ext.',
+  '': 'source?',
 }
 
 function Detail(props: Props) {
-  const { stream, project: p, ps, setNote, onBack, onDelete } = props
+  const { stream, project: p, ps, setField, setNote, onBack, onDelete } = props
+
+  // Is the ⚙️ settings panel open? Local UI state — nobody else needs it.
+  const [showSettings, setShowSettings] = useState(false)
 
   return (
     <section className="detail">
-      <button className="mini back" onClick={onBack}>
-        ← {stream} dashboard
-      </button>
+      <div className="detail-head">
+        <button className="mini back" onClick={onBack}>
+          ← {stream} dashboard
+        </button>
+        <button
+          className={'mini gear' + (showSettings ? ' on' : '')}
+          onClick={() => setShowSettings((s) => !s)}
+          title="Project settings"
+        >
+          ⚙️ Settings
+        </button>
+      </div>
+
       <h2>{p.address}</h2>
       <p className="meta">
         {p.model} · {p.subdivision} · {p.city}, FL {p.zip} · parcel {p.parcel}
         {p.permit && <> · permit {p.permit}</>}
         {p.workOrder && <> · WO# {p.workOrder}</>}
       </p>
+
+      {/* The gear panel: all editable config for the whole project, any tab. */}
+      {showSettings && (
+        <ProjectSettings
+          project={p}
+          ps={ps}
+          setField={setField}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
 
       {/* Click-to-call / pre-filled email buttons for this tab. */}
       <ContactLinks stream={stream} p={p} ps={ps} />
@@ -91,6 +126,15 @@ function Detail(props: Props) {
       {stream === 'water' && <WaterBody {...props} />}
       {stream === 'septic' && <SepticBody {...props} />}
       {stream === 'permit' && <PermitBody {...props} />}
+      {stream === 'materials' && (
+        <MaterialsBody
+          project={p}
+          ps={ps}
+          addOrder={props.addOrder}
+          updateOrder={props.updateOrder}
+          removeOrder={props.removeOrder}
+        />
+      )}
 
       <label className="notes-label">
         {NOTE_LABEL[stream]}
@@ -122,51 +166,22 @@ function Detail(props: Props) {
 function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField }: Props) {
   const next = nextElectricAction(p, ps)
   const shutoff = shutoffFor(ps)
+  const u = utilityOf(p, ps)
+  const eng = engineerOf(p, ps)
 
   return (
     <>
       {needsVerify(p, ps) && (
         <div className="banner">
           ⚠️ Territory not verified — confirm SECO vs Duke before applying
-          (subdivision: {p.subdivision}).
+          (subdivision: {p.subdivision}). Set the utility in ⚙️ Settings.
         </div>
       )}
 
-      <div className="settings">
-        <label>
-          Utility
-          <select
-            value={ps.electricCo ?? p.electricCo}
-            onChange={(e) => setField(p.id, 'electricCo', e.target.value as Utility)}
-          >
-            <option value="">— unknown —</option>
-            <option value="SECO">SECO</option>
-            <option value="DUKE">Duke</option>
-            <option value="CLAY">Clay</option>
-          </select>
-        </label>
-
-        <label>
-          Service
-          <select
-            value={serviceTypeOf(p, ps)}
-            onChange={(e) => setField(p.id, 'serviceType', e.target.value as ServiceType)}
-          >
-            <option value="">?</option>
-            <option value="OH">Overhead</option>
-            <option value="UG">Underground</option>
-          </select>
-        </label>
-
-        <label>
-          Engineer
-          <input
-            value={engineerOf(p, ps)}
-            onChange={(e) => setField(p.id, 'engineer', e.target.value)}
-            placeholder="not assigned"
-          />
-        </label>
-      </div>
+      {/* Read-only config summary — edit these in ⚙️ Settings. */}
+      <p className="summary">
+        ⚡ {u || 'utility?'} · {SERVICE_LABEL[serviceTypeOf(p, ps)]} · Engineer: {eng || '—'}
+      </p>
 
       <p className="next-line">
         Next: <b>{next.label}</b>
@@ -181,6 +196,8 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField }: Pro
         setStepNote={setStepNote}
       />
 
+      {/* Closing date + shut-off reminder stay here — they're sale workflow,
+          not project config. */}
       <div className="closing">
         <label>
           Closing date
@@ -214,26 +231,13 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField }: Pro
 
 /* ===================== WATER ===================== */
 
-function WaterBody({ project: p, ps, toggleStep, setStepNote, setField }: Props) {
+function WaterBody({ project: p, ps, toggleStep, setStepNote }: Props) {
   const source = waterSourceOf(p, ps)
   const next = nextWaterAction(p, ps)
 
   return (
     <>
-      <div className="settings">
-        <label>
-          Water source
-          <select
-            value={source}
-            onChange={(e) => setField(p.id, 'waterSource', e.target.value as WaterSource)}
-          >
-            <option value="">— unknown —</option>
-            <option value="Well">Well</option>
-            <option value="City">City Water</option>
-            <option value="CityWM">City Water + main extension</option>
-          </select>
-        </label>
-      </div>
+      <p className="summary">💧 {WATER_LABEL[source]}</p>
 
       {source === 'CityWM' && (
         <div className="flag">
@@ -244,7 +248,7 @@ function WaterBody({ project: p, ps, toggleStep, setStepNote, setField }: Props)
 
       {/* No source yet → no checklist to show. */}
       {!source ? (
-        <div className="flag">Set the water source above to load its checklist.</div>
+        <div className="flag">Set the water source in ⚙️ Settings to load its checklist.</div>
       ) : (
         <>
           <p className="next-line">
@@ -266,41 +270,17 @@ function WaterBody({ project: p, ps, toggleStep, setStepNote, setField }: Props)
 
 /* ================= SEPTIC / SEWER ================= */
 
-function SepticBody({ project: p, ps, toggleStep, setStepNote, setField }: Props) {
+function SepticBody({ project: p, ps, toggleStep, setStepNote }: Props) {
   const source = septicSourceOf(ps)
   const system = septicSystemOf(ps)
   const next = nextSepticAction(ps)
 
   return (
     <>
-      <div className="settings">
-        <label>
-          Wastewater
-          <select
-            value={source}
-            onChange={(e) => setField(p.id, 'septicSource', e.target.value as SepticSource)}
-          >
-            <option value="Septic">Septic (DEP onsite)</option>
-            <option value="Sewer">City Sewer</option>
-          </select>
-        </label>
-
-        {/* System type only applies to septic lots. */}
-        {source === 'Septic' && (
-          <label>
-            System type
-            <select
-              value={system}
-              onChange={(e) => setField(p.id, 'septicSystem', e.target.value as SepticSystem)}
-            >
-              <option value="">— select —</option>
-              <option value="INRB">INRB — recorded notice required</option>
-              <option value="ATU">ATU — aerobic treatment unit</option>
-              <option value="NA">N/A — conventional system</option>
-            </select>
-          </label>
-        )}
-      </div>
+      <p className="summary">
+        🚽 {source === 'Sewer' ? 'City Sewer' : 'Septic'}
+        {source === 'Septic' && system && <> · {system}</>}
+      </p>
 
       {source === 'Septic' && (
         <p className="provider">
@@ -308,8 +288,8 @@ function SepticBody({ project: p, ps, toggleStep, setStepNote, setField }: Props
         </p>
       )}
 
-      {/* The INRB conditional: picking INRB adds a step to the checklist
-          (see septicStepsFor in lifecycles.ts) — this flag explains why. */}
+      {/* The INRB conditional: picking INRB (in ⚙️ Settings) adds a step to the
+          checklist (see septicStepsFor in lifecycles.ts) — this flag explains why. */}
       {source === 'Septic' && system === 'INRB' && (
         <div className="flag">
           📄 INRB system — a recorded INRB notice must be sent to Georges
@@ -335,51 +315,27 @@ function SepticBody({ project: p, ps, toggleStep, setStepNote, setField }: Props
 
 /* ===================== PERMITTING ===================== */
 
-function PermitBody({ project: p, ps, toggleStep, setStepNote, setField, addDocuments, removeDocument }: Props) {
+function PermitBody({ project: p, ps, toggleStep, setStepNote, addDocuments, removeDocument }: Props) {
   const next = nextPermitAction(ps)
-  const folder = sharepointFolderOf(p, ps) // CSV default, unless overridden
-  const permitUrl = permitPortalOf(p, ps) // CSV default, unless overridden
-  const expiry = permitExpiryFor(p, ps) // null until an expiration date is known
-  const countyStatus = permitCountyStatusOf(p) // live status from the portal, if read
+  const folder = sharepointFolderOf(p, ps) // hidden link — opened via the button below
+  const permitUrl = permitPortalOf(p, ps)
+  const expiry = permitExpiryFor(p, ps)
+  const countyStatus = permitCountyStatusOf(p)
+  const issued = permitIssuedOf(p, ps)
+  const expires = permitExpiresOf(p, ps)
 
   return (
     <>
-      <div className="settings">
-        <label>
-          Responsible
-          <select
-            value={permitResponsibleOf(ps)}
-            onChange={(e) => setField(p.id, 'permitResponsible', e.target.value as PermitResponsible)}
-          >
-            <option value="Us">Us (Iron Shield)</option>
-            <option value="Owner">Owner</option>
-            <option value="GC">General contractor</option>
-          </select>
-        </label>
+      {/* Read-only summary — edit responsible / links / dates in ⚙️ Settings. */}
+      <p className="summary">
+        📋 Responsible: {permitResponsibleOf(ps)}
+        {countyStatus && <> · County: {countyStatus}</>}
+        {issued && <> · Issued {issued}</>}
+        {expires && <> · Expires {expires}</>}
+      </p>
 
-        {/* These two URLs are editable per project. The folder is pre-filled
-            for the projects we could match from SharePoint; paste the rest. */}
-        <label className="grow">
-          SharePoint folder
-          <input
-            value={folder}
-            onChange={(e) => setField(p.id, 'sharepointUrl', e.target.value)}
-            placeholder="https://…sharepoint.com/…/<parcel>"
-          />
-        </label>
-
-        <label className="grow">
-          County permit page
-          <input
-            value={permitUrl}
-            onChange={(e) => setField(p.id, 'permitUrl', e.target.value)}
-            placeholder="https://…marionfl.org/…"
-          />
-        </label>
-      </div>
-
-      {/* Quick-open links (only show when a URL exists). encodeURI handles the
-          spaces in the SharePoint folder names. target=_blank opens a new tab. */}
+      {/* Quick-open links — the URL itself stays hidden; you just click to open.
+          encodeURI handles spaces in SharePoint folder names. */}
       {(folder || permitUrl) && (
         <div className="contact-row">
           {folder && (
@@ -395,42 +351,16 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, setField, addDocu
         </div>
       )}
 
-      {/* The county's authoritative status, read live from the portal. */}
-      {countyStatus && (
-        <p className="provider">🏛 County status (live): <b>{countyStatus}</b></p>
+      {/* Expiry reminder (only when a date is known), colored by urgency. */}
+      {expiry && (
+        <p className={'shutoff' + (expiry.daysLeft <= 7 ? ' due' : expiry.daysLeft <= 30 ? ' warn' : '')}>
+          {expiry.daysLeft < 0 ? (
+            <>⏰ Permit EXPIRED <b>{expiry.date}</b> ({-expiry.daysLeft} days ago)</>
+          ) : (
+            <>⏰ Permit expires <b>{expiry.date}</b> ({expiry.daysLeft} days)</>
+          )}
+        </p>
       )}
-
-      {/* Issued + expiration dates, with the expiry reminder. Same layout as
-          the electric closing/shut-off block — and the same urgency colors.
-          The values default to what we read from the portal; typing overrides. */}
-      <div className="closing">
-        <label>
-          Permit issued
-          <input
-            type="date"
-            value={permitIssuedOf(p, ps)}
-            onChange={(e) => setField(p.id, 'permitIssuedDate', e.target.value)}
-          />
-        </label>
-        <label>
-          Permit expires
-          <input
-            type="date"
-            value={permitExpiresOf(p, ps)}
-            onChange={(e) => setField(p.id, 'permitExpiresDate', e.target.value)}
-          />
-        </label>
-
-        {expiry && (
-          <span className={'shutoff' + (expiry.daysLeft <= 7 ? ' due' : expiry.daysLeft <= 30 ? ' warn' : '')}>
-            {expiry.daysLeft < 0 ? (
-              <>⏰ Permit EXPIRED <b>{expiry.date}</b> ({-expiry.daysLeft} days ago)</>
-            ) : (
-              <>⏰ Permit expires <b>{expiry.date}</b> ({expiry.daysLeft} days)</>
-            )}
-          </span>
-        )}
-      </div>
 
       <p className="next-line">
         Next: <b>{next.label}</b>

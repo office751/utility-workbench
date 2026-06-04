@@ -18,6 +18,7 @@ import Detail from './components/Detail'
 import Dashboard from './components/Dashboard'
 import ExportImport from './components/ExportImport'
 import AddProject from './components/AddProject'
+import QuickAdd from './components/QuickAdd'
 
 // The tabs. Pure config, so adding a tab = adding a line.
 const TABS: { key: Stream; label: string }[] = [
@@ -25,6 +26,7 @@ const TABS: { key: Stream; label: string }[] = [
   { key: 'water', label: '💧 Water' },
   { key: 'septic', label: '🚽 Septic' },
   { key: 'permit', label: '📋 Permit' },
+  { key: 'materials', label: '🛒 Materials' },
 ]
 
 function App() {
@@ -40,6 +42,9 @@ function App() {
     deleteProject,
     addDocuments,
     removeDocument,
+    addOrder,
+    updateOrder,
+    removeOrder,
     replaceState,
   } = useProjects()
 
@@ -98,6 +103,9 @@ function App() {
         </nav>
       </header>
 
+      {/* The Quick-Add capture bar — only on the Materials tab. */}
+      {tab === 'materials' && <QuickAdd projects={projects} addOrder={addOrder} />}
+
       {/* The layout is a 3-column grid: list | drag-handle | detail.
           We set the FIRST column's width through a CSS variable (--sidebar-w)
           rather than hard-coding it, so the dragging hook can change it live
@@ -150,6 +158,9 @@ function App() {
             setField={setField}
             addDocuments={addDocuments}
             removeDocument={removeDocument}
+            addOrder={addOrder}
+            updateOrder={updateOrder}
+            removeOrder={removeOrder}
             onBack={() => setSelectedId(null)}
             onDelete={() => {
               deleteProject(selected.id)

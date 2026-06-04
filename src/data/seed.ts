@@ -18,8 +18,9 @@ import { PERMIT_DATES } from './permitDates'
 /** A blank slate for one project — no steps done, no notes. */
 export function emptyProjectState(): ProjectState {
   return {
-    steps: { electric: {}, water: {}, septic: {}, permit: {} },
-    notes: { electric: '', water: '', septic: '', permit: '' },
+    orders: [],
+    steps: { electric: {}, water: {}, septic: {}, permit: {}, materials: {} },
+    notes: { electric: '', water: '', septic: '', permit: '', materials: '' },
   }
 }
 

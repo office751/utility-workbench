@@ -12,8 +12,25 @@
  *      (checked-off steps, notes... things that change as you work)
  */
 
-/** The workstreams every house has. */
-export type Stream = 'electric' | 'water' | 'septic' | 'permit'
+/** The tabs/workstreams. 'materials' is the odd one out — see OrderItem. */
+export type Stream = 'electric' | 'water' | 'septic' | 'permit' | 'materials'
+
+/** Where a material order is in its little lifecycle. */
+export type OrderStatus = 'toOrder' | 'ordered' | 'delivered' | 'installed'
+
+/**
+ * One material order for a project. Unlike the other streams (one lifecycle
+ * per project), a project has a LIST of these — trusses, slab, cabinets, etc.
+ */
+export interface OrderItem {
+  id: string // unique (crypto.randomUUID)
+  category: string // 'Trusses', 'Slab package', … (from data/orders.ts, but free-form ok)
+  status: OrderStatus
+  vendor?: string
+  neededBy?: string // YYYY-MM-DD — optional; powers lead-time hints later
+  note?: string
+  createdAt: string // display date it was captured
+}
 
 /** Who's handling the building permit — tracked even when it isn't us. */
 export type PermitResponsible = 'Us' | 'Owner' | 'GC' | ''
@@ -99,6 +116,9 @@ export interface ProjectState {
   sharepointUrl?: string // link to this project's SharePoint folder
   permitUrl?: string // link to the county permit record/page
   permitDocs?: ProjectDoc[] // attached document names (placeholder storage)
+
+  /** Material orders for this project (trusses, slab, cabinets, …). */
+  orders?: OrderItem[]
 
   /** Checked-off steps, per stream, keyed by step id (e.g. "meter", "snrb"). */
   steps: Record<Stream, Record<string, StepState>>

@@ -17,7 +17,15 @@
  *                (here: save to localStorage)
  */
 import { useEffect, useState } from 'react'
-import type { Project, ProjectDoc, ProjectState, StepState, Stream, WorkbenchState } from '../types'
+import type {
+  OrderItem,
+  Project,
+  ProjectDoc,
+  ProjectState,
+  StepState,
+  Stream,
+  WorkbenchState,
+} from '../types'
 import { buildInitialState, emptyProjectState, inferPermitSteps } from '../data/seed'
 import { PROJECTS } from '../data/projects'
 
@@ -25,7 +33,7 @@ import { PROJECTS } from '../data/projects'
 const STORAGE_KEY = 'isc_workbench_v1'
 
 /** The streams every saved project must have step/note buckets for. */
-const STREAMS: Stream[] = ['electric', 'water', 'septic', 'permit']
+const STREAMS: Stream[] = ['electric', 'water', 'septic', 'permit', 'materials']
 
 /**
  * Make sure one saved ProjectState has a bucket for every stream. Older saves
@@ -40,7 +48,9 @@ function normalize(ps: ProjectState): ProjectState {
     if (!steps[s]) steps[s] = {}
     if (notes[s] == null) notes[s] = ''
   }
-  return { ...ps, steps, notes }
+  // Older saves predate material orders — ensure it's an array.
+  const orders = Array.isArray(ps.orders) ? ps.orders : []
+  return { ...ps, steps, notes, orders }
 }
 
 /**
@@ -198,6 +208,44 @@ export function useProjects() {
     updateProject(id, { permitDocs: (ps.permitDocs ?? []).filter((_, i) => i !== index) })
   }
 
+  /**
+   * Add a material order to a project (status starts toOrder).
+   *
+   * NOTE: this appends INSIDE the state updater (reading `prev`), not from a
+   * value captured outside. That matters because Quick-Add adds several orders
+   * in a row — if we computed the new list from the closure's `state`, each
+   * call would read the same stale value and the last one would win, dropping
+   * the earlier orders. Reading `prev` makes rapid successive adds stack up.
+   */
+  function addOrder(id: number, order: Omit<OrderItem, 'id' | 'createdAt'>) {
+    const newOrder: OrderItem = {
+      ...order,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toLocaleDateString(),
+    }
+    setState((prev) => {
+      const cur = prev.projects[id] ?? emptyProjectState()
+      return {
+        ...prev,
+        projects: { ...prev.projects, [id]: { ...cur, orders: [...(cur.orders ?? []), newOrder] } },
+      }
+    })
+  }
+
+  /** Patch one order (e.g. advance its status, set vendor/note). */
+  function updateOrder(id: number, orderId: string, patch: Partial<OrderItem>) {
+    const ps = getProjectState(id)
+    updateProject(id, {
+      orders: (ps.orders ?? []).map((o) => (o.id === orderId ? { ...o, ...patch } : o)),
+    })
+  }
+
+  /** Remove an order from a project. */
+  function removeOrder(id: number, orderId: string) {
+    const ps = getProjectState(id)
+    updateProject(id, { orders: (ps.orders ?? []).filter((o) => o.id !== orderId) })
+  }
+
   /** Replace EVERYTHING with an imported state (the Import button). */
   function replaceState(next: WorkbenchState) {
     setState(migrate(next)) // migrate: older export files have no roster/permit
@@ -215,6 +263,9 @@ export function useProjects() {
     deleteProject,
     addDocuments,
     removeDocument,
+    addOrder,
+    updateOrder,
+    removeOrder,
     replaceState,
   }
 }
