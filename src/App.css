@@ -779,6 +779,11 @@ button.primary:disabled {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 9px 12px;
+  resize: vertical; /* it's a textarea now — drag taller for big paste blocks */
+  line-height: 1.4;
+}
+.qa-row {
+  align-items: flex-start; /* keep the button top-aligned when the box grows */
 }
 .qa-input:focus {
   outline: none;
@@ -808,6 +813,18 @@ button.primary:disabled {
 }
 [data-theme='dark'] .qa-done {
   color: #86dba6;
+}
+.qa-results p {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+.qa-dup {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #a06a00;
+}
+[data-theme='dark'] .qa-dup {
+  color: #e6c860;
 }
 
 /* ---------- Materials: per-project orders list ---------- */

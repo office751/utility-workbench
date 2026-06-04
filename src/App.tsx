@@ -104,7 +104,9 @@ function App() {
       </header>
 
       {/* The Quick-Add capture bar — only on the Materials tab. */}
-      {tab === 'materials' && <QuickAdd projects={projects} addOrder={addOrder} />}
+      {tab === 'materials' && (
+        <QuickAdd projects={projects} getProjectState={getProjectState} addOrder={addOrder} />
+      )}
 
       {/* The layout is a 3-column grid: list | drag-handle | detail.
           We set the FIRST column's width through a CSS variable (--sidebar-w)

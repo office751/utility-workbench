@@ -101,9 +101,21 @@ Permitting, then in-app notifications (needs the timestamp change below).
       project is added (spec homes repeat: A/B/E2/F…).
 - [ ] **Vendor directory + order email shortcuts** — supplier per category with
       click-to-call / pre-filled order email (reuse the ContactLinks pattern).
-- [ ] **"Claude pulls from Messages"** capture path — on request, read Josh's
-      recent texts on this Mac and create orders to confirm (no typing). Needs
-      Messages access; fully-automatic version needs the backend.
+- [x] **"Claude pulls from Messages"** capture path *(June 2026)* — Full Disk
+      Access granted; `scripts/read-josh-orders.mjs` reads Josh & Mickey's texts
+      (+ their group chats) from the Mac Messages DB, decodes binary-text
+      messages, tells orders apart from questions/status, matches project + item,
+      and prints proposed orders + paste-lines. Run: `node scripts/read-josh-orders.mjs --since YYYY-MM-DD`.
+- [x] **Multi-line Quick-Add paste + duplicate guard** *(June 2026)* — Quick-Add
+      box is now a textarea; paste the script's whole block (one project per
+      line) and each line is parsed to its own project. Won't re-add an item a
+      project already has — if it's already Ordered it says so and skips (stops
+      double-orders when Josh asks twice). Enter submits, Shift+Enter = new line.
+- [ ] **New order categories surfaced from texts** — Dumpster, Porta-potty,
+      Garage door, Sand added to `data/orders.ts`. Consider grouping "site
+      services" separately from materials in the UI.
+- [ ] **Fully-automatic Messages→orders** — needs the backend (a small service
+      watching for Josh's texts); until then it's the on-request script above.
 - [ ] **Action Center** — one "needs attention" home aggregating permit expiry,
       electric shut-offs, and materials to order / overdue across all projects.
 

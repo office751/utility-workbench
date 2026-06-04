@@ -15,10 +15,15 @@ export const ORDER_CATEGORIES: string[] = [
   'Slab package',
   'Block',
   'Lintels',
+  'Sand',
   'Flooring',
   'Cabinets',
   'Lighting package',
   'Bathroom tile',
+  'Garage door',
+  // site services Josh/Mickey report on:
+  'Dumpster',
+  'Porta-potty',
 ]
 
 /** The order lifecycle (in order). */
@@ -39,10 +44,17 @@ export const CATEGORY_KEYWORDS: Record<string, string> = {
   framing: 'Framing package',
   frame: 'Framing package',
   slab: 'Slab package',
+  slap: 'Slab package', // common typo
   block: 'Block',
   lintel: 'Lintels',
+  lentil: 'Lintels', // common spelling
+  sand: 'Sand',
   floor: 'Flooring',
   cabinet: 'Cabinets',
   light: 'Lighting package',
   tile: 'Bathroom tile',
+  'garage door': 'Garage door',
+  dumpster: 'Dumpster',
+  porta: 'Porta-potty',
+  'ports potty': 'Porta-potty',
 }
