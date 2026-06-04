@@ -26,7 +26,7 @@ import type {
   Task,
   WorkbenchState,
 } from '../types'
-import { buildInitialState, emptyProjectState, inferPermitSteps } from '../data/seed'
+import { buildInitialState, emptyProjectState, inferPermitSteps, seedStateFor } from '../data/seed'
 import { PROJECTS } from '../data/projects'
 import { supabase } from '../lib/supabase'
 import { deleteProjectFile, uploadProjectFile } from '../lib/files'
@@ -112,7 +112,44 @@ function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
     projects[Number(id)] = norm
   }
   // Tasks arrived after the first releases — older saves won't have them.
-  return { roster, projects, tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [] }
+  const result: WorkbenchState = {
+    roster: [...roster],
+    projects,
+    tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
+    extrasSeeded: parsed.extrasSeeded === true,
+  }
+  // One-time: fold in the C.O./Hold homes if this save predates them.
+  return result.extrasSeeded ? result : mergeExtraProjects(result)
+}
+
+/** Stable identity for matching a project across the seed and saved data. */
+function projectKey(p: Project): string {
+  return `${p.address.trim().toLowerCase()}|${p.parcel.trim()}`
+}
+
+/**
+ * ONE-TIME merge: fold the C.O./Hold homes from the seed (PROJECTS) into a
+ * saved roster that predates them. It ONLY ever touches homes whose status is
+ * 'CO'/'Hold' (so a project you deleted earlier is never resurrected), skips
+ * any already present (by address+parcel), and assigns fresh ids past the
+ * current max so it can't collide with projects you've added. Each new home
+ * gets its progress seeded (C.O. = done) via seedStateFor. Sets extrasSeeded
+ * so it never runs again — meaning deletions of these homes stick.
+ */
+function mergeExtraProjects(state: WorkbenchState): WorkbenchState {
+  const roster = [...state.roster]
+  const projects = { ...state.projects }
+  const have = new Set(roster.map(projectKey))
+  let nextId = Math.max(0, ...roster.map((p) => p.id)) + 1
+  for (const seed of PROJECTS) {
+    if (seed.listStatus !== 'CO' && seed.listStatus !== 'Hold') continue
+    if (have.has(projectKey(seed))) continue
+    const p: Project = { ...seed, id: nextId++ }
+    roster.push(p)
+    projects[p.id] = seedStateFor(p)
+    have.add(projectKey(p))
+  }
+  return { ...state, roster, projects, extrasSeeded: true }
 }
 
 /** Read saved state, or build the seeded starting state on first ever run. */
@@ -158,9 +195,16 @@ export function useProjects() {
         if (cancelled) return
         if (error) throw error
         if (data?.data) {
-          skipNextSave.current = true // we're loading FROM the cloud — don't write it back
-          lastPushed.current = JSON.stringify(data.data)
-          setState(migrate(data.data as Partial<WorkbenchState>))
+          const cloudData = data.data as Partial<WorkbenchState>
+          lastPushed.current = JSON.stringify(cloudData)
+          // Normally a cloud load shouldn't echo back as a write. EXCEPTION:
+          // if the cloud copy predates the C.O./Hold homes, migrate() merges
+          // them in now and we WANT that written back — so don't skip the save.
+          if (cloudData.extrasSeeded) skipNextSave.current = true
+          // Mark ready BEFORE setState so, when a merge IS needed, the save
+          // effect that setState triggers actually fires (it gates on this).
+          cloudReady.current = true
+          setState(migrate(cloudData))
         } else {
           // Cloud is empty → seed it with whatever this browser currently has.
           lastPushed.current = JSON.stringify(state)

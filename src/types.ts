@@ -58,6 +58,8 @@ export type ListStatus =
   | 'MeterSet'
   | 'PowerOn'
   | 'InProgress'
+  | 'CO' // Certificate of Occupancy — house finished / closed out
+  | 'Hold' // paused per the Construction Job List
 
 /** One house. The fixed facts — see src/data/projects.ts. */
 export interface Project {
@@ -177,4 +179,10 @@ export interface WorkbenchState {
   projects: Record<number, ProjectState>
   /** Free-form cross-role tasks (IT, office, supplies…) — not project-bound. */
   tasks: Task[]
+  /**
+   * One-time marker: the C.O./Hold homes from the Construction Job List have
+   * been merged into the roster. Stays true so they're never re-added — that
+   * way if you delete one, it stays deleted.
+   */
+  extrasSeeded?: boolean
 }

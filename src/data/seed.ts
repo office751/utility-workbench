@@ -11,9 +11,16 @@
  *      few city-water projects had progress recorded from MCU emails.
  *   3. Septic: DEP permit progress recorded from email correspondence.
  */
-import type { ProjectState, StepState, WorkbenchState } from '../types'
+import type { Project, ProjectState, StepState, WorkbenchState } from '../types'
 import { PROJECTS, WELL_INSTALLED } from './projects'
 import { PERMIT_DATES } from './permitDates'
+import {
+  ELECTRIC_STEPS,
+  PERMIT_STEPS,
+  septicStepsFor,
+  waterStepsFor,
+  type StepDef,
+} from './lifecycles'
 
 /** A blank slate for one project — no steps done, no notes. */
 export function emptyProjectState(): ProjectState {
@@ -116,46 +123,76 @@ const SEPTIC_SEED: Record<number, { done: string[]; note: string }> = {
   },
 }
 
+/** Parcels whose "septic" line is actually city SEWER (not a septic system). */
+const SEWER_PARCELS = new Set<string>(['15270-007-29']) // 55 NW 45th Loop
+
+/** Mark every step in a checklist done — used for finished (C.O.) homes. */
+function markAllDone(defs: StepDef[]): Record<string, StepState> {
+  const out: Record<string, StepState> = {}
+  for (const d of defs) out[d.id] = { done: true, date: '(C.O.)' }
+  return out
+}
+
+/**
+ * Build the STARTING progress for ONE project. Two special statuses:
+ *   - 'CO'   (Certificate of Occupancy) → the house is finished, so every
+ *            stage across all streams is marked done (it won't clutter Today).
+ *   - 'Hold' → parked; nothing seeded, just a note explaining why.
+ * Everything else follows the original list-status / email-derived seeding.
+ */
+export function seedStateFor(p: Project): ProjectState {
+  const ps = emptyProjectState()
+
+  if (p.listStatus === 'CO') {
+    // A closed-out home is done in every stream. Set the water/septic source
+    // first so the right checklist (well vs city, septic vs sewer) gets ticked.
+    ps.waterSource = p.waterSource
+    ps.septicSource = SEWER_PARCELS.has(p.parcel) ? 'Sewer' : 'Septic'
+    ps.steps.electric = markAllDone(ELECTRIC_STEPS)
+    ps.steps.water = markAllDone(waterStepsFor(p, ps))
+    ps.steps.septic = markAllDone(septicStepsFor(ps))
+    ps.steps.permit = markAllDone(PERMIT_STEPS.filter((s) => s.id !== 'corrections'))
+    return ps
+  }
+
+  if (p.listStatus === 'Hold') {
+    ps.notes.permit = 'ON HOLD per the Construction Job List.'
+    ps.steps.permit = inferPermitSteps(p.permit)
+    return ps
+  }
+
+  // --- active projects: the original three-source seeding ---
+  // 1. electric steps implied by the list status
+  for (const stepId of ELECTRIC_STATUS_STEPS[p.listStatus] ?? []) {
+    ps.steps.electric[stepId] = { done: true, date: '(from list)' }
+  }
+  // 2. water: well already drilled ("WI"), plus MCU email progress
+  if (WELL_INSTALLED.includes(p.id)) {
+    ps.steps.water['wdrilled'] = { done: true, date: '(from list)' }
+  }
+  const w = WATER_SEED[p.id]
+  if (w) {
+    for (const stepId of w.done) ps.steps.water[stepId] = { done: true, date: '(from email)' }
+    ps.notes.water = w.note
+  }
+  // 3. septic progress from emails
+  const s = SEPTIC_SEED[p.id]
+  if (s) {
+    for (const stepId of s.done) ps.steps.septic[stepId] = { done: true, date: '(from email)' }
+    ps.notes.septic = s.note
+  }
+  // 4. permit progress inferred from the permit number's format / county data
+  ps.steps.permit = inferPermitSteps(p.permit)
+
+  return ps
+}
+
 /** Build the full initial WorkbenchState for a fresh browser. */
 export function buildInitialState(): WorkbenchState {
   const projects: Record<number, ProjectState> = {}
-
-  for (const p of PROJECTS) {
-    const ps = emptyProjectState()
-
-    // 1. electric steps implied by the old list status
-    for (const stepId of ELECTRIC_STATUS_STEPS[p.listStatus] ?? []) {
-      ps.steps.electric[stepId] = { done: true, date: '(from list)' }
-    }
-
-    // 2. water: well already drilled ("WI" in the old list)
-    if (WELL_INSTALLED.includes(p.id)) {
-      ps.steps.water['wdrilled'] = { done: true, date: '(from list)' }
-    }
-    const w = WATER_SEED[p.id]
-    if (w) {
-      for (const stepId of w.done) {
-        ps.steps.water[stepId] = { done: true, date: '(from email)' }
-      }
-      ps.notes.water = w.note
-    }
-
-    // 3. septic progress from emails
-    const s = SEPTIC_SEED[p.id]
-    if (s) {
-      for (const stepId of s.done) {
-        ps.steps.septic[stepId] = { done: true, date: '(from email)' }
-      }
-      ps.notes.septic = s.note
-    }
-
-    // 4. permit progress inferred from the permit number's format
-    ps.steps.permit = inferPermitSteps(p.permit)
-
-    projects[p.id] = ps
-  }
-
-  // The roster starts as a copy of the built-in list; from here on the
-  // saved state owns it (so the Add-project form can grow it).
-  return { roster: PROJECTS, projects, tasks: [] }
+  for (const p of PROJECTS) projects[p.id] = seedStateFor(p)
+  // The roster starts as a copy of the built-in list; from here on the saved
+  // state owns it. extrasSeeded=true because the C.O./Hold homes are already
+  // in PROJECTS here — a fresh browser doesn't need the one-time merge.
+  return { roster: PROJECTS, projects, tasks: [], extrasSeeded: true }
 }

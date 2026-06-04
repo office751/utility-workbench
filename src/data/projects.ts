@@ -60,6 +60,25 @@ export const PROJECTS: Project[] = [
   { id: 61, address: "TBD SW Pensacola Dr", city: "Dunnellon", zip: "34431", model: "The Republic RHG", parcel: "1811-011-001", subdivision: "Rainbow Lakes Estates, Sec J", electricCo: "", permit: "", workOrder: "", serviceType: "", listStatus: "NotApplied", engineer: "", waterSource: "" },
   { id: 62, address: "TBD SW Lobelia Ct", city: "Dunnellon", zip: "34431", model: "The Republic RHG", parcel: "1810-001-005", subdivision: "Rainbow Lakes Estates, Sec I", electricCo: "", permit: "", workOrder: "", serviceType: "", listStatus: "NotApplied", engineer: "", waterSource: "" },
   { id: 63, address: "4256 SW Wisteria Ct", city: "Dunnellon", zip: "34431", model: "Concord WF LHG", parcel: "1805-008-006", subdivision: "Rainbow Lakes Estates, Sec D", electricCo: "", permit: "BLDR-26-04-11591", workOrder: "", serviceType: "", listStatus: "NotApplied", engineer: "", waterSource: "Well" },
+
+  // --- Completed (C.O.) + On-Hold homes from the Construction Job List ---
+  // Added after the first batch so the app mirrors the FULL SharePoint list.
+  // C.O. homes are seeded done across every stream (see seed.ts → seedStateFor);
+  // the Hold home is parked. For EXISTING saved data these get folded in by the
+  // one-time merge in useProjects (so ids may differ from the placeholders here).
+  { id: 64, address: "2449 NW 66th St", city: "Ocala", zip: "34475", model: "A", parcel: "1328-006-023", subdivision: "Regal Park", electricCo: "DUKE", permit: "2024112801", workOrder: "", serviceType: "OH", listStatus: "CO", engineer: "Kevin Lanier", waterSource: "Well" },
+  { id: 65, address: "2236 NW 66th St", city: "Ocala", zip: "34475", model: "A", parcel: "1328-014-010", subdivision: "Regal Park", electricCo: "DUKE", permit: "2025010180", workOrder: "", serviceType: "OH", listStatus: "CO", engineer: "Kevin Lanier", waterSource: "Well" },
+  { id: 66, address: "2594 NW 65th Pl", city: "Ocala", zip: "34475", model: "G-LH", parcel: "1328-004-001", subdivision: "Regal Park", electricCo: "DUKE", permit: "2025020791", workOrder: "", serviceType: "OH", listStatus: "CO", engineer: "Kevin Lanier", waterSource: "Well" },
+  { id: 67, address: "13221 SE 41st Terrace", city: "Belleview", zip: "34420", model: "G-LH", parcel: "4214-167-074", subdivision: "Belleview Heights Estates, Unit 14", electricCo: "SECO", permit: "2024111657", workOrder: "", serviceType: "UG", listStatus: "CO", engineer: "", waterSource: "Well" },
+  { id: 68, address: "20855 SW Beach Blvd", city: "Dunnellon", zip: "34431", model: "G-RH", parcel: "1801-023-054", subdivision: "Rainbow Lakes Estates, Sec A", electricCo: "SECO", permit: "2024120296", workOrder: "", serviceType: "UG", listStatus: "CO", engineer: "", waterSource: "Well" },
+  { id: 69, address: "21153 SW Beach Blvd", city: "Dunnellon", zip: "34431", model: "G-LH", parcel: "1802-004-060", subdivision: "Rainbow Lakes Estates, Sec B", electricCo: "SECO", permit: "2025020794", workOrder: "", serviceType: "UG", listStatus: "CO", engineer: "", waterSource: "Well" },
+  { id: 70, address: "20152 SW 84th St", city: "Dunnellon", zip: "34431", model: "G-RH", parcel: "3302-010-009", subdivision: "Rainbow's End Estates Unit 2", electricCo: "DUKE", permit: "2025012777", workOrder: "", serviceType: "OH", listStatus: "CO", engineer: "Ben Rashley", waterSource: "Well" },
+  { id: 71, address: "20050 SW 80th Place Rd", city: "Dunnellon", zip: "34431", model: "F-LH", parcel: "3301-002-002", subdivision: "Rainbow's End Estates Unit 1", electricCo: "DUKE", permit: "2025020800", workOrder: "", serviceType: "OH", listStatus: "CO", engineer: "", waterSource: "Well" },
+  { id: 72, address: "55 NW 45th Loop", city: "Ocala", zip: "34475", model: "E2-RH", parcel: "15270-007-29", subdivision: "St James Park", electricCo: "DUKE", permit: "2023122667", workOrder: "", serviceType: "UG", listStatus: "CO", engineer: "", waterSource: "City" },
+  { id: 73, address: "11891 SE 70th Ave Rd", city: "Belleview", zip: "34420", model: "F-RH", parcel: "3924-013-023", subdivision: "Lake Weir Gardens", electricCo: "DUKE", permit: "2025060961", workOrder: "", serviceType: "OH", listStatus: "CO", engineer: "", waterSource: "Well" },
+  { id: 74, address: "16690 SE 62nd St", city: "Ocklawaha", zip: "32179", model: "G-LH", parcel: "39430-31-011", subdivision: "Woods & Lakes", electricCo: "CLAY", permit: "2025070288", workOrder: "", serviceType: "UG", listStatus: "CO", engineer: "", waterSource: "Well" },
+  { id: 75, address: "20925 SW Robin Dr", city: "Dunnellon", zip: "34431", model: "F-RH", parcel: "1801-028-032", subdivision: "Rainbow Lakes Estates, Sec A", electricCo: "SECO", permit: "2025070274", workOrder: "", serviceType: "UG", listStatus: "CO", engineer: "", waterSource: "Well" },
+  { id: 76, address: "TBD SW 103rd Loop", city: "Ocala", zip: "34476", model: "E2-LH", parcel: "3521-002-014", subdivision: "Hidden Lake Unit IV", electricCo: "SECO", permit: "", workOrder: "", serviceType: "UG", listStatus: "Hold", engineer: "", waterSource: "City" },
 ]
 
 /** Projects whose well was already installed per the original list ("WI"). */

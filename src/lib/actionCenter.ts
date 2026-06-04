@@ -79,6 +79,9 @@ export function buildActionCenter(
   let toOrderTotal = 0
 
   for (const p of projects) {
+    // Finished (C.O.) and parked (Hold) homes never belong in "needs attention"
+    // or the to-do moves — skip them entirely so the command center stays focused.
+    if (p.listStatus === 'CO' || p.listStatus === 'Hold') continue
     const ps = getProjectState(p.id)
     const base = { projectId: p.id, address: p.address, meta: `${p.model} · ${p.subdivision}` }
 
