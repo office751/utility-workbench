@@ -10,7 +10,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css' // global styles (applies to the whole page)
-import App from './App.tsx' // the top-level component — the real app lives here
+import Root from './Root.tsx' // auth gate → shows Login, then the App
 
 // Find the empty <div id="root"> in index.html and mount React there.
 // The "!" tells TypeScript "trust me, this element definitely exists".
@@ -19,6 +19,6 @@ createRoot(document.getElementById('root')!).render(
   // common React mistakes. It renders nothing visible and is automatically
   // stripped out of production builds.
   <StrictMode>
-    <App />
+    <Root />
   </StrictMode>,
 )

@@ -17,6 +17,7 @@ import { useState, type CSSProperties } from 'react'
 import './App.css'
 import type { Stream } from './types'
 import { useProjects } from './hooks/useProjects'
+import { supabase, hasSupabase } from './lib/supabase'
 import { streamActionCounts } from './lib/actionCenter'
 import { daysUntilDue, dueSoonTasks, waitingOnTasks } from './lib/tasks'
 import { useTheme } from './hooks/useTheme'
@@ -145,6 +146,11 @@ function App() {
           </button>
           {/* move data between browsers as a .json file */}
           <ExportImport state={state} onImport={replaceState} />
+          {hasSupabase && (
+            <button className="mini signout" onClick={() => supabase?.auth.signOut()} title="Sign out">
+              ⎋ Sign out
+            </button>
+          )}
         </nav>
       </header>
 
