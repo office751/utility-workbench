@@ -9,6 +9,7 @@
 import { useState } from 'react'
 import type { OrderItem, OrderStatus, Project, ProjectState } from '../types'
 import { ORDER_CATEGORIES, ORDER_STATUSES } from '../data/orders'
+import { VENDORS, vendorMailto } from '../data/vendors'
 import { ordersOf } from '../lib/orders'
 
 interface Props {
@@ -29,6 +30,22 @@ function MaterialsBody({ project: p, ps, addOrder, updateOrder, removeOrder }: P
 
   return (
     <>
+      {/* Quick "draft an order email" buttons — open a pre-filled email to the
+          vendor about THIS job site (recipient + items already filled in). */}
+      <div className="vendor-row">
+        <span className="vendor-label">✉️ Order from:</span>
+        {VENDORS.map((v) => (
+          <a
+            key={v.id}
+            className="vendor-btn"
+            href={vendorMailto(v, p, ps)}
+            title={`Draft an email to ${v.name} — ${v.supplies}`}
+          >
+            {v.icon} {v.name}
+          </a>
+        ))}
+      </div>
+
       {orders.length === 0 ? (
         <p className="summary">🛒 No orders yet — capture one above, or add below.</p>
       ) : (

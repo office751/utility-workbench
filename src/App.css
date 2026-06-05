@@ -388,6 +388,36 @@ textarea {
   background: var(--bg);
 }
 
+/* ---------- vendor "draft order email" buttons ---------- */
+.vendor-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0 14px;
+}
+.vendor-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-right: 2px;
+}
+.vendor-btn {
+  font-size: 12px;
+  line-height: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.vendor-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 /* ---------- the checklist ---------- */
 
 .checklist {
