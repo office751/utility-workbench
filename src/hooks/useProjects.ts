@@ -460,6 +460,16 @@ export function useProjects() {
     updateProject(id, { orders: (ps.orders ?? []).filter((o) => o.id !== orderId) })
   }
 
+  /** Dismiss a permit portal notification — kept in history, just marked read. */
+  function dismissNotification(id: number, sourceKey: string) {
+    const ps = getProjectState(id)
+    updateProject(id, {
+      notifications: (ps.notifications ?? []).map((n) =>
+        n.sourceKey === sourceKey ? { ...n, dismissed: true } : n,
+      ),
+    })
+  }
+
   /* ----------------------------- TASKS ------------------------------ */
   /* Free-form cross-role tasks (IT / office / supplies / …) live at the TOP
      level of state — they aren't tied to any one project. Each updater reads
@@ -502,6 +512,7 @@ export function useProjects() {
     deleteProject,
     addProjectFiles,
     removeProjectFile,
+    dismissNotification,
     addOrder,
     updateOrder,
     removeOrder,

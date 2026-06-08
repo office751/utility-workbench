@@ -44,6 +44,7 @@ import Checklist from './Checklist'
 import ContactLinks from './ContactLinks'
 import DocumentsBox from './DocumentsBox'
 import PermitReviewItems from './PermitReviewItems'
+import PermitNotifications from './PermitNotifications'
 import ProjectSettings from './ProjectSettings'
 import MaterialsBody from './MaterialsBody'
 

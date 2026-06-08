@@ -90,22 +90,24 @@ function classify(tables) {
   return { holds, rejections, fyi }
 }
 
-async function scrapePermit(page, guid) {
-  await page.goto(`${BASE}#/permit/${guid}`, { waitUntil: 'domcontentloaded' })
-  // The SPA polls forever (never goes "idle"), so wait for actual content.
-  await page
-    .waitForFunction(() => /Permit Number|Type:\s/.test(document.body.innerText), { timeout: 30000 })
-    .catch(() => {})
+const readTables = (page) =>
+  page.evaluate(() =>
+    [...document.querySelectorAll('table')].map((tbl) => ({
+      headers: [...tbl.querySelectorAll('th')].map((th) => th.textContent.trim()).filter(Boolean),
+      rows: [...tbl.querySelectorAll('tbody tr')]
+        .map((tr) => [...tr.querySelectorAll('td')].map((td) => td.textContent.trim().replace(/\s+/g, ' ')))
+        .filter((r) => r.some((c) => c)),
+    })),
+  )
 
-  // Render the tabs whose tables we need (Angular only builds the active tab).
+// Click the tabs whose tables we need (Angular only builds the active tab; the
+// eReviews/Inspections tab hides under the "More Info" dropdown).
+async function activateTabs(page) {
   await page.evaluate(() => {
-    const click = (txt) => {
-      const el = [...document.querySelectorAll('a,button,li,span')].find((e) => (e.textContent || '').trim() === txt)
-      if (el) el.click()
-    }
-    click('Holds')
+    const el = [...document.querySelectorAll('a,button,li,span')].find((e) => (e.textContent || '').trim() === 'Holds')
+    if (el) el.click()
   })
-  await page.waitForTimeout(700)
+  await page.waitForTimeout(1200)
   await page.evaluate(() => {
     const more = [...document.querySelectorAll('a,button')].find(
       (e) => /more info/i.test((e.textContent || '').trim()) && e.offsetParent !== null,
@@ -114,17 +116,30 @@ async function scrapePermit(page, guid) {
     const er = [...document.querySelectorAll('a,button,li,span')].find((e) => (e.textContent || '').trim() === 'eReviews')
     if (er) er.click()
   })
-  await page.waitForTimeout(900)
+  await page.waitForTimeout(1400)
+}
 
-  const tables = await page.evaluate(() =>
-    [...document.querySelectorAll('table')].map((tbl) => ({
-      headers: [...tbl.querySelectorAll('th')].map((th) => th.textContent.trim()).filter(Boolean),
-      rows: [...tbl.querySelectorAll('tbody tr')]
-        .map((tr) => [...tr.querySelectorAll('td')].map((td) => td.textContent.trim().replace(/\s+/g, ' ')))
-        .filter((r) => r.some((c) => c)),
-    })),
-  )
-  return classify(tables)
+async function scrapePermit(page, guid) {
+  await page.goto(`${BASE}#/permit/${guid}`, { waitUntil: 'domcontentloaded' })
+  // The SPA polls forever (never "idle"), so wait for actual content.
+  const loaded = await page
+    .waitForFunction(() => /Permit Number/i.test(document.body.innerText), { timeout: 30000 })
+    .then(() => true)
+    .catch(() => false)
+  if (!loaded) return { holds: [], rejections: [], fyi: [], complete: false, tableCount: 0 }
+
+  await activateTabs(page)
+  let tables = await readTables(page)
+  // A fully-rendered permit page has ~11 tables. If we see far fewer, the page
+  // under-rendered (slow load) — re-activate + re-read ONCE. This is what guards
+  // against a flaky read falsely reporting "clear" and wiping real items.
+  if (tables.length < 6) {
+    await page.waitForTimeout(2500)
+    await activateTabs(page)
+    tables = await readTables(page)
+  }
+  const complete = tables.length >= 6
+  return { ...classify(tables), complete, tableCount: tables.length }
 }
 
 /* -------- write findings into the Workbench (Supabase), de-duped + safe -------- */
@@ -260,14 +275,18 @@ console.log(`\nScanning ${entries.length} permit${entries.length === 1 ? '' : 's
 const results = []
 for (const [permit, guid] of entries) {
   try {
-    const { holds, rejections, fyi } = await scrapePermit(page, guid)
-    results.push({ permit, holds, rejections, fyi })
-    const n = holds.length + rejections.length
-    if (n || fyi.length) {
-      console.log(`\n● ${permit}  (${n} action${n === 1 ? '' : 's'}${fyi.length ? `, ${fyi.length} FYI` : ''})`)
-      for (const r of rejections) console.log(`   ⚠️  ${r.desc}: ${r.status} [${r.date}]`)
-      for (const h of holds) console.log(`   🚧 HOLD: ${h.name} — ${h.comment} [${h.date}]`)
-      for (const f of fyi) console.log(`   🔔 FYI: ${f.name} — ${f.comment.slice(0, 80)} [${f.date}]`)
+    const res = await scrapePermit(page, guid)
+    results.push({ permit, ...res })
+    if (!res.complete) {
+      console.log(`● ${permit}  — ⚠ under-rendered (${res.tableCount} tables) — skipped, its items left untouched`)
+      continue
+    }
+    const n = res.holds.length + res.rejections.length
+    if (n || res.fyi.length) {
+      console.log(`\n● ${permit}  (${n} action${n === 1 ? '' : 's'}${res.fyi.length ? `, ${res.fyi.length} FYI` : ''})`)
+      for (const r of res.rejections) console.log(`   ⚠️  ${r.desc}: ${r.status} [${r.date}]`)
+      for (const h of res.holds) console.log(`   🚧 HOLD: ${h.name} — ${h.comment} [${h.date}]`)
+      for (const f of res.fyi) console.log(`   🔔 FYI: ${f.name} — ${f.comment.slice(0, 80)} [${f.date}]`)
     } else {
       console.log(`● ${permit}  — clear`)
     }
@@ -277,7 +296,13 @@ for (const [permit, guid] of entries) {
 }
 await ctx.close()
 
-const total = results.reduce((s, r) => s + r.holds.length + r.rejections.length, 0)
-const fyiTotal = results.reduce((s, r) => s + (r.fyi ? r.fyi.length : 0), 0)
-console.log(`\nScanned ${results.length} permit(s): ${total} action item(s)${fyiTotal ? ` + ${fyiTotal} FYI` : ''}.`)
-await syncToWorkbench(results)
+// Only permits that FULLY rendered get synced — under-rendered ones are left
+// alone (never cleared) so a flaky load can't wipe real items.
+const done = results.filter((r) => r.complete)
+const skipped = results.length - done.length
+const total = done.reduce((s, r) => s + r.holds.length + r.rejections.length, 0)
+const fyiTotal = done.reduce((s, r) => s + (r.fyi ? r.fyi.length : 0), 0)
+console.log(
+  `\nScanned ${done.length}/${results.length} fully${skipped ? ` (${skipped} skipped)` : ''}: ${total} action item(s)${fyiTotal ? ` + ${fyiTotal} FYI` : ''}.`,
+)
+await syncToWorkbench(done)

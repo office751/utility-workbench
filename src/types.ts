@@ -108,6 +108,19 @@ export interface ProjectDoc {
 }
 
 /**
+ * One per-permit portal NOTIFICATION — an FYI status note pulled from the county
+ * portal by the scanner (e.g. "DEP construction permit received"). Dismissible,
+ * but kept in history under the 🔔; the badge counts the undismissed ones.
+ */
+export interface PermitNote {
+  sourceKey: string // stable id from the scanner (de-dupe); e.g. "portal:<permit>:fyi:<name>:<date>"
+  text: string
+  date?: string
+  dismissed?: boolean
+  createdAt?: string
+}
+
+/**
  * Everything that CHANGES for one project — this is what localStorage holds.
  * Fields marked `?` are optional overrides: e.g. if `electricCo` is set here,
  * it wins over the roster value (you verified/changed the utility).
@@ -136,6 +149,12 @@ export interface ProjectState {
    * can be shared by text/email via a signed link (see lib/files.ts).
    */
   docs?: ProjectDoc[]
+
+  /**
+   * Per-permit portal notifications (FYI notes from the county scan). Shown
+   * under the 🔔 on the permit; dismissible but kept in history.
+   */
+  notifications?: PermitNote[]
 
   /** Material orders for this project (trusses, slab, cabinets, …). */
   orders?: OrderItem[]
