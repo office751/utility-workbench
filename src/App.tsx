@@ -64,6 +64,7 @@ function App() {
     deleteProject,
     addProjectFiles,
     removeProjectFile,
+    dismissNotification,
     addOrder,
     updateOrder,
     removeOrder,
@@ -255,6 +256,7 @@ function App() {
                 addTask={addTask}
                 updateTask={updateTask}
                 removeTask={removeTask}
+                dismissNotification={dismissNotification}
                 onSwitchStream={(s) => setLens(s)}
                 onBack={() => setSelectedId(null)}
                 onDelete={() => {

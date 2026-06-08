@@ -62,6 +62,7 @@ interface Updaters {
   addTask: (t: Omit<Task, 'id' | 'createdAt' | 'done' | 'doneAt'>) => void
   updateTask: (id: string, patch: Partial<Task>) => void
   removeTask: (id: string) => void
+  dismissNotification: (id: number, sourceKey: string) => void
 }
 
 interface Props extends Updaters {
@@ -375,7 +376,7 @@ function SepticBody({ project: p, ps, toggleStep, setStepNote }: Props) {
 
 /* ===================== PERMITTING ===================== */
 
-function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, updateTask, removeTask }: Props) {
+function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, updateTask, removeTask, dismissNotification }: Props) {
   const next = nextPermitAction(ps)
   const folder = sharepointFolderOf(p, ps) // hidden link — opened via the button below
   const permitUrl = permitPortalOf(p, ps)
@@ -386,6 +387,12 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, u
 
   return (
     <>
+      {/* 🔔 FYI notifications the portal scanner pulled in (dismissible). */}
+      <PermitNotifications
+        notes={ps.notifications ?? []}
+        onDismiss={(sk) => dismissNotification(p.id, sk)}
+      />
+
       {/* Read-only summary — edit responsible / links / dates in ⚙️ Settings. */}
       <p className="summary">
         📋 Responsible: {permitResponsibleOf(ps)}

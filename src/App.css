@@ -459,6 +459,87 @@ textarea {
   flex: 1;
 }
 
+/* ---------- permit 🔔 notifications (FYI from the portal scan) ---------- */
+.permit-notices {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 6px;
+}
+.notice-bell {
+  position: relative;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1;
+  padding: 4px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel);
+  cursor: pointer;
+}
+.notice-bell.has {
+  border-color: var(--accent);
+}
+.notice-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #c0492f;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+.notice-panel {
+  position: absolute;
+  top: 36px;
+  right: 0;
+  z-index: 20;
+  width: min(440px, 86vw);
+  max-height: 340px;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+  padding: 8px;
+}
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.notice:last-child {
+  border-bottom: none;
+}
+.notice-text {
+  flex: 1;
+}
+.notice.dismissed {
+  opacity: 0.55;
+}
+.notice-divider {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 8px 4px 2px;
+}
+.notice-allclear {
+  font-size: 13px;
+  text-align: center;
+  padding: 6px;
+}
+
 /* ---------- the checklist ---------- */
 
 .checklist {
