@@ -33,12 +33,16 @@ if (onlyPermit) entries = entries.filter(([p]) => p === onlyPermit)
 
 // A status that means "needs your attention".
 const REJECTED = /disapprov|fail(ed)?|reject|correction|denied|incomplete|partial/i
+// The county stamps this exact "pay impact fees before final" hold on EVERY
+// permit — pure noise. Water-line/WME "Final Holds" don't contain this text.
+const BOILERPLATE = /impact fees cannot be paid prior to permit issuance/i
 const firstDate = (cells) => cells.find((c) => /\d{1,2}\/\d{1,2}\/\d{4}/.test(c)) || ''
 
-/** Turn the raw tables scraped off a permit page into actionable items. */
+/** Turn the raw tables scraped off a permit page into actionable items + FYIs. */
 function classify(tables) {
-  const holds = []
-  const rejections = []
+  const holds = [] // actionable holds
+  const rejections = [] // inspection / review disapprovals
+  const fyi = [] // "Information …" status notes → dismissible notifications
   for (const t of tables) {
     const hl = t.headers.join('|').toLowerCase()
 
@@ -48,9 +52,14 @@ function classify(tables) {
         const status = (r[r.length - 1] || '').trim()
         // EXACT match — "Inactive" contains "active", so a substring test would
         // wrongly flag resolved holds.
-        if (status.toLowerCase() === 'active') {
-          holds.push({ name: r[0] || '', comment: r[2] || r[1] || '', date: r[3] || '', status })
-        }
+        if (status.toLowerCase() !== 'active') continue
+        const name = (r[0] || '').trim()
+        const comment = r[2] || r[1] || ''
+        if (BOILERPLATE.test(comment)) continue // standard impact-fee hold → noise
+        const item = { name, comment, date: r[3] || '' }
+        // "Information …" rows are status FYIs → dismissible notifications, not to-dos.
+        if (/^information\b/i.test(name)) fyi.push(item)
+        else holds.push(item)
       }
       continue
     }
@@ -74,7 +83,7 @@ function classify(tables) {
       }
     }
   }
-  return { holds, rejections }
+  return { holds, rejections, fyi }
 }
 
 async function scrapePermit(page, guid) {
@@ -142,13 +151,14 @@ console.log(`\nScanning ${entries.length} permit${entries.length === 1 ? '' : 's
 const results = []
 for (const [permit, guid] of entries) {
   try {
-    const { holds, rejections } = await scrapePermit(page, guid)
-    results.push({ permit, holds, rejections })
+    const { holds, rejections, fyi } = await scrapePermit(page, guid)
+    results.push({ permit, holds, rejections, fyi })
     const n = holds.length + rejections.length
-    if (n) {
-      console.log(`\n● ${permit}  (${n} item${n === 1 ? '' : 's'})`)
-      for (const h of holds) console.log(`   🚧 HOLD: ${h.name} — ${h.comment} [${h.date}]`)
+    if (n || fyi.length) {
+      console.log(`\n● ${permit}  (${n} action${n === 1 ? '' : 's'}${fyi.length ? `, ${fyi.length} FYI` : ''})`)
       for (const r of rejections) console.log(`   ⚠️  ${r.desc}: ${r.status} [${r.date}]`)
+      for (const h of holds) console.log(`   🚧 HOLD: ${h.name} — ${h.comment} [${h.date}]`)
+      for (const f of fyi) console.log(`   🔔 FYI: ${f.name} — ${f.comment.slice(0, 80)} [${f.date}]`)
     } else {
       console.log(`● ${permit}  — clear`)
     }
@@ -159,5 +169,6 @@ for (const [permit, guid] of entries) {
 await ctx.close()
 
 const total = results.reduce((s, r) => s + r.holds.length + r.rejections.length, 0)
-console.log(`\nDone. ${results.length} permits scanned, ${total} actionable item(s) found.`)
+const fyiTotal = results.reduce((s, r) => s + (r.fyi ? r.fyi.length : 0), 0)
+console.log(`\nDone. ${results.length} permits scanned, ${total} action item(s)${fyiTotal ? ` + ${fyiTotal} FYI` : ''}.`)
 console.log('(Dry run — nothing written. Writing into the Workbench is the next step.)\n')
