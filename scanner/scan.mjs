@@ -45,8 +45,10 @@ function classify(tables) {
     // --- HOLDS table: Name | Description | Comments | Hold Date | Status ---
     if (hl.includes('hold date')) {
       for (const r of t.rows) {
-        const status = r[r.length - 1] || ''
-        if (/active/i.test(status)) {
+        const status = (r[r.length - 1] || '').trim()
+        // EXACT match — "Inactive" contains "active", so a substring test would
+        // wrongly flag resolved holds.
+        if (status.toLowerCase() === 'active') {
           holds.push({ name: r[0] || '', comment: r[2] || r[1] || '', date: r[3] || '', status })
         }
       }
@@ -119,13 +121,21 @@ const ctx = await chromium.launchPersistentContext(PROFILE_DIR, {
 })
 const page = ctx.pages()[0] || (await ctx.newPage())
 
-await page.goto(`${BASE}#/home`, { waitUntil: 'domcontentloaded' })
-await page.waitForTimeout(2500)
-const loggedIn = await page.evaluate(() => /log out/i.test(document.body.innerText))
-if (!loggedIn) {
-  console.error('\n✗ Not logged in to the portal. Run `npm run login` first, then retry.\n')
-  await ctx.close()
-  process.exit(1)
+// Auth check: actually LOAD the first permit and confirm its record renders.
+// (The portal keeps both "Log In" and "Log Out" in the DOM, so a text check is
+// unreliable — loading a permit is the real test of whether the session is good.)
+const probeGuid = entries[0] && entries[0][1]
+if (probeGuid) {
+  await page.goto(`${BASE}#/permit/${probeGuid}`, { waitUntil: 'domcontentloaded' })
+  const ok = await page
+    .waitForFunction(() => /Permit Number/i.test(document.body.innerText), { timeout: 30000 })
+    .then(() => true)
+    .catch(() => false)
+  if (!ok) {
+    console.error('\n✗ Could not load a permit (likely logged out). Run `npm run login` first, then retry.\n')
+    await ctx.close()
+    process.exit(1)
+  }
 }
 
 console.log(`\nScanning ${entries.length} permit${entries.length === 1 ? '' : 's'}…`)
