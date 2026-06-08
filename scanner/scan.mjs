@@ -100,23 +100,38 @@ const readTables = (page) =>
     })),
   )
 
+// The two tables whose presence proves the tabs we care about actually rendered.
+const hasHoldsTable = (tables) => tables.some((t) => t.headers.join('|').toLowerCase().includes('hold date'))
+const hasInspTable = (tables) =>
+  tables.some((t) => {
+    const h = t.headers.join('|').toLowerCase()
+    return h.includes('inspector') || h.includes('scheduled date') || h.includes('view inspection')
+  })
+
 // Click the tabs whose tables we need (Angular only builds the active tab; the
-// eReviews/Inspections tab hides under the "More Info" dropdown).
+// eReviews/Inspections tab hides under the "More Info" dropdown). Idempotent:
+// opens "More Info" only if eReviews isn't already reachable, so repeated calls
+// don't toggle the dropdown shut.
 async function activateTabs(page) {
   await page.evaluate(() => {
     const el = [...document.querySelectorAll('a,button,li,span')].find((e) => (e.textContent || '').trim() === 'Holds')
     if (el) el.click()
   })
-  await page.waitForTimeout(1200)
+  await page.waitForTimeout(900)
   await page.evaluate(() => {
-    const more = [...document.querySelectorAll('a,button')].find(
-      (e) => /more info/i.test((e.textContent || '').trim()) && e.offsetParent !== null,
-    )
-    if (more) more.click()
+    const vis = (e) => e && e.offsetParent !== null
+    const er = [...document.querySelectorAll('a,button,li,span')].find((e) => (e.textContent || '').trim() === 'eReviews' && vis(e))
+    if (!er) {
+      const more = [...document.querySelectorAll('a,button')].find((e) => /more info/i.test((e.textContent || '').trim()) && vis(e))
+      if (more) more.click()
+    }
+  })
+  await page.waitForTimeout(700)
+  await page.evaluate(() => {
     const er = [...document.querySelectorAll('a,button,li,span')].find((e) => (e.textContent || '').trim() === 'eReviews')
     if (er) er.click()
   })
-  await page.waitForTimeout(1400)
+  await page.waitForTimeout(1000)
 }
 
 async function scrapePermit(page, guid) {
@@ -128,17 +143,17 @@ async function scrapePermit(page, guid) {
     .catch(() => false)
   if (!loaded) return { holds: [], rejections: [], fyi: [], complete: false, tableCount: 0 }
 
-  await activateTabs(page)
-  let tables = await readTables(page)
-  // A fully-rendered permit page has ~11 tables. If we see far fewer, the page
-  // under-rendered (slow load) — re-activate + re-read ONCE. This is what guards
-  // against a flaky read falsely reporting "clear" and wiping real items.
-  if (tables.length < 6) {
-    await page.waitForTimeout(2500)
+  // Poll: re-activate the Holds + eReviews/Inspections tabs until BOTH tables are
+  // actually in the DOM. The SPA renders tabs lazily, and trusting a read before
+  // the Inspections tab rendered is exactly what produced false "clear" results.
+  let tables = []
+  for (let attempt = 0; attempt < 5; attempt++) {
     await activateTabs(page)
     tables = await readTables(page)
+    if (hasHoldsTable(tables) && hasInspTable(tables)) break
+    await page.waitForTimeout(1500)
   }
-  const complete = tables.length >= 6
+  const complete = hasHoldsTable(tables) && hasInspTable(tables)
   return { ...classify(tables), complete, tableCount: tables.length }
 }
 

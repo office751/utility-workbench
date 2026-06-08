@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Nightly permit scan. Install:
+    cp scanner/com.ironshield.permitscanner.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.ironshield.permitscanner.plist
+  Remove:
+    launchctl unload ~/Library/LaunchAgents/com.ironshield.permitscanner.plist
+  Runs scan.mjs --write at 5:30 AM daily. The Mac must be awake (if asleep,
+  launchd runs it on the next wake). Logs go to scanner/logs/.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.ironshield.permitscanner</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/Construction/.nvm/versions/node/v24.16.0/bin/node</string>
+    <string>scan.mjs</string>
+    <string>--write</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/Users/Construction/Documents/Claude/Projects/Utility Applications/utility-workbench/scanner</string>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>5</integer>
+    <key>Minute</key>
+    <integer>30</integer>
+  </dict>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>StandardOutPath</key>
+  <string>/Users/Construction/Documents/Claude/Projects/Utility Applications/utility-workbench/scanner/logs/scan.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/Construction/Documents/Claude/Projects/Utility Applications/utility-workbench/scanner/logs/scan.err.log</string>
+</dict>
+</plist>
