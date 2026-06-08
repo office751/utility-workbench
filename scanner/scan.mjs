@@ -14,6 +14,7 @@
  *   npm run scan -- --headed          # watch it work in a visible window
  */
 import { chromium } from 'playwright'
+import { createClient } from '@supabase/supabase-js'
 import 'dotenv/config'
 import fs from 'node:fs'
 
@@ -22,6 +23,9 @@ const PROFILE_DIR = process.env.PROFILE_DIR || './profile'
 
 const args = process.argv.slice(2)
 const headed = args.includes('--headed')
+const doWrite = args.includes('--write') // without this, the sync only PREVIEWS
+const SUPABASE_URL = process.env.SUPABASE_URL
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY
 const onlyPermit =
   (args.find((a) => a.startsWith('--permit=')) || '').split('=')[1] ||
   (args.includes('--permit') ? args[args.indexOf('--permit') + 1] : null)
@@ -123,6 +127,111 @@ async function scrapePermit(page, guid) {
   return classify(tables)
 }
 
+/* -------- write findings into the Workbench (Supabase), de-duped + safe -------- */
+const permitFromKey = (k) => {
+  const m = /^portal:([^:]+):/.exec(k || '')
+  return m ? m[1] : null
+}
+const trimDesc = (d) => (d || '').replace(/\s*-\s*1\s*&\s*2\s*Residential Family\s*$/i, '').trim()
+
+/** From scan results + the roster, build the tasks + per-project FYIs we WANT to exist. */
+function buildDesired(results, roster) {
+  const idByPermit = new Map()
+  const addrById = new Map()
+  for (const p of roster) {
+    if (p.permit) idByPermit.set(p.permit, p.id)
+    addrById.set(p.id, p.address)
+  }
+  const tasks = []
+  const notesByProject = new Map()
+  for (const r of results) {
+    const pid = idByPermit.get(r.permit)
+    if (pid == null) continue // permit not in roster → skip
+    const addr = addrById.get(pid) || r.permit
+    for (const rej of r.rejections)
+      tasks.push({ sourceKey: `portal:${r.permit}:rej:${rej.desc}`, projectId: pid, text: `${addr}: ${trimDesc(rej.desc)} — ${rej.status}` })
+    for (const h of r.holds)
+      tasks.push({ sourceKey: `portal:${r.permit}:hold:${h.name}:${h.date}`, projectId: pid, text: `${addr}: ${h.name} — ${(h.comment || '').slice(0, 140)}` })
+    for (const f of r.fyi) {
+      if (!notesByProject.has(pid)) notesByProject.set(pid, [])
+      notesByProject.get(pid).push({ sourceKey: `portal:${r.permit}:fyi:${f.name}:${f.date}`, text: `${f.name} — ${(f.comment || '').slice(0, 220)}`, date: f.date })
+    }
+  }
+  return { tasks, notesByProject }
+}
+
+async function syncToWorkbench(results) {
+  if (!SERVICE_KEY) {
+    console.log('\n(No SUPABASE_SERVICE_KEY in .env — scan only, nothing written.)\n')
+    return
+  }
+  const sb = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } })
+  const { data, error } = await sb.from('workbench').select('data').eq('id', 'main').maybeSingle()
+  if (error) return console.error('\n✗ Could not read Workbench:', error.message, '\n')
+  const blob = data && data.data
+  // SAFETY: never write if the data doesn't look like a real workbench.
+  if (!blob || !Array.isArray(blob.roster) || blob.roster.length === 0 || !blob.projects || !Array.isArray(blob.tasks))
+    return console.error('\n✗ Workbench data looks invalid — aborting (nothing written).\n')
+  const originalJson = JSON.stringify(data.data) // captured BEFORE we mutate, for the backup
+
+  const scanned = new Set(results.map((r) => r.permit))
+  const { tasks: desired, notesByProject } = buildDesired(results, blob.roster)
+  const desiredKeys = new Set(desired.map((t) => t.sourceKey))
+  const existingByKey = new Map(blob.tasks.filter((t) => t.sourceKey).map((t) => [t.sourceKey, t]))
+
+  // --- tasks: drop resolved portal items (only for permits we scanned), add/update the rest ---
+  let added = 0, updated = 0, cleared = 0
+  blob.tasks = blob.tasks.filter((t) => {
+    const perm = permitFromKey(t.sourceKey)
+    if (perm && scanned.has(perm) && !desiredKeys.has(t.sourceKey)) { cleared++; return false }
+    return true
+  })
+  for (const d of desired) {
+    const ex = existingByKey.get(d.sourceKey)
+    if (ex) {
+      if (ex.text !== d.text || ex.done) { ex.text = d.text; ex.done = false; delete ex.doneAt; updated++ } // re-flagged → reopen
+    } else {
+      blob.tasks.push({ id: crypto.randomUUID(), text: d.text, category: 'construction', projectId: d.projectId, sourceKey: d.sourceKey, done: false, createdAt: new Date().toISOString() })
+      added++
+    }
+  }
+
+  // --- FYI notifications (per project): preserve `dismissed`, drop resolved ---
+  let nAdded = 0, nCleared = 0
+  const scannedPids = new Set()
+  for (const r of results) { const p = blob.roster.find((x) => x.permit === r.permit); if (p) scannedPids.add(p.id) }
+  for (const pid of scannedPids) {
+    const ps = blob.projects[pid]
+    if (!ps) continue
+    const desiredNotes = notesByProject.get(pid) || []
+    const desiredNKeys = new Set(desiredNotes.map((n) => n.sourceKey))
+    const byKey = new Map((ps.notifications || []).filter((n) => n.sourceKey).map((n) => [n.sourceKey, n]))
+    const kept = (ps.notifications || []).filter((n) => {
+      const perm = permitFromKey(n.sourceKey)
+      if (perm && !desiredNKeys.has(n.sourceKey)) { nCleared++; return false }
+      return true
+    })
+    for (const d of desiredNotes) {
+      const ex = byKey.get(d.sourceKey)
+      if (ex) { ex.text = d.text; ex.date = d.date } // keep `dismissed`
+      else { kept.push({ sourceKey: d.sourceKey, text: d.text, date: d.date, dismissed: false, createdAt: new Date().toISOString() }); nAdded++ }
+    }
+    ps.notifications = kept
+  }
+
+  console.log('\nWorkbench sync:')
+  console.log(`   tasks:         +${added} new, ${updated} updated, ${cleared} cleared`)
+  console.log(`   notifications: +${nAdded} new, ${nCleared} cleared`)
+  if (!doWrite) return console.log('\n(PREVIEW — nothing written. Re-run with  --write  to apply.)\n')
+
+  fs.mkdirSync(new URL('./backups/', import.meta.url), { recursive: true })
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+  fs.writeFileSync(new URL(`./backups/workbench-${stamp}.json`, import.meta.url), originalJson)
+  const { error: werr } = await sb.from('workbench').upsert({ id: 'main', data: blob, updated_at: new Date().toISOString() })
+  if (werr) return console.error('\n✗ Write failed:', werr.message, '\n')
+  console.log(`\n✓ Written to your Workbench. Backup: scanner/backups/workbench-${stamp}.json\n`)
+}
+
 // ---- run ----
 const ctx = await chromium.launchPersistentContext(PROFILE_DIR, {
   headless: !headed,
@@ -170,5 +279,5 @@ await ctx.close()
 
 const total = results.reduce((s, r) => s + r.holds.length + r.rejections.length, 0)
 const fyiTotal = results.reduce((s, r) => s + (r.fyi ? r.fyi.length : 0), 0)
-console.log(`\nDone. ${results.length} permits scanned, ${total} action item(s)${fyiTotal ? ` + ${fyiTotal} FYI` : ''}.`)
-console.log('(Dry run — nothing written. Writing into the Workbench is the next step.)\n')
+console.log(`\nScanned ${results.length} permit(s): ${total} action item(s)${fyiTotal ? ` + ${fyiTotal} FYI` : ''}.`)
+await syncToWorkbench(results)
