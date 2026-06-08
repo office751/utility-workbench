@@ -251,6 +251,10 @@ function App() {
                 addOrder={addOrder}
                 updateOrder={updateOrder}
                 removeOrder={removeOrder}
+                tasks={state.tasks}
+                addTask={addTask}
+                updateTask={updateTask}
+                removeTask={removeTask}
                 onSwitchStream={(s) => setLens(s)}
                 onBack={() => setSelectedId(null)}
                 onDelete={() => {

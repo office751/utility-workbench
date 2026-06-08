@@ -12,7 +12,7 @@
  * stay hidden until you open settings.
  */
 import { useState } from 'react'
-import type { OrderItem, OrderStatus, Project, ProjectState, Stream } from '../types'
+import type { OrderItem, OrderStatus, Project, ProjectState, Stream, Task } from '../types'
 import { ELECTRIC_STEPS, PERMIT_STEPS, septicStepsFor, waterStepsFor } from '../data/lifecycles'
 import {
   engineerOf,
@@ -43,6 +43,7 @@ import { GEORGES } from '../data/contacts'
 import Checklist from './Checklist'
 import ContactLinks from './ContactLinks'
 import DocumentsBox from './DocumentsBox'
+import PermitReviewItems from './PermitReviewItems'
 import ProjectSettings from './ProjectSettings'
 import MaterialsBody from './MaterialsBody'
 
@@ -57,12 +58,16 @@ interface Updaters {
   addOrder: (id: number, order: { category: string; status: OrderStatus }) => void
   updateOrder: (id: number, orderId: string, patch: Partial<OrderItem>) => void
   removeOrder: (id: number, orderId: string) => void
+  addTask: (t: Omit<Task, 'id' | 'createdAt' | 'done' | 'doneAt'>) => void
+  updateTask: (id: string, patch: Partial<Task>) => void
+  removeTask: (id: string) => void
 }
 
 interface Props extends Updaters {
   stream: Stream
   project: Project
   ps: ProjectState
+  tasks: Task[]
   onBack: () => void
   /** Permanently remove this project (App deletes + returns to dashboard). */
   onDelete: () => void
@@ -369,7 +374,7 @@ function SepticBody({ project: p, ps, toggleStep, setStepNote }: Props) {
 
 /* ===================== PERMITTING ===================== */
 
-function PermitBody({ project: p, ps, toggleStep, setStepNote }: Props) {
+function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, updateTask, removeTask }: Props) {
   const next = nextPermitAction(ps)
   const folder = sharepointFolderOf(p, ps) // hidden link — opened via the button below
   const permitUrl = permitPortalOf(p, ps)
@@ -427,6 +432,14 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote }: Props) {
         ps={ps}
         toggleStep={toggleStep}
         setStepNote={setStepNote}
+      />
+
+      <PermitReviewItems
+        projectId={p.id}
+        tasks={tasks}
+        addTask={addTask}
+        updateTask={updateTask}
+        removeTask={removeTask}
       />
     </>
   )

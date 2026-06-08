@@ -164,6 +164,17 @@ export interface Task {
   done?: boolean
   doneAt?: string // ISO timestamp when completed
   createdAt: string // ISO timestamp when captured
+  /**
+   * Links this task to a project/permit — e.g. a county-portal hold or
+   * plan-review rejection surfaced on that permit. Absent = free-standing task.
+   */
+  projectId?: number
+  /**
+   * Stable id for de-duping AUTO-created items so a re-scan updates instead of
+   * duplicating (the permit scanner sets it, e.g. "portal:<permit>:<holdId>").
+   * Absent for hand-entered tasks.
+   */
+  sourceKey?: string
 }
 
 /** The whole saved blob. */

@@ -418,6 +418,47 @@ textarea {
   color: var(--accent);
 }
 
+/* ---------- permit "Portal items" (reviews / holds) ---------- */
+.reviews {
+  margin: 14px 0 4px;
+}
+.reviews-empty {
+  font-size: 13px;
+  margin: 4px 0 8px;
+}
+.review-list {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+}
+.review-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.review-list li label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.review-list li.done .review-text {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+.review-add {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.review-add input {
+  flex: 1;
+}
+
 /* ---------- the checklist ---------- */
 
 .checklist {
