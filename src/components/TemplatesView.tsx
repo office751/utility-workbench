@@ -16,6 +16,7 @@ import { templateSpecs, type TemplateSpec } from '../data/templates'
 import { effectiveTemplate, renderTemplate } from '../lib/templates'
 import { VENDORS, vendorTemplateVars } from '../data/vendors'
 import { buildDukePacket, buildSecoPacket } from '../lib/loadForm'
+import { projectStatusVars } from '../lib/statusReport'
 
 interface Props {
   templates: Record<string, TemplateOverride> | undefined
@@ -41,6 +42,16 @@ function previewVars(spec: TemplateSpec, sample: Project | undefined, getPS: (id
       permit: sample.permit,
       model: sample.model,
       packet: spec.id === 'apply:SECO' ? buildSecoPacket(sample, ps) : buildDukePacket(sample, ps),
+    }
+  }
+  if (spec.id.startsWith('status:') && sample) {
+    // Subject tokens (date/count/scope) + the per-project body tokens together,
+    // so the card previews both the header line and a sample project block.
+    return {
+      date: new Date().toLocaleDateString(),
+      count: '12',
+      scope: 'all active',
+      ...projectStatusVars(sample, getPS(sample.id), getPS),
     }
   }
   return {}

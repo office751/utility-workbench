@@ -13,6 +13,9 @@ import {
   DEFAULT_APPLY_DUKE_SUBJECT,
   DEFAULT_APPLY_SECO_BODY,
   DEFAULT_APPLY_SECO_SUBJECT,
+  DEFAULT_STATUS_DETAILED_BODY,
+  DEFAULT_STATUS_SIMPLE_BODY,
+  DEFAULT_STATUS_SUBJECT,
   DEFAULT_VENDOR_BODY,
   DEFAULT_VENDOR_SUBJECT,
 } from '../lib/templates'
@@ -53,9 +56,57 @@ const APPLY_VARS: TemplateVar[] = [
   { token: '{{packet}}', desc: 'the fully-filled application form (auto-generated)' },
 ]
 
+// The SUBJECT line understands these (whole-report); the BODY is one block per
+// house and understands the project tokens below it.
+const STATUS_SUBJECT_VARS: TemplateVar[] = [
+  { token: '{{date}}', desc: "today's date" },
+  { token: '{{count}}', desc: 'number of projects in the report' },
+  { token: '{{scope}}', desc: 'what was selected (e.g. "all active")' },
+]
+const STATUS_BODY_VARS: TemplateVar[] = [
+  { token: '{{address}}', desc: 'street address' },
+  { token: '{{city}}', desc: 'city' },
+  { token: '{{model}}', desc: 'house model' },
+  { token: '{{subdivision}}', desc: 'subdivision' },
+  { token: '{{permit}}', desc: 'permit number (or —)' },
+  { token: '{{status}}', desc: 'Active / ON HOLD / C.O.' },
+  { token: '{{utility}}', desc: 'electric utility (SECO/Duke/Clay)' },
+  { token: '{{water_source}}', desc: 'water source' },
+  { token: '{{septic_type}}', desc: 'septic or sewer' },
+  { token: '{{electric}}', desc: 'electric status / next step' },
+  { token: '{{water}}', desc: 'water status / next step' },
+  { token: '{{septic}}', desc: 'septic status / next step' },
+  { token: '{{permit_status}}', desc: 'permit status / next step' },
+  { token: '{{materials}}', desc: 'materials summary' },
+  { token: '{{expires}}', desc: 'permit expiry date (if any)' },
+  { token: '{{nextAction}}', desc: "the project's #1 priority (same as Today)" },
+]
+
 /** Every editable template, grouped. (Future: more workflows register here.) */
 export function templateSpecs(): TemplateSpec[] {
   return [
+    {
+      id: 'status:simple',
+      group: 'Status reports',
+      icon: '📋',
+      name: 'Status report — simple overview',
+      description:
+        'One line per house in 📋 Status report (Simple). The SUBJECT frames the whole report; the BODY is repeated once per project.',
+      vars: [...STATUS_SUBJECT_VARS, ...STATUS_BODY_VARS],
+      subject: DEFAULT_STATUS_SUBJECT,
+      body: DEFAULT_STATUS_SIMPLE_BODY,
+    },
+    {
+      id: 'status:detailed',
+      group: 'Status reports',
+      icon: '📋',
+      name: 'Status report — detailed',
+      description:
+        'A full block per house in 📋 Status report (Detailed) — every stream. Edit the BODY to change exactly what each update includes.',
+      vars: [...STATUS_SUBJECT_VARS, ...STATUS_BODY_VARS],
+      subject: DEFAULT_STATUS_SUBJECT,
+      body: DEFAULT_STATUS_DETAILED_BODY,
+    },
     {
       id: 'apply:SECO',
       group: 'Electric application emails',

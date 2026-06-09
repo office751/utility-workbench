@@ -33,6 +33,8 @@ interface Props {
   onAdd: () => void
   /** Open the ⚡ batch electric-application screen. */
   onBatchApply: () => void
+  /** Open the 📋 status-report builder. */
+  onStatusReport: () => void
   getProjectState: (id: number) => ProjectState
 }
 
@@ -78,7 +80,7 @@ function nextLine(p: Project, ps: ProjectState, cells: Cell[]): string {
 
 const GLYPH: Record<CellState, string> = { done: '✓', fire: '!', go: '·' }
 
-function ProjectList({ projects, onSelect, onAdd, onBatchApply, getProjectState }: Props) {
+function ProjectList({ projects, onSelect, onAdd, onBatchApply, onStatusReport, getProjectState }: Props) {
   const [search, setSearch] = useState('')
   const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState<FilterState>(NO_FILTERS)
@@ -149,6 +151,9 @@ function ProjectList({ projects, onSelect, onAdd, onBatchApply, getProjectState 
         <span className="list-head-actions">
           <button className="mini apply-btn" onClick={onBatchApply} title="Draft electric applications for every house that needs one">
             ⚡ Batch apply
+          </button>
+          <button className="mini" onClick={onStatusReport} title="Build a status update for one, several, or all houses">
+            📋 Status report
           </button>
           <ShareMenu visible={visible.map((r) => r.p)} all={projects} getProjectState={getProjectState} />
           <button className="add-btn" onClick={onAdd}>

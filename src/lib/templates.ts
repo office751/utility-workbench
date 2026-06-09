@@ -65,6 +65,28 @@ export const DEFAULT_APPLY_DUKE_BODY = [
   '352-809-3235',
 ].join('\n')
 
+/** Default wording for the status report. The SUBJECT is the whole report's
+ *  subject ({{date}}/{{count}}/{{scope}}); the BODY is a PER-PROJECT block
+ *  ({{address}}, {{electric}}, …) that's rendered once for each house. Edit
+ *  these to change exactly what a status update includes. */
+export const DEFAULT_STATUS_SUBJECT = 'Iron Shield Construction — Status Update ({{date}})'
+
+export const DEFAULT_STATUS_SIMPLE_BODY = [
+  '• {{address}} ({{model}}) — {{status}}',
+  '    Next: {{nextAction}}',
+].join('\n')
+
+export const DEFAULT_STATUS_DETAILED_BODY = [
+  '📍 {{address}} — {{model}}  ·  {{status}}',
+  '   Permit: {{permit}}     Utility: {{utility}}',
+  '   ⚡ Electric:  {{electric}}',
+  '   💧 Water:     {{water}}',
+  '   🚽 Septic:    {{septic}}',
+  '   📋 Permit:    {{permit_status}}',
+  '   🛒 Materials: {{materials}}',
+  '   ➡  Next:      {{nextAction}}',
+].join('\n')
+
 /** A template's effective subject+body: your override where set, default otherwise. */
 export function effectiveTemplate(
   overrides: Record<string, TemplateOverride> | undefined,

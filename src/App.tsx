@@ -23,6 +23,7 @@ import { useTheme } from './hooks/useTheme'
 import { useDensity } from './hooks/useDensity'
 import ProjectList from './components/ProjectList'
 import BatchApply from './components/BatchApply'
+import StatusReport from './components/StatusReport'
 import Detail from './components/Detail'
 import Today from './components/Today'
 import TasksView from './components/TasksView'
@@ -79,6 +80,7 @@ function App() {
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [adding, setAdding] = useState(false) // is the Add form open?
   const [applying, setApplying] = useState(false) // is ⚡ Batch Apply open?
+  const [reporting, setReporting] = useState(false) // is 📋 Status report open?
   // When you open a project from Today/Tasks, jump straight to that stream's tab.
   const [openStream, setOpenStream] = useState<Stream | undefined>(undefined)
 
@@ -189,7 +191,15 @@ function App() {
       )}
 
       {tab === 'projects' &&
-        (applying ? (
+        (reporting ? (
+          <StatusReport
+            projects={projects}
+            getProjectState={getProjectState}
+            templates={state.templates}
+            modelTakeoffs={state.modelTakeoffs}
+            onClose={() => setReporting(false)}
+          />
+        ) : applying ? (
           <BatchApply
             projects={projects}
             getProjectState={getProjectState}
@@ -261,6 +271,7 @@ function App() {
                 setSelectedId(null)
               }}
               onBatchApply={() => setApplying(true)}
+              onStatusReport={() => setReporting(true)}
               getProjectState={getProjectState}
             />
           </div>
