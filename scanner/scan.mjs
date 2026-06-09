@@ -153,6 +153,9 @@ const permitFromKey = (k) => {
   return m ? m[1] : null
 }
 const trimDesc = (d) => (d || '').replace(/\s*-\s*1\s*&\s*2\s*Residential Family\s*$/i, '').trim()
+// A short discriminator so two holds with the same name + date (but different
+// comments — e.g. two "Final Hold" entries) don't collide on one sourceKey.
+const slug = (s) => (s || '').replace(/[^a-z0-9]+/gi, '').slice(0, 40).toLowerCase()
 
 /** From scan results + the roster, build the tasks + per-project FYIs we WANT to exist. */
 function buildDesired(results, roster) {
@@ -175,10 +178,10 @@ function buildDesired(results, roster) {
     // …holds + FYIs only when the Holds tab rendered.
     if (r.holdsOk) {
       for (const h of r.holds)
-        tasks.push({ sourceKey: `portal:${r.permit}:hold:${h.name}:${h.date}`, projectId: pid, text: `${addr}: ${h.name} — ${(h.comment || '').slice(0, 140)}` })
+        tasks.push({ sourceKey: `portal:${r.permit}:hold:${h.name}:${h.date}:${slug(h.comment)}`, projectId: pid, text: `${addr}: ${h.name} — ${(h.comment || '').slice(0, 140)}` })
       for (const f of r.fyi) {
         if (!notesByProject.has(pid)) notesByProject.set(pid, [])
-        notesByProject.get(pid).push({ sourceKey: `portal:${r.permit}:fyi:${f.name}:${f.date}`, text: `${f.name} — ${(f.comment || '').slice(0, 220)}`, date: f.date })
+        notesByProject.get(pid).push({ sourceKey: `portal:${r.permit}:fyi:${f.name}:${f.date}:${slug(f.comment)}`, text: `${f.name} — ${(f.comment || '').slice(0, 220)}`, date: f.date })
       }
     }
   }
@@ -217,7 +220,10 @@ async function syncToWorkbench(results) {
     if (okSet && okSet.has(perm) && !desiredKeys.has(t.sourceKey)) { cleared++; return false }
     return true
   })
+  const seenKeys = new Set()
   for (const d of desired) {
+    if (seenKeys.has(d.sourceKey)) continue // guard: never add the same key twice in one run
+    seenKeys.add(d.sourceKey)
     const ex = existingByKey.get(d.sourceKey)
     if (ex) {
       if (ex.text !== d.text || ex.done) { ex.text = d.text; ex.done = false; delete ex.doneAt; updated++ } // re-flagged → reopen
@@ -242,7 +248,10 @@ async function syncToWorkbench(results) {
       if ((n.sourceKey || '').startsWith('portal:') && !desiredNKeys.has(n.sourceKey)) { nCleared++; return false }
       return true
     })
+    const seenN = new Set()
     for (const d of desiredNotes) {
+      if (seenN.has(d.sourceKey)) continue
+      seenN.add(d.sourceKey)
       const ex = byKey.get(d.sourceKey)
       if (ex) { ex.text = d.text; ex.date = d.date } // keep `dismissed`
       else { kept.push({ sourceKey: d.sourceKey, text: d.text, date: d.date, dismissed: false, createdAt: new Date().toISOString() }); nAdded++ }
