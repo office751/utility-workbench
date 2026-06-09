@@ -11,9 +11,9 @@
  *    mechanical sheet (authoritative); Independence/Republic/Concord had no HVAC
  *    sheet, so tonnage was sized off the verified sqft→ton tiers
  *    (~≤1050 sqft → 2T, ~1300-1350 → 2.5T, ~1770 → 3T; ~1 ton per 550 sqft).
- *  - GRAY ZONES (a Manual-J would override): Republic (1472, sized 2.5 — could
- *    be 3) and Concord (1238, interpolated up to 2.5). D's 1282 sqft would tier
- *    to 2.5 but the sealed plan says 2T, so 2T stands.
+ *  - Republic (1472 → 3T) + Concord (1238 → 2T) tonnage confirmed by Adam from
+ *    the units actually installed (overriding the sqft-tier estimate). D's 1282
+ *    sqft would tier to 2.5 but the sealed plan says 2T, so 2T stands.
  *
  * Edit freely — runtime overrides (via the load-form modal) layer on top.
  */
@@ -32,8 +32,8 @@ export const MODELS_DEFAULT: Record<string, ModelSpec> = {
   F: { sqft: 1334, tons: 2.5 },
   G: { sqft: 1013, tons: 2 },
   Independence: { sqft: 1737, tons: 3, beds: 3 }, // ≈ E2 size
-  Republic: { sqft: 1472, tons: 2.5, beds: 3 }, // borderline 2.5↔3 — confirm
-  Concord: { sqft: 1238, tons: 2.5, beds: 2 }, // interpolated — confirm
+  Republic: { sqft: 1472, tons: 3, beds: 3 }, // 3 TON — confirmed by Adam (actual install)
+  Concord: { sqft: 1238, tons: 2, beds: 2 }, // 2 TON — confirmed by Adam (actual install)
   'Fire-House': { sqft: 1560, tons: 2.5, beds: 3 }, // 2.5 TON stated on Mechanical sheet M1
 }
 
