@@ -41,5 +41,16 @@ export const MARION_PERMITTING = {
 /** CC'd on outgoing application emails. */
 export const OFFICE_CC = 'office@ironshieldconstruction.com'
 
+/** Iron Shield's own info, as it appears on utility applications. */
+export const COMPANY = {
+  name: 'Iron Shield Construction',
+  legalName: 'Iron Shield Construction LLC',
+  mailing: 'PO Box 5651, Ocala, FL 34478',
+  phone: '352-809-3235',
+  email: 'office@ironshieldconstruction.com',
+  electrician: 'Iron Shield Electric — 352-492-3470',
+  siteContact: 'Adam Stiles',
+}
+
 /** Standard email signature. */
 export const SIGNATURE = 'Thank you,\nAdam Stiles\nIron Shield Construction LLC\n352-809-3235'

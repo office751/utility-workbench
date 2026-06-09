@@ -33,6 +33,38 @@ export const DEFAULT_VENDOR_BODY = [
   'Iron Shield Construction',
 ].join('\n')
 
+/** Default wording for the SECO / Duke electric application emails.
+ *  {{packet}} injects the fully-filled notification/service form. */
+export const DEFAULT_APPLY_SECO_SUBJECT = 'New Construction Electric Service — {{address}}'
+export const DEFAULT_APPLY_SECO_BODY = [
+  'Good morning,',
+  '',
+  'We would like to apply for new construction electric service at {{address}} ({{parcel}}).',
+  'The completed notification details are below; the signed form and site plan are attached.',
+  '',
+  '{{packet}}',
+  '',
+  'Thank you,',
+  'Adam Stiles',
+  'Iron Shield Construction LLC',
+  '352-809-3235',
+].join('\n')
+
+export const DEFAULT_APPLY_DUKE_SUBJECT = 'New Service - {{address}}'
+export const DEFAULT_APPLY_DUKE_BODY = [
+  'Good morning,',
+  '',
+  'We would like to apply for new construction electric service at {{address}} ({{parcel}}).',
+  'The service information is below; site plan attached.',
+  '',
+  '{{packet}}',
+  '',
+  'Thank you,',
+  'Adam Stiles',
+  'Iron Shield Construction LLC',
+  '352-809-3235',
+].join('\n')
+
 /** A template's effective subject+body: your override where set, default otherwise. */
 export function effectiveTemplate(
   overrides: Record<string, TemplateOverride> | undefined,

@@ -320,6 +320,32 @@ export function useProjects() {
     })
   }
 
+  /**
+   * Batch Apply's "✓ Mark applied": check the electric 'verify' + 'submit'
+   * steps in ONE state update. (Two toggleStep calls would clobber each other —
+   * each reads the same pre-update state; same lesson as addOrder.)
+   */
+  function markApplied(id: number) {
+    setState((prev) => {
+      const cur = prev.projects[id] ?? emptyProjectState()
+      const stamp = (ex: StepState | undefined): StepState => ({
+        ...ex,
+        done: true,
+        date: ex?.date ?? new Date().toLocaleDateString(),
+        doneAt: ex?.doneAt ?? new Date().toISOString(),
+      })
+      const electric = {
+        ...cur.steps.electric,
+        verify: stamp(cur.steps.electric.verify),
+        submit: stamp(cur.steps.electric.submit),
+      }
+      return {
+        ...prev,
+        projects: { ...prev.projects, [id]: { ...cur, steps: { ...cur.steps, electric } } },
+      }
+    })
+  }
+
   /** Save the small note attached to ONE checklist step. */
   function setStepNote(id: number, stream: Stream, stepId: string, note: string) {
     const ps = getProjectState(id)
@@ -520,6 +546,7 @@ export function useProjects() {
     state,
     getProjectState,
     toggleStep,
+    markApplied,
     setStepNote,
     setNote,
     setField,

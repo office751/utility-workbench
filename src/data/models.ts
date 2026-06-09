@@ -38,6 +38,27 @@ export const MODELS_DEFAULT: Record<string, ModelSpec> = {
 }
 
 /**
+ * Normalize a roster model string to its MODELS_DEFAULT key:
+ * "Model F-LH" → F · "E2-RH (SFR)" → E2 · "Independence LHG" → Independence.
+ * (Direct port of the original workbench's modelKey.)
+ */
+export function modelKey(model: string): string {
+  const m = (model || '').replace(/model/i, '').trim()
+  if (/independence/i.test(m)) return 'Independence'
+  if (/republic/i.test(m)) return 'Republic'
+  if (/concord/i.test(m)) return 'Concord'
+  if (/fire-?house/i.test(m)) return 'Fire-House'
+  if (/e2/i.test(m)) return 'E2'
+  const f = m.replace(/[^A-G]/gi, '')[0]
+  return (f || '').toUpperCase()
+}
+
+/** The spec for a roster model string (empty spec when the model is unknown). */
+export function specFor(model: string): ModelSpec {
+  return MODELS_DEFAULT[modelKey(model)] ?? { sqft: '', tons: '' }
+}
+
+/**
  * Standard electrical load shared across all models (from the original
  * Electric Applications Workbench packet). Used to pre-fill the load form.
  */

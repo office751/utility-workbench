@@ -15,6 +15,7 @@ import type { Project, ProjectState, TemplateOverride } from '../types'
 import { templateSpecs, type TemplateSpec } from '../data/templates'
 import { effectiveTemplate, renderTemplate } from '../lib/templates'
 import { VENDORS, vendorTemplateVars } from '../data/vendors'
+import { buildDukePacket, buildSecoPacket } from '../lib/loadForm'
 
 interface Props {
   templates: Record<string, TemplateOverride> | undefined
@@ -30,6 +31,17 @@ function previewVars(spec: TemplateSpec, sample: Project | undefined, getPS: (id
     const v = VENDORS.find((x) => `vendor:${x.id}` === spec.id) ?? VENDORS[0]
     if (sample) return vendorTemplateVars(v, sample, getPS(sample.id))
     return { vendor: v.name, address: '123 SW Example St', site: '123 SW Example St, Ocala, FL 34470', parcel: '0000-000-000', permit: 'BLDR-26-00-00000', model: 'F-LH', city: 'Ocala', zip: '34470', items: '  • Trusses' }
+  }
+  if (spec.id.startsWith('apply:') && sample) {
+    const ps = getPS(sample.id)
+    return {
+      address: sample.address,
+      site: `${sample.address}, ${sample.city}, FL ${sample.zip}`,
+      parcel: sample.parcel,
+      permit: sample.permit,
+      model: sample.model,
+      packet: spec.id === 'apply:SECO' ? buildSecoPacket(sample, ps) : buildDukePacket(sample, ps),
+    }
   }
   return {}
 }

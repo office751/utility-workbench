@@ -22,6 +22,7 @@ import { daysUntilDue, dueSoonTasks, waitingOnTasks } from './lib/tasks'
 import { useTheme } from './hooks/useTheme'
 import { useDensity } from './hooks/useDensity'
 import ProjectList from './components/ProjectList'
+import BatchApply from './components/BatchApply'
 import Detail from './components/Detail'
 import Today from './components/Today'
 import TasksView from './components/TasksView'
@@ -46,6 +47,7 @@ function App() {
     state,
     getProjectState,
     toggleStep,
+    markApplied,
     setStepNote,
     setNote,
     setField,
@@ -73,6 +75,7 @@ function App() {
   const [tab, setTab] = useState<View>('today') // default = the command center
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [adding, setAdding] = useState(false) // is the Add form open?
+  const [applying, setApplying] = useState(false) // is ⚡ Batch Apply open?
   // When you open a project from Today/Tasks, jump straight to that stream's tab.
   const [openStream, setOpenStream] = useState<Stream | undefined>(undefined)
 
@@ -173,7 +176,20 @@ function App() {
       )}
 
       {tab === 'projects' &&
-        (adding ? (
+        (applying ? (
+          <BatchApply
+            projects={projects}
+            getProjectState={getProjectState}
+            templates={state.templates}
+            markApplied={markApplied}
+            onClose={() => setApplying(false)}
+            onOpen={(id) => {
+              setApplying(false)
+              setOpenStream('electric')
+              setSelectedId(id)
+            }}
+          />
+        ) : adding ? (
           <AddProject
             onSave={(facts) => {
               const newId = addProject(facts)
@@ -229,6 +245,7 @@ function App() {
                 setAdding(true)
                 setSelectedId(null)
               }}
+              onBatchApply={() => setApplying(true)}
               getProjectState={getProjectState}
             />
           </div>
