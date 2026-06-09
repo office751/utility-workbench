@@ -100,38 +100,21 @@ const readTables = (page) =>
     })),
   )
 
-// The two tables whose presence proves the tabs we care about actually rendered.
-const hasHoldsTable = (tables) => tables.some((t) => t.headers.join('|').toLowerCase().includes('hold date'))
-const hasInspTable = (tables) =>
-  tables.some((t) => {
-    const h = t.headers.join('|').toLowerCase()
-    return h.includes('inspector') || h.includes('scheduled date') || h.includes('view inspection')
-  })
-
-// Click the tabs whose tables we need (Angular only builds the active tab; the
-// eReviews/Inspections tab hides under the "More Info" dropdown). Idempotent:
-// opens "More Info" only if eReviews isn't already reachable, so repeated calls
-// don't toggle the dropdown shut.
-async function activateTabs(page) {
-  await page.evaluate(() => {
-    const el = [...document.querySelectorAll('a,button,li,span')].find((e) => (e.textContent || '').trim() === 'Holds')
-    if (el) el.click()
-  })
-  await page.waitForTimeout(900)
-  await page.evaluate(() => {
-    const vis = (e) => e && e.offsetParent !== null
-    const er = [...document.querySelectorAll('a,button,li,span')].find((e) => (e.textContent || '').trim() === 'eReviews' && vis(e))
-    if (!er) {
-      const more = [...document.querySelectorAll('a,button')].find((e) => /more info/i.test((e.textContent || '').trim()) && vis(e))
-      if (more) more.click()
-    }
-  })
-  await page.waitForTimeout(700)
-  await page.evaluate(() => {
-    const er = [...document.querySelectorAll('a,button,li,span')].find((e) => (e.textContent || '').trim() === 'eReviews')
-    if (er) er.click()
-  })
-  await page.waitForTimeout(1000)
+// Click a top-level tab, wait for ITS table to render, snapshot. Returns
+// { ok, tables }. Reading each tab separately is essential: the SPA destroys
+// the inactive tab's table, so Holds + Inspections never coexist in the DOM.
+async function readTab(page, tabName, headerSrc) {
+  await page.getByText(tabName, { exact: true }).first().click({ timeout: 5000 }).catch(() => {})
+  const ok = await page
+    .waitForFunction(
+      (src) => [...document.querySelectorAll('table th')].some((th) => new RegExp(src, 'i').test(th.textContent || '')),
+      headerSrc,
+      { timeout: 6000 },
+    )
+    .then(() => true)
+    .catch(() => false)
+  await page.waitForTimeout(400) // let rows settle
+  return { ok, tables: await readTables(page) }
 }
 
 async function scrapePermit(page, guid) {
@@ -141,20 +124,27 @@ async function scrapePermit(page, guid) {
     .waitForFunction(() => /Permit Number/i.test(document.body.innerText), { timeout: 30000 })
     .then(() => true)
     .catch(() => false)
-  if (!loaded) return { holds: [], rejections: [], fyi: [], complete: false, tableCount: 0 }
+  if (!loaded) return { holds: [], rejections: [], fyi: [], holdsOk: false, inspOk: false, tableCount: 0 }
 
-  // Poll: re-activate the Holds + eReviews/Inspections tabs until BOTH tables are
-  // actually in the DOM. The SPA renders tabs lazily, and trusting a read before
-  // the Inspections tab rendered is exactly what produced false "clear" results.
-  let tables = []
-  for (let attempt = 0; attempt < 5; attempt++) {
-    await activateTabs(page)
-    tables = await readTables(page)
-    if (hasHoldsTable(tables) && hasInspTable(tables)) break
-    await page.waitForTimeout(1500)
+  // HOLDS tab — holds + FYI notes live here. (Every permit has at least the
+  // standard "Final Hold", so this table is reliably present.)
+  const holdsTab = await readTab(page, 'Holds', 'hold date')
+  // INSPECTIONS tab — the disapprovals live here.
+  const inspTab = await readTab(page, 'Inspections', 'inspector|scheduled date|view inspection')
+
+  const fromHolds = classify(holdsTab.tables)
+  const fromInsp = classify(inspTab.tables)
+  // Per-tab flags: a permit may legitimately have a holds table but no
+  // inspections yet, or vice-versa. We reconcile each category ONLY when its
+  // tab rendered, so a tab that didn't load can never wipe that category.
+  return {
+    holds: fromHolds.holds,
+    fyi: fromHolds.fyi,
+    rejections: fromInsp.rejections,
+    holdsOk: holdsTab.ok,
+    inspOk: inspTab.ok,
+    tableCount: holdsTab.tables.length + inspTab.tables.length,
   }
-  const complete = hasHoldsTable(tables) && hasInspTable(tables)
-  return { ...classify(tables), complete, tableCount: tables.length }
 }
 
 /* -------- write findings into the Workbench (Supabase), de-duped + safe -------- */
@@ -178,13 +168,18 @@ function buildDesired(results, roster) {
     const pid = idByPermit.get(r.permit)
     if (pid == null) continue // permit not in roster → skip
     const addr = addrById.get(pid) || r.permit
-    for (const rej of r.rejections)
-      tasks.push({ sourceKey: `portal:${r.permit}:rej:${rej.desc}`, projectId: pid, text: `${addr}: ${trimDesc(rej.desc)} — ${rej.status}` })
-    for (const h of r.holds)
-      tasks.push({ sourceKey: `portal:${r.permit}:hold:${h.name}:${h.date}`, projectId: pid, text: `${addr}: ${h.name} — ${(h.comment || '').slice(0, 140)}` })
-    for (const f of r.fyi) {
-      if (!notesByProject.has(pid)) notesByProject.set(pid, [])
-      notesByProject.get(pid).push({ sourceKey: `portal:${r.permit}:fyi:${f.name}:${f.date}`, text: `${f.name} — ${(f.comment || '').slice(0, 220)}`, date: f.date })
+    // Rejections only count when the Inspections tab rendered…
+    if (r.inspOk)
+      for (const rej of r.rejections)
+        tasks.push({ sourceKey: `portal:${r.permit}:rej:${rej.desc}`, projectId: pid, text: `${addr}: ${trimDesc(rej.desc)} — ${rej.status}` })
+    // …holds + FYIs only when the Holds tab rendered.
+    if (r.holdsOk) {
+      for (const h of r.holds)
+        tasks.push({ sourceKey: `portal:${r.permit}:hold:${h.name}:${h.date}`, projectId: pid, text: `${addr}: ${h.name} — ${(h.comment || '').slice(0, 140)}` })
+      for (const f of r.fyi) {
+        if (!notesByProject.has(pid)) notesByProject.set(pid, [])
+        notesByProject.get(pid).push({ sourceKey: `portal:${r.permit}:fyi:${f.name}:${f.date}`, text: `${f.name} — ${(f.comment || '').slice(0, 220)}`, date: f.date })
+      }
     }
   }
   return { tasks, notesByProject }
@@ -204,16 +199,22 @@ async function syncToWorkbench(results) {
     return console.error('\n✗ Workbench data looks invalid — aborting (nothing written).\n')
   const originalJson = JSON.stringify(data.data) // captured BEFORE we mutate, for the backup
 
-  const scanned = new Set(results.map((r) => r.permit))
+  // Which categories rendered, per permit — we only clear a category whose tab loaded.
+  const holdsOkPermits = new Set(results.filter((r) => r.holdsOk).map((r) => r.permit))
+  const inspOkPermits = new Set(results.filter((r) => r.inspOk).map((r) => r.permit))
   const { tasks: desired, notesByProject } = buildDesired(results, blob.roster)
   const desiredKeys = new Set(desired.map((t) => t.sourceKey))
   const existingByKey = new Map(blob.tasks.filter((t) => t.sourceKey).map((t) => [t.sourceKey, t]))
 
-  // --- tasks: drop resolved portal items (only for permits we scanned), add/update the rest ---
+  // --- tasks: drop resolved portal items, but ONLY for the category whose tab
+  //     actually rendered for that permit (hold-tasks ⇒ holdsOk, rej-tasks ⇒ inspOk). ---
   let added = 0, updated = 0, cleared = 0
   blob.tasks = blob.tasks.filter((t) => {
-    const perm = permitFromKey(t.sourceKey)
-    if (perm && scanned.has(perm) && !desiredKeys.has(t.sourceKey)) { cleared++; return false }
+    const parts = (t.sourceKey || '').split(':')
+    if (parts[0] !== 'portal') return true
+    const perm = parts[1]
+    const okSet = parts[2] === 'hold' ? holdsOkPermits : parts[2] === 'rej' ? inspOkPermits : null
+    if (okSet && okSet.has(perm) && !desiredKeys.has(t.sourceKey)) { cleared++; return false }
     return true
   })
   for (const d of desired) {
@@ -226,19 +227,19 @@ async function syncToWorkbench(results) {
     }
   }
 
-  // --- FYI notifications (per project): preserve `dismissed`, drop resolved ---
+  // --- FYI notifications: reconcile only for permits whose HOLDS tab rendered;
+  //     preserve `dismissed`, drop resolved. ---
   let nAdded = 0, nCleared = 0
-  const scannedPids = new Set()
-  for (const r of results) { const p = blob.roster.find((x) => x.permit === r.permit); if (p) scannedPids.add(p.id) }
-  for (const pid of scannedPids) {
+  const holdsOkPids = new Set()
+  for (const r of results) if (r.holdsOk) { const p = blob.roster.find((x) => x.permit === r.permit); if (p) holdsOkPids.add(p.id) }
+  for (const pid of holdsOkPids) {
     const ps = blob.projects[pid]
     if (!ps) continue
     const desiredNotes = notesByProject.get(pid) || []
     const desiredNKeys = new Set(desiredNotes.map((n) => n.sourceKey))
     const byKey = new Map((ps.notifications || []).filter((n) => n.sourceKey).map((n) => [n.sourceKey, n]))
     const kept = (ps.notifications || []).filter((n) => {
-      const perm = permitFromKey(n.sourceKey)
-      if (perm && !desiredNKeys.has(n.sourceKey)) { nCleared++; return false }
+      if ((n.sourceKey || '').startsWith('portal:') && !desiredNKeys.has(n.sourceKey)) { nCleared++; return false }
       return true
     })
     for (const d of desiredNotes) {
@@ -292,18 +293,20 @@ for (const [permit, guid] of entries) {
   try {
     const res = await scrapePermit(page, guid)
     results.push({ permit, ...res })
-    if (!res.complete) {
-      console.log(`● ${permit}  — ⚠ under-rendered (${res.tableCount} tables) — skipped, its items left untouched`)
+    if (!res.holdsOk && !res.inspOk) {
+      console.log(`● ${permit}  — ⚠ neither tab rendered (${res.tableCount} tables) — skipped, items left untouched`)
       continue
     }
-    const n = res.holds.length + res.rejections.length
-    if (n || res.fyi.length) {
-      console.log(`\n● ${permit}  (${n} action${n === 1 ? '' : 's'}${res.fyi.length ? `, ${res.fyi.length} FYI` : ''})`)
-      for (const r of res.rejections) console.log(`   ⚠️  ${r.desc}: ${r.status} [${r.date}]`)
-      for (const h of res.holds) console.log(`   🚧 HOLD: ${h.name} — ${h.comment} [${h.date}]`)
-      for (const f of res.fyi) console.log(`   🔔 FYI: ${f.name} — ${f.comment.slice(0, 80)} [${f.date}]`)
+    const partial = !res.holdsOk ? ' [holds tab skipped]' : !res.inspOk ? ' [inspections tab skipped]' : ''
+    const n = (res.inspOk ? res.rejections.length : 0) + (res.holdsOk ? res.holds.length : 0)
+    const fyiN = res.holdsOk ? res.fyi.length : 0
+    if (n || fyiN) {
+      console.log(`\n● ${permit}  (${n} action${n === 1 ? '' : 's'}${fyiN ? `, ${fyiN} FYI` : ''})${partial}`)
+      if (res.inspOk) for (const r of res.rejections) console.log(`   ⚠️  ${r.desc}: ${r.status} [${r.date}]`)
+      if (res.holdsOk) for (const h of res.holds) console.log(`   🚧 HOLD: ${h.name} — ${h.comment} [${h.date}]`)
+      if (res.holdsOk) for (const f of res.fyi) console.log(`   🔔 FYI: ${f.name} — ${f.comment.slice(0, 80)} [${f.date}]`)
     } else {
-      console.log(`● ${permit}  — clear`)
+      console.log(`● ${permit}  — clear${partial}`)
     }
   } catch (e) {
     console.log(`● ${permit}  — error: ${e.message}`)
@@ -311,13 +314,13 @@ for (const [permit, guid] of entries) {
 }
 await ctx.close()
 
-// Only permits that FULLY rendered get synced — under-rendered ones are left
-// alone (never cleared) so a flaky load can't wipe real items.
-const done = results.filter((r) => r.complete)
-const skipped = results.length - done.length
-const total = done.reduce((s, r) => s + r.holds.length + r.rejections.length, 0)
-const fyiTotal = done.reduce((s, r) => s + (r.fyi ? r.fyi.length : 0), 0)
+// Sync reconciles per-category using each permit's holdsOk/inspOk flags, so a
+// tab that didn't render is simply left alone (never cleared).
+const read = results.filter((r) => r.holdsOk || r.inspOk)
+const skipped = results.length - read.length
+const total = read.reduce((s, r) => s + (r.inspOk ? r.rejections.length : 0) + (r.holdsOk ? r.holds.length : 0), 0)
+const fyiTotal = read.reduce((s, r) => s + (r.holdsOk ? r.fyi.length : 0), 0)
 console.log(
-  `\nScanned ${done.length}/${results.length} fully${skipped ? ` (${skipped} skipped)` : ''}: ${total} action item(s)${fyiTotal ? ` + ${fyiTotal} FYI` : ''}.`,
+  `\nRead ${read.length}/${results.length} permit(s)${skipped ? ` (${skipped} fully skipped)` : ''}: ${total} action item(s)${fyiTotal ? ` + ${fyiTotal} FYI` : ''}.`,
 )
-await syncToWorkbench(done)
+await syncToWorkbench(results)
