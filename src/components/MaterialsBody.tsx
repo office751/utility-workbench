@@ -7,7 +7,7 @@
  * the fast path; this is the full per-project view.
  */
 import { useState } from 'react'
-import type { OrderItem, OrderStatus, Project, ProjectState } from '../types'
+import type { OrderItem, OrderStatus, Project, ProjectState, TemplateOverride } from '../types'
 import { ORDER_CATEGORIES, ORDER_STATUSES } from '../data/orders'
 import { VENDORS, vendorMailto } from '../data/vendors'
 import { ordersOf } from '../lib/orders'
@@ -15,12 +15,14 @@ import { ordersOf } from '../lib/orders'
 interface Props {
   project: Project
   ps: ProjectState
+  /** Custom email wording from ⚙️ Settings → Templates (defaults when unset). */
+  templates?: Record<string, TemplateOverride>
   addOrder: (id: number, order: { category: string; status: OrderStatus }) => void
   updateOrder: (id: number, orderId: string, patch: Partial<OrderItem>) => void
   removeOrder: (id: number, orderId: string) => void
 }
 
-function MaterialsBody({ project: p, ps, addOrder, updateOrder, removeOrder }: Props) {
+function MaterialsBody({ project: p, ps, templates, addOrder, updateOrder, removeOrder }: Props) {
   const orders = ordersOf(ps)
   const [newCategory, setNewCategory] = useState(ORDER_CATEGORIES[0])
 
@@ -38,7 +40,7 @@ function MaterialsBody({ project: p, ps, addOrder, updateOrder, removeOrder }: P
           <a
             key={v.id}
             className="vendor-btn"
-            href={vendorMailto(v, p, ps)}
+            href={vendorMailto(v, p, ps, templates)}
             title={`Draft an email to ${v.name} — ${v.supplies}`}
           >
             {v.icon} {v.name}

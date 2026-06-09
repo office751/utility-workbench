@@ -24,6 +24,7 @@ import type {
   StepState,
   Stream,
   Task,
+  TemplateOverride,
   WorkbenchState,
 } from '../types'
 import { buildInitialState, emptyProjectState, inferPermitSteps, seedStateFor } from '../data/seed'
@@ -117,6 +118,7 @@ function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
     projects,
     tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
     extrasSeeded: parsed.extrasSeeded === true,
+    templates: parsed.templates ?? {},
   }
   // One-time: fold in the C.O./Hold homes if this save predates them.
   return result.extrasSeeded ? result : mergeExtraProjects(result)
@@ -460,6 +462,19 @@ export function useProjects() {
     updateProject(id, { orders: (ps.orders ?? []).filter((o) => o.id !== orderId) })
   }
 
+  /**
+   * Edit one workflow template's wording (⚙️ Settings → Templates).
+   * Pass null to RESET it back to the built-in default.
+   */
+  function setTemplate(id: string, patch: Partial<TemplateOverride> | null) {
+    setState((prev) => {
+      const templates = { ...(prev.templates ?? {}) }
+      if (patch === null) delete templates[id]
+      else templates[id] = { ...templates[id], ...patch }
+      return { ...prev, templates }
+    })
+  }
+
   /** Dismiss a permit portal notification — kept in history, just marked read. */
   function dismissNotification(id: number, sourceKey: string) {
     const ps = getProjectState(id)
@@ -513,6 +528,7 @@ export function useProjects() {
     addProjectFiles,
     removeProjectFile,
     dismissNotification,
+    setTemplate,
     addOrder,
     updateOrder,
     removeOrder,

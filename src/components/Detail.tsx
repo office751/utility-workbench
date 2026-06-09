@@ -72,6 +72,8 @@ interface Props extends Updaters {
   project: Project
   ps: ProjectState
   tasks: Task[]
+  /** Custom email wording from ⚙️ Settings → Templates. */
+  templates?: Record<string, import('../types').TemplateOverride>
   /** Stream tab to open on (from a Today/Tasks deep-link). Default: Overview. */
   initialStream?: Stream
   onBack: () => void
@@ -236,6 +238,7 @@ function Detail(props: Props) {
             <MaterialsBody
               project={p}
               ps={ps}
+              templates={props.templates}
               addOrder={props.addOrder}
               updateOrder={props.updateOrder}
               removeOrder={props.removeOrder}

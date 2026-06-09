@@ -10,7 +10,8 @@
  * vendor later. The body already drops in the job site + any of the project's
  * matching "to order" items, so it's useful out of the gate.
  */
-import type { Project, ProjectState } from '../types'
+import type { Project, ProjectState, TemplateOverride } from '../types'
+import { DEFAULT_VENDOR_BODY, DEFAULT_VENDOR_SUBJECT, effectiveTemplate, renderTemplate } from '../lib/templates'
 
 export interface Vendor {
   id: string
@@ -60,29 +61,41 @@ export const VENDORS: Vendor[] = [
   },
 ]
 
-/**
- * Build the mailto: draft for one vendor + project. Includes the job site and
- * any of the project's "to order" items that match the vendor's categories.
- */
-export function vendorMailto(v: Vendor, p: Project, ps: ProjectState): string {
-  const site = `${p.address}, ${p.city}, FL ${p.zip}`.trim()
+/** The live values a vendor-email template's {{tokens}} can use. */
+export function vendorTemplateVars(v: Vendor, p: Project, ps: ProjectState): Record<string, string> {
   const items = (ps.orders ?? [])
     .filter((o) => o.status === 'toOrder' && (!v.categories || v.categories.includes(o.category)))
     .map((o) => `  • ${o.category}`)
-  const subject = `${v.name} — ${p.address}`
-  const body = [
-    `Hi ${v.name},`,
-    ``,
-    `Request for our job site:`,
-    `Site: ${site}`,
-    ...(p.parcel ? [`Parcel: ${p.parcel}`] : []),
-    ``,
-    `Item(s):`,
-    ...(items.length ? items : ['  • ']),
-    ``,
-    `Thanks,`,
-    `Adam Stiles`,
-    `Iron Shield Construction`,
-  ].join('\n')
+  return {
+    vendor: v.name,
+    address: p.address,
+    city: p.city,
+    zip: p.zip,
+    site: `${p.address}, ${p.city}, FL ${p.zip}`.trim(),
+    parcel: p.parcel,
+    permit: p.permit,
+    model: p.model,
+    items: items.length ? items.join('\n') : '  • ',
+  }
+}
+
+/**
+ * Build the mailto: draft for one vendor + project. Wording comes from the
+ * editable template (⚙️ Settings → Templates); your overrides win, defaults
+ * otherwise. Includes the job site + the project's matching "to order" items.
+ */
+export function vendorMailto(
+  v: Vendor,
+  p: Project,
+  ps: ProjectState,
+  overrides?: Record<string, TemplateOverride>,
+): string {
+  const t = effectiveTemplate(overrides, `vendor:${v.id}`, {
+    subject: DEFAULT_VENDOR_SUBJECT,
+    body: DEFAULT_VENDOR_BODY,
+  })
+  const vars = vendorTemplateVars(v, p, ps)
+  const subject = renderTemplate(t.subject, vars)
+  const body = renderTemplate(t.body, vars)
   return `mailto:${v.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
 }

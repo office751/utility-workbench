@@ -24,6 +24,7 @@ import {
 } from '../lib/nextAction'
 import { isMaterialsDone, materialsNeedsAction, ordersSummary } from '../lib/orders'
 import Filters, { NO_FILTERS, countActive, type FilterState } from './Filters'
+import ShareMenu from './ShareMenu'
 
 interface Props {
   /** The live roster from saved state. */
@@ -143,9 +144,12 @@ function ProjectList({ projects, onSelect, onAdd, getProjectState }: Props) {
         <span className="muted">
           Showing {visible.length} of {projects.length}
         </span>
-        <button className="add-btn" onClick={onAdd}>
-          ＋ Add project
-        </button>
+        <span className="list-head-actions">
+          <ShareMenu visible={visible.map((r) => r.p)} all={projects} getProjectState={getProjectState} />
+          <button className="add-btn" onClick={onAdd}>
+            ＋ Add project
+          </button>
+        </span>
       </div>
 
       <div className="list">

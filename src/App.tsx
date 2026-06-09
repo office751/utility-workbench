@@ -25,12 +25,13 @@ import ProjectList from './components/ProjectList'
 import Detail from './components/Detail'
 import Today from './components/Today'
 import TasksView from './components/TasksView'
+import TemplatesView from './components/TemplatesView'
 import ExportImport from './components/ExportImport'
 import AddProject from './components/AddProject'
 import QuickAdd from './components/QuickAdd'
 
-/** A top-level view. */
-type View = 'today' | 'tasks' | 'projects'
+/** A top-level view. 'settings' is reached via the 🛠 header button, not a tab. */
+type View = 'today' | 'tasks' | 'projects' | 'settings'
 
 // The three top tabs. Pure config.
 const TABS: { key: View; label: string }[] = [
@@ -59,6 +60,7 @@ function App() {
     addTask,
     updateTask,
     removeTask,
+    setTemplate,
     replaceState,
   } = useProjects()
 
@@ -117,6 +119,17 @@ function App() {
               )}
             </button>
           ))}
+          {/* 🛠 templates & settings */}
+          <button
+            className={tab === 'settings' ? 'act' : ''}
+            onClick={() => {
+              setTab('settings')
+              setSelectedId(null)
+            }}
+            title="Templates & settings"
+          >
+            🛠
+          </button>
           {/* density toggle — ⊟ collapses to compact, ⊞ expands back */}
           <button onClick={toggleDensity} title="Toggle compact / comfortable spacing">
             {density === 'comfortable' ? '⊟' : '⊞'}
@@ -150,6 +163,15 @@ function App() {
         <TasksView tasks={state.tasks} addTask={addTask} updateTask={updateTask} removeTask={removeTask} />
       )}
 
+      {tab === 'settings' && (
+        <TemplatesView
+          templates={state.templates}
+          setTemplate={setTemplate}
+          sampleProject={projects.find((p) => p.listStatus !== 'CO') ?? projects[0]}
+          getProjectState={getProjectState}
+        />
+      )}
+
       {tab === 'projects' &&
         (adding ? (
           <AddProject
@@ -168,6 +190,7 @@ function App() {
             project={selected}
             ps={getProjectState(selected.id)}
             tasks={state.tasks}
+            templates={state.templates}
             initialStream={openStream}
             toggleStep={toggleStep}
             setStepNote={setStepNote}

@@ -196,6 +196,16 @@ export interface Task {
   sourceKey?: string
 }
 
+/**
+ * Your edits to one workflow template (e.g. a vendor order email). Only the
+ * fields you've changed are stored — anything unset falls back to the built-in
+ * default, so new default improvements still reach untouched templates.
+ */
+export interface TemplateOverride {
+  subject?: string
+  body?: string
+}
+
 /** The whole saved blob. */
 export interface WorkbenchState {
   /**
@@ -215,4 +225,9 @@ export interface WorkbenchState {
    * way if you delete one, it stays deleted.
    */
   extrasSeeded?: boolean
+  /**
+   * Custom wording for workflow templates (vendor order emails, and future
+   * ones like the load form), keyed by template id — editable in ⚙️ Settings.
+   */
+  templates?: Record<string, TemplateOverride>
 }

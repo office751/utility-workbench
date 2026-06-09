@@ -1669,6 +1669,92 @@ button.danger:hover {
   margin: 2px 0 8px;
   font-size: 12px;
 }
+.list-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---------- 📤 Share menu (export / print / copy) ---------- */
+.share-menu {
+  position: relative;
+}
+.share-btn {
+  font-weight: 600;
+}
+.share-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  min-width: 280px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.share-opt {
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.share-opt .muted {
+  font-size: 11px;
+}
+.share-opt:hover {
+  background: var(--bg);
+}
+.share-opt.x {
+  color: var(--muted);
+  align-items: center;
+  flex-direction: row;
+  justify-content: center;
+}
+.share-pop.chooser {
+  min-width: min(420px, 86vw);
+  padding: 12px;
+}
+.chooser-head {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.chooser-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 4px 12px;
+  margin-bottom: 12px;
+}
+.chooser-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.chooser-actions .spacer {
+  flex: 1;
+}
+.mini.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.mini.primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 /* the 5-icon per-row stream strip on each list row */
 .row-streams {
@@ -1771,6 +1857,146 @@ button.danger:hover {
 .ov-card-next {
   font-size: 12px;
   color: var(--muted);
+}
+
+/* ---------- 🛠 Templates settings page ---------- */
+.templates-view {
+  max-width: 860px;
+}
+.templates-view h2 {
+  margin: 4px 0 6px;
+}
+.templates-view > .muted {
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+.tpl-group h3 {
+  font-size: 14px;
+  margin: 18px 0 8px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.tpl-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.tpl-card.open {
+  border-color: var(--accent);
+}
+.tpl-head {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  padding: 12px 14px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.tpl-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tpl-pill {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+}
+.tpl-toggle {
+  color: var(--muted);
+}
+.tpl-body {
+  padding: 0 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tpl-desc {
+  font-size: 12.5px;
+  margin: 0;
+}
+.tpl-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.tpl-label input,
+.tpl-label textarea {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+.tpl-vars {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tpl-var {
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 7px;
+}
+.tpl-var code {
+  color: var(--accent);
+  font-weight: 600;
+}
+.tpl-preview {
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--bg);
+}
+.tpl-preview-h {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.tpl-preview-subject {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.tpl-preview-body {
+  font: inherit;
+  font-size: 12.5px;
+  white-space: pre-wrap;
+  margin: 0;
+  color: var(--text);
+}
+.tpl-coming {
+  font-size: 12px;
+  margin-top: 16px;
 }
 
 /* ---------- login screen ---------- */
