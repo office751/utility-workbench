@@ -12,7 +12,7 @@
  * surface a task here without you having to star it (that's the auto-urgency).
  */
 import { useState } from 'react'
-import type { Project, ProjectState, Stream, Task } from '../types'
+import type { Project, ProjectState, Stream, Task, WorkbenchState } from '../types'
 import { buildActionCenter, type ActionItem } from '../lib/actionCenter'
 import { daysUntilDue, dueLabel, dueSoonTasks, focusTasks, waitingOnTasks } from '../lib/tasks'
 import { hatOf } from '../data/hats'
@@ -21,6 +21,8 @@ interface Props {
   projects: Project[]
   getProjectState: (id: number) => ProjectState
   tasks: Task[]
+  /** Per-model takeoff status — drives the missing-takeoffs urgency. */
+  modelTakeoffs?: WorkbenchState['modelTakeoffs']
   /** Open a project on a specific tab (e.g. an expiring permit → its Permit tab). */
   onOpen: (id: number, stream: Stream) => void
   /** Mark a task done from the home screen. */
@@ -131,8 +133,8 @@ function MoveGroup({
   )
 }
 
-function Today({ projects, getProjectState, tasks, onOpen, onCompleteTask, onGoTasks }: Props) {
-  const ac = buildActionCenter(projects, getProjectState)
+function Today({ projects, getProjectState, tasks, modelTakeoffs, onOpen, onCompleteTask, onGoTasks }: Props) {
+  const ac = buildActionCenter(projects, getProjectState, modelTakeoffs)
   const focus = focusTasks(tasks)
 
   // Auto-urgency: time fires first (overdue floats to the top), then the people

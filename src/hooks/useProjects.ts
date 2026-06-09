@@ -28,6 +28,7 @@ import type {
   WorkbenchState,
 } from '../types'
 import { buildInitialState, emptyProjectState, inferPermitSteps, seedStateFor } from '../data/seed'
+import { ESTABLISHED_MODELS, TAKEOFF_TYPES } from '../data/takeoffs'
 import { PROJECTS } from '../data/projects'
 import { supabase } from '../lib/supabase'
 import { deleteProjectFile, uploadProjectFile } from '../lib/files'
@@ -113,12 +114,26 @@ function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
     projects[Number(id)] = norm
   }
   // Tasks arrived after the first releases — older saves won't have them.
+  // First run of the takeoff tracker: established models start fully gathered;
+  // new models (Republic, Concord, anything future) start EMPTY = needs chasing.
+  let modelTakeoffs = parsed.modelTakeoffs
+  if (!modelTakeoffs) {
+    modelTakeoffs = {}
+    for (const mk of ESTABLISHED_MODELS) {
+      modelTakeoffs[mk] = Object.fromEntries(
+        TAKEOFF_TYPES.map((t) => [t.id, { done: true, date: '(established)' }]),
+      )
+    }
+  }
+
   const result: WorkbenchState = {
     roster: [...roster],
     projects,
     tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
     extrasSeeded: parsed.extrasSeeded === true,
     templates: parsed.templates ?? {},
+    modelTakeoffs,
+    modelOrderLists: parsed.modelOrderLists ?? {},
   }
   // One-time: fold in the C.O./Hold homes if this save predates them.
   return result.extrasSeeded ? result : mergeExtraProjects(result)
@@ -488,6 +503,30 @@ export function useProjects() {
     updateProject(id, { orders: (ps.orders ?? []).filter((o) => o.id !== orderId) })
   }
 
+  /** Mark one takeoff gathered (or not) for a house MODEL — shared across all
+   *  projects of that model. */
+  function setModelTakeoff(modelK: string, takeoffId: string, done: boolean) {
+    setState((prev) => {
+      const all = { ...(prev.modelTakeoffs ?? {}) }
+      const cur = { ...(all[modelK] ?? {}) }
+      cur[takeoffId] = done ? { done: true, date: new Date().toLocaleDateString() } : { done: false }
+      all[modelK] = cur
+      return { ...prev, modelTakeoffs: all }
+    })
+  }
+
+  /** Save a model's material order list for one category (the takeoff contents). */
+  function setModelOrderList(modelK: string, category: string, text: string) {
+    setState((prev) => {
+      const all = { ...(prev.modelOrderLists ?? {}) }
+      const cur = { ...(all[modelK] ?? {}) }
+      if (text.trim()) cur[category] = text
+      else delete cur[category]
+      all[modelK] = cur
+      return { ...prev, modelOrderLists: all }
+    })
+  }
+
   /**
    * Edit one workflow template's wording (⚙️ Settings → Templates).
    * Pass null to RESET it back to the built-in default.
@@ -556,6 +595,8 @@ export function useProjects() {
     removeProjectFile,
     dismissNotification,
     setTemplate,
+    setModelTakeoff,
+    setModelOrderList,
     addOrder,
     updateOrder,
     removeOrder,

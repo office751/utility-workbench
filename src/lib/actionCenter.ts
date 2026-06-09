@@ -9,7 +9,9 @@
  * It's pure logic (no React), reusing the per-stream brains we already have so
  * the command center can never disagree with the individual tabs.
  */
-import type { Project, ProjectState, Stream } from '../types'
+import type { Project, ProjectState, Stream, WorkbenchState } from '../types'
+import { missingTakeoffs, permitIssued } from './takeoffs'
+import { modelKey } from '../data/models'
 import { shutoffFor } from './shutoff'
 import { permitExpiryFor } from './permitExpiry'
 import { stalenessFor, isStale } from './staleness'
@@ -22,7 +24,7 @@ import {
 } from './nextAction'
 import { toOrderCount } from './orders'
 
-export type ActionKind = 'expiry' | 'shutoff' | 'stale' | 'todo' | 'order'
+export type ActionKind = 'expiry' | 'shutoff' | 'stale' | 'todo' | 'order' | 'takeoff'
 export type Severity = 'crit' | 'warn' | 'info'
 
 /** One actionable line on the command center. */
@@ -73,6 +75,7 @@ const STREAM_ICON: Record<Stream, string> = {
 export function buildActionCenter(
   projects: Project[],
   getProjectState: (id: number) => ProjectState,
+  modelTakeoffs?: WorkbenchState['modelTakeoffs'],
 ): ActionCenter {
   const attention: ActionItem[] = []
   const moves: ActionItem[] = []
@@ -84,6 +87,36 @@ export function buildActionCenter(
     if (p.listStatus === 'CO' || p.listStatus === 'Hold') continue
     const ps = getProjectState(p.id)
     const base = { projectId: p.id, address: p.address, meta: `${p.model} · ${p.subdivision}` }
+
+    // --- NEW-MODEL TAKEOFFS: a model missing takeoffs is a problem; missing
+    //     them once the PERMIT IS ISSUED is the most important thing on the
+    //     project (it blocks ordering everything). ---
+    const missing = missingTakeoffs(modelTakeoffs, p.model)
+    if (missing.length > 0) {
+      const names = missing.map((t) => t.label.split(' ')[0]).join(', ')
+      if (permitIssued(ps)) {
+        attention.push({
+          ...base,
+          stream: 'materials',
+          kind: 'takeoff',
+          icon: '🧩',
+          text: `PERMIT ISSUED but model ${modelKey(p.model)} is missing takeoffs`,
+          detail: names,
+          severity: 'crit',
+          sortDays: -9999, // floats to the very top
+        })
+      } else {
+        moves.push({
+          ...base,
+          stream: 'materials',
+          kind: 'takeoff',
+          icon: '🧩',
+          text: `Gather takeoffs for new model ${modelKey(p.model)} (${names})`,
+          severity: 'info',
+          sortDays: 0,
+        })
+      }
+    }
 
     // --- deadline: permit expiry (look ahead two weeks) ---
     const exp = permitExpiryFor(p, ps)
@@ -169,7 +202,7 @@ export function buildActionCenter(
   // Rank attention: criticals first, then by urgency (soonest / most overdue).
   attention.sort((a, b) => SEV_RANK[a.severity] - SEV_RANK[b.severity] || a.sortDays - b.sortDays)
   // Moves: cluster the do-something-now to-dos above the shopping list.
-  const KIND_ORDER: Record<string, number> = { todo: 0, order: 1 }
+  const KIND_ORDER: Record<string, number> = { takeoff: 0, todo: 1, order: 2 }
   moves.sort((a, b) => (KIND_ORDER[a.kind] ?? 9) - (KIND_ORDER[b.kind] ?? 9))
 
   return {

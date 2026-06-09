@@ -27,6 +27,7 @@ import Detail from './components/Detail'
 import Today from './components/Today'
 import TasksView from './components/TasksView'
 import TemplatesView from './components/TemplatesView'
+import TakeoffsView from './components/TakeoffsView'
 import ExportImport from './components/ExportImport'
 import AddProject from './components/AddProject'
 import QuickAdd from './components/QuickAdd'
@@ -56,6 +57,8 @@ function App() {
     addProjectFiles,
     removeProjectFile,
     dismissNotification,
+    setModelTakeoff,
+    setModelOrderList,
     addOrder,
     updateOrder,
     removeOrder,
@@ -156,6 +159,7 @@ function App() {
           projects={projects}
           getProjectState={getProjectState}
           tasks={state.tasks}
+          modelTakeoffs={state.modelTakeoffs}
           onOpen={openProject}
           onCompleteTask={(id) => updateTask(id, { done: true, doneAt: new Date().toISOString() })}
           onGoTasks={() => setTab('tasks')}
@@ -167,12 +171,21 @@ function App() {
       )}
 
       {tab === 'settings' && (
-        <TemplatesView
-          templates={state.templates}
-          setTemplate={setTemplate}
-          sampleProject={projects.find((p) => p.listStatus !== 'CO') ?? projects[0]}
-          getProjectState={getProjectState}
-        />
+        <>
+          <TakeoffsView
+            roster={projects}
+            modelTakeoffs={state.modelTakeoffs}
+            modelOrderLists={state.modelOrderLists}
+            setModelTakeoff={setModelTakeoff}
+            setModelOrderList={setModelOrderList}
+          />
+          <TemplatesView
+            templates={state.templates}
+            setTemplate={setTemplate}
+            sampleProject={projects.find((p) => p.listStatus !== 'CO') ?? projects[0]}
+            getProjectState={getProjectState}
+          />
+        </>
       )}
 
       {tab === 'projects' &&
@@ -207,6 +220,8 @@ function App() {
             ps={getProjectState(selected.id)}
             tasks={state.tasks}
             templates={state.templates}
+            modelTakeoffs={state.modelTakeoffs}
+            modelOrderLists={state.modelOrderLists}
             initialStream={openStream}
             toggleStep={toggleStep}
             setStepNote={setStepNote}

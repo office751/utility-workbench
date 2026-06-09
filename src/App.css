@@ -1939,6 +1939,58 @@ button.danger:hover {
   color: var(--text);
 }
 
+/* ---------- 📐 Model takeoffs (settings) ---------- */
+.takeoffs-view {
+  max-width: 860px;
+  margin-bottom: 28px;
+}
+.takeoffs-view h2 {
+  margin: 4px 0 6px;
+}
+.takeoffs-view > .muted {
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+.tko-pill {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  color: #fff;
+}
+.tko-pill.miss {
+  background: #c0492f;
+}
+.tko-pill.ok {
+  background: #2f6b2f;
+}
+.tko-count {
+  font-size: 11px;
+  font-weight: 400;
+}
+.tko-checks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 4px 14px;
+}
+.tko-check {
+  font-size: 13px;
+}
+.tko-lists {
+  border-top: 1px dashed var(--border);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tko-add {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
 /* ---------- 🛠 Templates settings page ---------- */
 .templates-view {
   max-width: 860px;

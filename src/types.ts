@@ -230,4 +230,16 @@ export interface WorkbenchState {
    * ones like the load form), keyed by template id — editable in ⚙️ Settings.
    */
   templates?: Record<string, TemplateOverride>
+  /**
+   * Which takeoffs have been GATHERED per house model (truss engineering,
+   * framing package, …), keyed by model key → takeoff id. A model missing
+   * takeoffs whose permit is already issued becomes a top-priority item.
+   */
+  modelTakeoffs?: Record<string, Record<string, { done: boolean; date?: string }>>
+  /**
+   * Per-model material order lists (the actual takeoff contents — e.g. Model
+   * A's block count), keyed by model key → order category. When present, the
+   * vendor order email includes the list under that item.
+   */
+  modelOrderLists?: Record<string, Record<string, string>>
 }

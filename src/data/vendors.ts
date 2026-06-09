@@ -61,11 +61,26 @@ export const VENDORS: Vendor[] = [
   },
 ]
 
-/** The live values a vendor-email template's {{tokens}} can use. */
-export function vendorTemplateVars(v: Vendor, p: Project, ps: ProjectState): Record<string, string> {
+/** The live values a vendor-email template's {{tokens}} can use. When the
+ *  model has a saved order list for a category (⚙️ Settings → Takeoffs), the
+ *  list's contents ride along under that item. */
+export function vendorTemplateVars(
+  v: Vendor,
+  p: Project,
+  ps: ProjectState,
+  modelLists?: Record<string, string>,
+): Record<string, string> {
   const items = (ps.orders ?? [])
     .filter((o) => o.status === 'toOrder' && (!v.categories || v.categories.includes(o.category)))
-    .map((o) => `  • ${o.category}`)
+    .map((o) => {
+      const list = modelLists?.[o.category]
+      if (!list) return `  • ${o.category}`
+      const detail = list
+        .split('\n')
+        .map((l) => `      ${l}`)
+        .join('\n')
+      return `  • ${o.category}:\n${detail}`
+    })
   return {
     vendor: v.name,
     address: p.address,
@@ -89,12 +104,13 @@ export function vendorMailto(
   p: Project,
   ps: ProjectState,
   overrides?: Record<string, TemplateOverride>,
+  modelLists?: Record<string, string>,
 ): string {
   const t = effectiveTemplate(overrides, `vendor:${v.id}`, {
     subject: DEFAULT_VENDOR_SUBJECT,
     body: DEFAULT_VENDOR_BODY,
   })
-  const vars = vendorTemplateVars(v, p, ps)
+  const vars = vendorTemplateVars(v, p, ps, modelLists)
   const subject = renderTemplate(t.subject, vars)
   const body = renderTemplate(t.body, vars)
   return `mailto:${v.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`

@@ -74,6 +74,9 @@ interface Props extends Updaters {
   tasks: Task[]
   /** Custom email wording from ⚙️ Settings → Templates. */
   templates?: Record<string, import('../types').TemplateOverride>
+  /** Per-model takeoff status + order lists (⚙️ Settings → Takeoffs). */
+  modelTakeoffs?: import('../types').WorkbenchState['modelTakeoffs']
+  modelOrderLists?: import('../types').WorkbenchState['modelOrderLists']
   /** Stream tab to open on (from a Today/Tasks deep-link). Default: Overview. */
   initialStream?: Stream
   onBack: () => void
@@ -239,6 +242,8 @@ function Detail(props: Props) {
               project={p}
               ps={ps}
               templates={props.templates}
+              modelTakeoffs={props.modelTakeoffs}
+              modelOrderLists={props.modelOrderLists}
               addOrder={props.addOrder}
               updateOrder={props.updateOrder}
               removeOrder={props.removeOrder}
