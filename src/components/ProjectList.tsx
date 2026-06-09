@@ -1,151 +1,133 @@
 /**
- * ProjectList.tsx — the sidebar: search + filters + one row per project.
+ * ProjectList.tsx — the Projects LANDING: one searchable list of every house.
  *
- * Now stream-aware: the badge, the "next action" hint, and which filters
- * apply all depend on the current tab. The row layout itself is identical
- * for all three streams — only the DATA shown in it changes, and that's
- * computed by one helper (rowInfo) so the rendering stays simple.
+ * Project-first: no stream is chosen here. Each row shows the house plus a
+ * 5-icon strip (⚡💧🚽📋🛒) summarizing every stream at a glance — ✓ done,
+ * ! needs action, · in progress — so you can triage the whole portfolio without
+ * opening anything. Click a row to enter that house's workspace (see Detail).
  */
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import type { Project, ProjectState, Stream } from '../types'
 import {
   electricNeedsAction,
-  engineerOf,
   isElectricDone,
   isPermitDone,
   isSepticDone,
   isWaterDone,
-  needsVerify,
   nextElectricAction,
   nextPermitAction,
   nextSepticAction,
   nextWaterAction,
   permitNeedsAction,
-  permitResponsibleOf,
   septicNeedsAction,
-  septicSourceOf,
-  utilityOf,
   waterNeedsAction,
-  waterSourceOf,
 } from '../lib/nextAction'
-import { permitExpiryFor } from '../lib/permitExpiry'
-import { isMaterialsDone, materialsNeedsAction, ordersSummary, toOrderCount } from '../lib/orders'
-import { DoneChip, PermitBadge, SepticBadge, UtilityBadge, WaterBadge } from './Badges'
+import { isMaterialsDone, materialsNeedsAction, ordersSummary } from '../lib/orders'
 import Filters, { NO_FILTERS, countActive, type FilterState } from './Filters'
 
 interface Props {
-  stream: Stream
-  /** The live roster from saved state (not the hard-coded file!). */
+  /** The live roster from saved state. */
   projects: Project[]
-  selectedId: number | null
   onSelect: (id: number) => void
   onAdd: () => void
   getProjectState: (id: number) => ProjectState
 }
 
-/** Everything one row needs to display, per stream. */
-interface RowInfo {
-  badge: ReactNode
-  next: string
-  done: boolean
-  needsAction: boolean
+type CellState = 'done' | 'fire' | 'go'
+interface Cell {
+  key: Stream
+  icon: string
+  state: CellState
 }
 
-function rowInfo(stream: Stream, p: Project, ps: ProjectState): RowInfo {
-  if (stream === 'electric') {
-    return {
-      badge: needsVerify(p, ps) ? <span className="badge warn">verify?</span> : <UtilityBadge p={p} ps={ps} />,
-      next: nextElectricAction(p, ps).label,
-      done: isElectricDone(ps),
-      needsAction: electricNeedsAction(p, ps),
-    }
-  }
-  if (stream === 'water') {
-    return {
-      badge: <WaterBadge p={p} ps={ps} />,
-      next: nextWaterAction(p, ps).label,
-      done: isWaterDone(p, ps),
-      needsAction: waterNeedsAction(p, ps),
-    }
-  }
-  if (stream === 'permit') {
-    // An expiring permit takes over the "next" line so it stands out in the list.
-    const exp = permitExpiryFor(p, ps)
-    const expiringSoon = exp !== null && exp.daysLeft <= 7
-    return {
-      badge: <PermitBadge ps={ps} />,
-      next: expiringSoon
-        ? `⏰ ${exp!.daysLeft < 0 ? 'EXPIRED' : `Expires in ${exp!.daysLeft}d`} · ${exp!.date}`
-        : nextPermitAction(ps).label,
-      done: isPermitDone(ps),
-      needsAction: permitNeedsAction(ps),
-    }
-  }
-  if (stream === 'materials') {
-    const toOrder = toOrderCount(ps)
-    return {
-      badge: <span className={'badge' + (toOrder > 0 ? ' warn' : '')}>🛒 {toOrder || '✓'}</span>,
-      next: ordersSummary(ps),
-      done: isMaterialsDone(ps),
-      needsAction: materialsNeedsAction(ps),
-    }
-  }
-  return {
-    badge: <SepticBadge ps={ps} />,
-    next: nextSepticAction(ps).label,
-    done: isSepticDone(ps),
-    needsAction: septicNeedsAction(ps),
-  }
+/** One status cell per stream — drives the 5-icon row strip. */
+function streamCells(p: Project, ps: ProjectState): Cell[] {
+  const mk = (key: Stream, icon: string, done: boolean, fire: boolean): Cell => ({
+    key,
+    icon,
+    state: done ? 'done' : fire ? 'fire' : 'go',
+  })
+  return [
+    mk('electric', '⚡', isElectricDone(ps), electricNeedsAction(p, ps)),
+    mk('water', '💧', isWaterDone(p, ps), waterNeedsAction(p, ps)),
+    mk('septic', '🚽', isSepticDone(ps), septicNeedsAction(ps)),
+    mk('permit', '📋', isPermitDone(ps), permitNeedsAction(ps)),
+    mk('materials', '🛒', isMaterialsDone(ps), materialsNeedsAction(ps)),
+  ]
 }
 
-function ProjectList({ stream, projects, selectedId, onSelect, onAdd, getProjectState }: Props) {
-  // Local UI state. Note: App renders this component with key={tab}, so
-  // switching tabs gives you a FRESH copy — search and filters reset.
+/** The single most-urgent next action across all streams (the first one on fire). */
+function nextLine(p: Project, ps: ProjectState, cells: Cell[]): string {
+  const fire = cells.find((c) => c.state === 'fire')
+  if (!fire) return ''
+  const label =
+    fire.key === 'electric'
+      ? nextElectricAction(p, ps).label
+      : fire.key === 'water'
+        ? nextWaterAction(p, ps).label
+        : fire.key === 'septic'
+          ? nextSepticAction(ps).label
+          : fire.key === 'permit'
+            ? nextPermitAction(ps).label
+            : ordersSummary(ps)
+  return `→ ${label}`
+}
+
+const GLYPH: Record<CellState, string> = { done: '✓', fire: '!', go: '·' }
+
+function ProjectList({ projects, onSelect, onAdd, getProjectState }: Props) {
   const [search, setSearch] = useState('')
   const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState<FilterState>(NO_FILTERS)
 
-  // Distinct engineer names for the electric filter dropdown.
-  const engineers = [
-    ...new Set(projects.map((p) => engineerOf(p, getProjectState(p.id))).filter(Boolean)),
-  ].sort()
+  const q = search.trim().toLowerCase()
 
-  // Apply search + every active filter. A project must pass ALL of them.
-  const q = search.toLowerCase()
-  const visible = projects.filter((p) => {
+  // Build a row model once, then filter — avoids recomputing stream cells twice.
+  const rows = projects.map((p) => {
     const ps = getProjectState(p.id)
-    const info = rowInfo(stream, p, ps)
+    const cells = streamCells(p, ps)
+    return {
+      p,
+      ps,
+      cells,
+      allDone: cells.every((c) => c.state === 'done'),
+      anyFire: cells.some((c) => c.state === 'fire'),
+      next: nextLine(p, ps, cells),
+    }
+  })
 
-    const matchesSearch =
-      p.address.toLowerCase().includes(q) ||
-      p.subdivision.toLowerCase().includes(q) ||
-      p.model.toLowerCase().includes(q)
-    if (!matchesSearch) return false
-
-    // Stream-specific dropdowns:
-    if (stream === 'electric' && filters.utility && utilityOf(p, ps) !== filters.utility) return false
-    if (stream === 'electric' && filters.engineer && engineerOf(p, ps) !== filters.engineer) return false
-    if (stream === 'water' && filters.waterSource && waterSourceOf(p, ps) !== filters.waterSource) return false
-    if (stream === 'septic' && filters.septicSource && septicSourceOf(ps) !== filters.septicSource) return false
-    if (stream === 'permit' && filters.permitResponsible && permitResponsibleOf(ps) !== filters.permitResponsible) return false
-
-    // Shared checkboxes:
-    if (filters.needsActionOnly && !info.needsAction) return false
-    if (filters.hideDone && info.done) return false
+  const visible = rows.filter(({ p, allDone, anyFire }) => {
+    // Search across the strings you'd actually have in hand (8 fields).
+    if (q) {
+      const hay = [p.address, p.subdivision, p.model, p.permit, p.parcel, p.workOrder, p.city, p.zip]
+        .join(' ')
+        .toLowerCase()
+      if (!hay.includes(q)) return false
+    }
+    if (filters.hideCO && p.listStatus === 'CO') return false
+    if (filters.needsActionOnly && !anyFire) return false
+    if (filters.hideDone && allDone) return false
     return true
   })
 
-  const nActive = countActive(filters, stream)
+  const nActive = countActive(filters)
 
   return (
-    <aside className="sidebar">
+    <section className="project-list">
       <div className="search-row">
-        <input
-          className="search"
-          placeholder={`Search ${projects.length} projects…`}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        <div className="search-wrap">
+          <input
+            className="search"
+            placeholder="Search address, permit #, parcel, WO#, city, zip, model…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {search && (
+            <button className="search-clear" title="Clear" onClick={() => setSearch('')}>
+              ✕
+            </button>
+          )}
+        </div>
         <button
           className={'filter-btn' + (showFilters || nActive > 0 ? ' on' : '')}
           onClick={() => setShowFilters(!showFilters)}
@@ -155,38 +137,42 @@ function ProjectList({ stream, projects, selectedId, onSelect, onAdd, getProject
         </button>
       </div>
 
-      {showFilters && (
-        <Filters stream={stream} filters={filters} onChange={setFilters} engineers={engineers} />
-      )}
+      {showFilters && <Filters filters={filters} onChange={setFilters} />}
 
-      <button className="add-btn" onClick={onAdd}>
-        ＋ Add project
-      </button>
+      <div className="list-head">
+        <span className="muted">
+          Showing {visible.length} of {projects.length}
+        </span>
+        <button className="add-btn" onClick={onAdd}>
+          ＋ Add project
+        </button>
+      </div>
 
       <div className="list">
-        {visible.map((p) => {
-          const ps = getProjectState(p.id)
-          const info = rowInfo(stream, p, ps)
-          return (
-            <div
-              key={p.id}
-              className={'item' + (p.id === selectedId ? ' sel' : '')}
-              onClick={() => onSelect(p.id)}
-            >
-              <div className="item-top">
-                <span className="item-addr">{p.address}</span>
-                {info.done ? <DoneChip /> : info.badge}
-              </div>
-              <div className="item-sub">
-                {p.model} · {p.subdivision}
-              </div>
-              <div className="item-next">{info.next}</div>
+        {visible.map(({ p, cells, next }) => (
+          <div key={p.id} className="item" onClick={() => onSelect(p.id)}>
+            <div className="item-top">
+              <span className="item-addr">{p.address}</span>
+              {p.listStatus === 'CO' && <span className="status-pill co">C.O.</span>}
+              {p.listStatus === 'Hold' && <span className="status-pill hold">HOLD</span>}
             </div>
-          )
-        })}
+            <div className="item-sub">
+              {p.model} · {p.subdivision} · {p.city} {p.zip}
+              {p.permit && <> · {p.permit}</>}
+            </div>
+            <div className="row-streams">
+              {cells.map((c) => (
+                <span key={c.key} className={'row-cell ' + c.state} title={c.key}>
+                  {c.icon} {GLYPH[c.state]}
+                </span>
+              ))}
+            </div>
+            {next && <div className="item-next">{next}</div>}
+          </div>
+        ))}
         {visible.length === 0 && <p className="muted pad">No matches.</p>}
       </div>
-    </aside>
+    </section>
   )
 }
 

@@ -1630,46 +1630,147 @@ button.danger:hover {
   max-width: 100%;
 }
 
-/* ---------- stream lens row (inside the Projects tab) ---------- */
-.lens-row {
+/* ---------- project-first Landing (full-width list of all houses) ---------- */
+.projects-landing {
   display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
+  flex-direction: column;
+  gap: 12px;
 }
-.lens-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font: inherit;
-  font-size: 13px;
-  padding: 6px 13px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+.project-list {
   background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+}
+.search-wrap {
+  position: relative;
+  flex: 1;
+}
+.search-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
   color: var(--muted);
   cursor: pointer;
+  font-size: 13px;
+  padding: 4px 6px;
 }
-.lens-chip:hover {
-  border-color: var(--accent);
+.search-clear:hover {
+  color: var(--accent);
+}
+.list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 2px 0 8px;
+  font-size: 12px;
+}
+
+/* the 5-icon per-row stream strip on each list row */
+.row-streams {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.row-cell {
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.row-cell.done {
+  color: #2f6b2f;
+  border-color: #2f6b2f44;
+}
+[data-theme='dark'] .row-cell.done {
+  color: #86dba6;
+  border-color: #86dba644;
+}
+.row-cell.fire {
+  color: #c0492f;
+  border-color: #c0492f66;
+  background: #c0492f11;
+  font-weight: 700;
+}
+.row-cell.go {
+  opacity: 0.75;
+}
+
+/* CO / HOLD status pills (list rows + detail header) */
+.status-pill {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.status-pill.co {
+  background: #2f6b2f;
+  color: #fff;
+}
+.status-pill.hold {
+  background: #d9920a;
+  color: #fff;
+}
+.detail-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 0 2px;
+}
+
+/* ---------- project Overview tab ---------- */
+.overview {
+  margin-top: 4px;
+}
+.overview-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.ov-card {
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
   color: var(--text);
 }
-.lens-chip.act {
-  background: var(--accent);
+.ov-card:hover {
   border-color: var(--accent);
-  color: #fff;
 }
-.lens-chip.act .tab-badge {
-  background: rgba(255, 255, 255, 0.28);
-  color: #fff;
+.ov-card.done {
+  border-color: #2f6b2f55;
 }
-.lens-chip.act .tab-badge.fire {
-  background: #fff;
-  color: #c0492f;
+.ov-card-h {
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 4px;
 }
-[data-density='compact'] .lens-chip {
-  padding: 4px 10px;
+.ov-card.done .ov-card-h {
+  color: #2f6b2f;
+}
+[data-theme='dark'] .ov-card.done .ov-card-h {
+  color: #86dba6;
+}
+.ov-card-next {
   font-size: 12px;
+  color: var(--muted);
 }
 
 /* ---------- login screen ---------- */

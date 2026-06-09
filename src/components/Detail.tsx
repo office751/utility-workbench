@@ -65,16 +65,18 @@ interface Updaters {
   dismissNotification: (id: number, sourceKey: string) => void
 }
 
+/** A tab in the project workspace: the Overview summary, or one stream. */
+type DetailTab = 'overview' | Stream
+
 interface Props extends Updaters {
-  stream: Stream
   project: Project
   ps: ProjectState
   tasks: Task[]
+  /** Stream tab to open on (from a Today/Tasks deep-link). Default: Overview. */
+  initialStream?: Stream
   onBack: () => void
-  /** Permanently remove this project (App deletes + returns to dashboard). */
+  /** Permanently remove this project (App deletes + returns to the list). */
   onDelete: () => void
-  /** Switch which stream's detail shows, keeping THIS project selected. */
-  onSwitchStream: (stream: Stream) => void
 }
 
 const NOTE_LABEL: Record<Stream, string> = {
@@ -113,16 +115,18 @@ function streamStatus(key: Stream, p: Project, ps: ProjectState): { label: strin
 }
 
 function Detail(props: Props) {
-  const { stream, project: p, ps, setField, setNote, onBack, onDelete, onSwitchStream } = props
+  const { project: p, ps, setField, setNote, onBack, onDelete } = props
 
-  // Is the ⚙️ settings panel open? Local UI state — nobody else needs it.
+  // Which tab is open: the Overview summary, or one stream. Defaults to the
+  // deep-linked stream (from Today/Tasks) or Overview.
+  const [activeTab, setActiveTab] = useState<DetailTab>(props.initialStream ?? 'overview')
   const [showSettings, setShowSettings] = useState(false)
 
   return (
     <section className="detail">
       <div className="detail-head">
         <button className="mini back" onClick={onBack}>
-          ← {stream} dashboard
+          ← All projects
         </button>
         <button
           className={'mini gear' + (showSettings ? ' on' : '')}
@@ -133,22 +137,32 @@ function Detail(props: Props) {
         </button>
       </div>
 
-      <h2>{p.address}</h2>
+      <h2 className="detail-title">
+        {p.address}
+        {p.listStatus === 'CO' && <span className="status-pill co">C.O.</span>}
+        {p.listStatus === 'Hold' && <span className="status-pill hold">HOLD</span>}
+      </h2>
       <p className="meta">
         {p.model} · {p.subdivision} · {p.city}, FL {p.zip} · parcel {p.parcel}
         {p.permit && <> · permit {p.permit}</>}
         {p.workOrder && <> · WO# {p.workOrder}</>}
       </p>
 
-      {/* Project overview: all five streams at a glance — click one to jump to it. */}
+      {/* The workspace tab bar: Overview + the five streams (each shows its status). */}
       <div className="stream-strip">
+        <button
+          className={'ss-chip' + (activeTab === 'overview' ? ' active' : '')}
+          onClick={() => setActiveTab('overview')}
+        >
+          <span className="ss-name">🏠 Overview</span>
+        </button>
         {STREAM_TABS.map(({ key, icon, name }) => {
           const st = streamStatus(key, p, ps)
           return (
             <button
               key={key}
-              className={'ss-chip' + (key === stream ? ' active' : '') + (st.done ? ' done' : '')}
-              onClick={() => onSwitchStream(key)}
+              className={'ss-chip' + (key === activeTab ? ' active' : '') + (st.done ? ' done' : '')}
+              onClick={() => setActiveTab(key)}
               title={`${name}: ${st.label}`}
             >
               <span className="ss-name">
@@ -161,63 +175,84 @@ function Detail(props: Props) {
         })}
       </div>
 
-      {/* The gear panel: all editable config for the whole project, any tab. */}
+      {/* The gear panel: all editable config for the whole project. */}
       {showSettings && (
-        <ProjectSettings
-          project={p}
-          ps={ps}
-          setField={setField}
-          onClose={() => setShowSettings(false)}
-        />
+        <ProjectSettings project={p} ps={ps} setField={setField} onClose={() => setShowSettings(false)} />
       )}
 
-      {/* Click-to-call / pre-filled email buttons for this tab. */}
-      <ContactLinks stream={stream} p={p} ps={ps} />
+      {/* ---- OVERVIEW: at-a-glance status + project-wide things (files, delete) ---- */}
+      {activeTab === 'overview' && (
+        <div className="overview">
+          <div className="overview-cards">
+            {STREAM_TABS.map(({ key, icon, name }) => {
+              const st = streamStatus(key, p, ps)
+              return (
+                <button
+                  key={key}
+                  className={'ov-card' + (st.done ? ' done' : '')}
+                  onClick={() => setActiveTab(key)}
+                >
+                  <div className="ov-card-h">
+                    {icon} {name} {st.done ? '✓' : ''}
+                  </div>
+                  <div className="ov-card-next">{st.label}</div>
+                </button>
+              )
+            })}
+          </div>
 
-      {/* Render the body for whichever tab we're on. */}
-      {stream === 'electric' && <ElectricBody {...props} />}
-      {stream === 'water' && <WaterBody {...props} />}
-      {stream === 'septic' && <SepticBody {...props} />}
-      {stream === 'permit' && <PermitBody {...props} />}
-      {stream === 'materials' && (
-        <MaterialsBody
-          project={p}
-          ps={ps}
-          addOrder={props.addOrder}
-          updateOrder={props.updateOrder}
-          removeOrder={props.removeOrder}
-        />
+          {/* Files for this whole project — upload + share by text/email. */}
+          <DocumentsBox
+            projectId={p.id}
+            docs={ps.docs ?? []}
+            onAddFiles={(files) => props.addProjectFiles(p.id, files)}
+            onRemove={(i) => props.removeProjectFile(p.id, i)}
+          />
+
+          {/* Danger zone — confirm() forces a deliberate yes before deleting. */}
+          <button
+            className="mini danger"
+            onClick={() => {
+              if (confirm(`Remove ${p.address} and ALL its progress (electric, water, septic, permit)?`)) {
+                onDelete()
+              }
+            }}
+          >
+            🗑 Remove this project
+          </button>
+        </div>
       )}
 
-      <label className="notes-label">
-        {NOTE_LABEL[stream]}
-        <textarea
-          rows={3}
-          value={ps.notes[stream]}
-          onChange={(e) => setNote(p.id, stream, e.target.value)}
-          placeholder="Anything worth remembering…"
-        />
-      </label>
+      {/* ---- STREAM tabs: contacts + the stream body + that stream's notes ---- */}
+      {activeTab !== 'overview' && (
+        <>
+          <ContactLinks stream={activeTab} p={p} ps={ps} />
 
-      {/* Files for this whole project (any stream) — upload + share by text/email. */}
-      <DocumentsBox
-        projectId={p.id}
-        docs={ps.docs ?? []}
-        onAddFiles={(files) => props.addProjectFiles(p.id, files)}
-        onRemove={(i) => props.removeProjectFile(p.id, i)}
-      />
+          {activeTab === 'electric' && <ElectricBody {...props} />}
+          {activeTab === 'water' && <WaterBody {...props} />}
+          {activeTab === 'septic' && <SepticBody {...props} />}
+          {activeTab === 'permit' && <PermitBody {...props} />}
+          {activeTab === 'materials' && (
+            <MaterialsBody
+              project={p}
+              ps={ps}
+              addOrder={props.addOrder}
+              updateOrder={props.updateOrder}
+              removeOrder={props.removeOrder}
+            />
+          )}
 
-      {/* Danger zone — confirm() forces a deliberate yes before deleting. */}
-      <button
-        className="mini danger"
-        onClick={() => {
-          if (confirm(`Remove ${p.address} and ALL its progress (electric, water, septic, permit)?`)) {
-            onDelete()
-          }
-        }}
-      >
-        🗑 Remove this project
-      </button>
+          <label className="notes-label">
+            {NOTE_LABEL[activeTab]}
+            <textarea
+              rows={3}
+              value={ps.notes[activeTab]}
+              onChange={(e) => setNote(p.id, activeTab, e.target.value)}
+              placeholder="Anything worth remembering…"
+            />
+          </label>
+        </>
+      )}
     </section>
   )
 }
