@@ -24,6 +24,7 @@ const PROFILE_DIR = process.env.PROFILE_DIR || './profile'
 const args = process.argv.slice(2)
 const headed = args.includes('--headed')
 const doWrite = args.includes('--write') // without this, the sync only PREVIEWS
+const doPrune = args.includes('--prune') // OFF by default → add-only (never removes an item)
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY
 const onlyPermit =
@@ -113,7 +114,26 @@ async function readTab(page, tabName, headerSrc) {
     )
     .then(() => true)
     .catch(() => false)
-  await page.waitForTimeout(400) // let rows settle
+  // The header can render before its ROWS finish loading — reading then drops
+  // real items. Poll the matching table's row count until it's STABLE across two
+  // checks (handles async row loading; a genuinely-empty table settles at 0 fast).
+  if (ok) {
+    let last = -1
+    for (let i = 0; i < 8; i++) {
+      const c = await page.evaluate((src) => {
+        const re = new RegExp(src, 'i')
+        const tbl = [...document.querySelectorAll('table')].find((t) =>
+          [...t.querySelectorAll('th')].some((th) => re.test(th.textContent || '')),
+        )
+        return tbl ? tbl.querySelectorAll('tbody tr').length : 0
+      }, headerSrc)
+      if (c === last) break
+      last = c
+      await page.waitForTimeout(500)
+    }
+  } else {
+    await page.waitForTimeout(400)
+  }
   return { ok, tables: await readTables(page) }
 }
 
@@ -217,7 +237,7 @@ async function syncToWorkbench(results) {
     if (parts[0] !== 'portal') return true
     const perm = parts[1]
     const okSet = parts[2] === 'hold' ? holdsOkPermits : parts[2] === 'rej' ? inspOkPermits : null
-    if (okSet && okSet.has(perm) && !desiredKeys.has(t.sourceKey)) { cleared++; return false }
+    if (doPrune && okSet && okSet.has(perm) && !desiredKeys.has(t.sourceKey)) { cleared++; return false }
     return true
   })
   const seenKeys = new Set()
@@ -245,7 +265,7 @@ async function syncToWorkbench(results) {
     const desiredNKeys = new Set(desiredNotes.map((n) => n.sourceKey))
     const byKey = new Map((ps.notifications || []).filter((n) => n.sourceKey).map((n) => [n.sourceKey, n]))
     const kept = (ps.notifications || []).filter((n) => {
-      if ((n.sourceKey || '').startsWith('portal:') && !desiredNKeys.has(n.sourceKey)) { nCleared++; return false }
+      if (doPrune && (n.sourceKey || '').startsWith('portal:') && !desiredNKeys.has(n.sourceKey)) { nCleared++; return false }
       return true
     })
     const seenN = new Set()
