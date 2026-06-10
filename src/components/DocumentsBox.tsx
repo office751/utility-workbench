@@ -10,7 +10,9 @@
  *
  * Sharing uses a "signed link": a long, unguessable URL we mint fresh each
  * time you hit Share (good for ~1 year) so your files stay private but the
- * link you send is always live.
+ * link you send is always live. "Copy link" copies it as RICH TEXT — pasting
+ * into Mail/Word/Teams shows the clickable file name, not the URL soup
+ * (plain-text fields still get the raw URL). See lib/richCopy.ts.
  *
  * Files come in two ways: clicking "Add files" or dragging onto the drop zone.
  */
@@ -18,6 +20,7 @@ import { useRef, useState } from 'react'
 import type { ProjectDoc } from '../types'
 import { hasSupabase } from '../lib/supabase'
 import { getShareUrl } from '../lib/files'
+import { copyRichLink } from '../lib/richCopy'
 
 interface Props {
   projectId: number
@@ -93,9 +96,11 @@ function DocumentsBox({ docs, onAddFiles, onRemove }: Props) {
     }
   }
 
-  async function copy(url: string) {
+  /** 📋 Copy link — lands as a clickable FILE NAME in rich editors (Mail,
+   *  Word, Teams); plain fields (SMS, notes) still get the raw URL. */
+  async function copy(name: string, url: string) {
     try {
-      await navigator.clipboard.writeText(url)
+      await copyRichLink(name, url)
       setCopied(true)
     } catch {
       setError('Copy failed — select and copy the link manually.')
@@ -196,7 +201,7 @@ function DocumentsBox({ docs, onAddFiles, onRemove }: Props) {
               {/* Desktop share menu (phones get the native sheet instead). */}
               {menu?.index === i && (
                 <div className="doc-share-menu">
-                  <button className="doc-btn" onClick={() => copy(menu.url)}>
+                  <button className="doc-btn" onClick={() => copy(d.name, menu.url)}>
                     {copied ? '✓ Copied' : '📋 Copy link'}
                   </button>
                   <a

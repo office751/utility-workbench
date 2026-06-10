@@ -23,6 +23,7 @@
 import type { Project, ProjectDoc, ProjectState, TemplateOverride } from '../types'
 import { JENNIFER, PERMIT_SUBS } from '../data/contacts'
 import { septicSourceOf, septicSystemOf } from './nextAction'
+import { escapeHtml } from './richCopy'
 import {
   DEFAULT_PERMIT_HANDOFF_BODY,
   DEFAULT_PERMIT_HANDOFF_SUBJECT,
@@ -62,17 +63,6 @@ export interface HandoffDraft {
   linked: number
   /** How many files SHOULD have gotten a link but couldn't (stale pointer, offline). */
   failed: number
-}
-
-/** The five characters HTML can't show literally — swapped for entities so a
- *  file name like "Plans & Specs <rev2>.pdf" can't break the markup. */
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
 }
 
 const DOCS_HEADER =
