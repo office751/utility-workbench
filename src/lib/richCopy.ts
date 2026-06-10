@@ -31,28 +31,69 @@ export function richLinkHtml(name: string, url: string): string {
 }
 
 /**
- * Copy `url` to the clipboard with `name` as its rich-text face.
- * Returns 'rich' when both flavors landed, 'plain' when only the raw URL
- * could be copied (older browser without ClipboardItem). Throws only when
- * the clipboard is entirely unavailable — caller shows the error.
+ * Put html + plain flavors on the clipboard, trying three ways in order:
  *
- * `url` may be a PROMISE of the link (e.g. one still being minted). That's
- * the Safari-safe shape: Safari only allows clipboard writes while the
- * click is "live", so instead of awaiting the mint first we hand
- * ClipboardItem promises created synchronously inside the click.
+ *   1. PROMISE-based ClipboardItem — content promises created synchronously
+ *      inside the click. Required by Safari (it only allows clipboard writes
+ *      while the click is "live", and our content may still be minting).
+ *   2. RESOLVED-blob ClipboardItem — await the content first, then write.
+ *      Chrome is fine writing after an await (its clipboard-write permission
+ *      persists for the tab), and some Chrome versions reject promise VALUES
+ *      inside ClipboardItem — this tier catches those.
+ *   3. writeText of the plain flavor — last resort; rich text is lost but
+ *      the user still gets a working (raw) link.
+ *
+ * Returns which flavor actually landed so the UI can tell the truth —
+ * 'plain' means pasting will show the raw URL, not the pretty name.
+ * Rejects of the CONTENT promises (e.g. "nothing to copy") propagate to the
+ * caller; only clipboard failures step down the ladder.
  */
-export async function copyRichLink(name: string, url: string | Promise<string>): Promise<'rich' | 'plain'> {
-  const urlPromise = Promise.resolve(url)
+export async function writeRichClipboard(
+  htmlContent: string | Promise<string>,
+  textContent: string | Promise<string>,
+): Promise<'rich' | 'plain'> {
+  const html = Promise.resolve(htmlContent)
+  const text = Promise.resolve(textContent)
+
   try {
     await navigator.clipboard.write([
       new ClipboardItem({
-        'text/html': urlPromise.then((u) => new Blob([richLinkHtml(name, u)], { type: 'text/html' })),
-        'text/plain': urlPromise.then((u) => new Blob([u], { type: 'text/plain' })),
+        'text/html': html.then((h) => new Blob([h], { type: 'text/html' })),
+        'text/plain': text.then((t) => new Blob([t], { type: 'text/plain' })),
       }),
     ])
     return 'rich'
   } catch {
-    await navigator.clipboard.writeText(await urlPromise)
+    /* tier 2 below — but first let content-promise rejections propagate */
+  }
+
+  // If the CONTENT itself failed (mint error, nothing to copy), this throw
+  // is the real story — don't mask it with a clipboard fallback.
+  const [h, t] = await Promise.all([html, text])
+
+  try {
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        'text/html': new Blob([h], { type: 'text/html' }),
+        'text/plain': new Blob([t], { type: 'text/plain' }),
+      }),
+    ])
+    return 'rich'
+  } catch {
+    await navigator.clipboard.writeText(t)
     return 'plain'
   }
+}
+
+/**
+ * Copy `url` to the clipboard with `name` as its rich-text face.
+ * `url` may be a PROMISE of the link (one still being minted) — see
+ * writeRichClipboard for the Safari reasoning. Returns 'rich' | 'plain'.
+ */
+export async function copyRichLink(name: string, url: string | Promise<string>): Promise<'rich' | 'plain'> {
+  const urlPromise = Promise.resolve(url)
+  return writeRichClipboard(
+    urlPromise.then((u) => richLinkHtml(name, u)),
+    urlPromise,
+  )
 }

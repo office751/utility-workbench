@@ -40,6 +40,7 @@ import { shutoffFor } from '../lib/shutoff'
 import { permitExpiresOf, permitExpiryFor } from '../lib/permitExpiry'
 import { permitHandoffDraft, permitHandoffDraftWithLinks, type HandoffDraft } from '../lib/permitHandoff'
 import { getShareUrl } from '../lib/files'
+import { writeRichClipboard } from '../lib/richCopy'
 import { isMaterialsDone, ordersSummary } from '../lib/orders'
 import { GEORGES } from '../data/contacts'
 import Checklist from './Checklist'
@@ -454,28 +455,21 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, u
 
     // Raw signed URLs are 300+ characters of token soup, so they don't go in
     // the draft. The docs section is a [PASTE HERE] marker and the CLIPBOARD
-    // gets the links as rich text — clickable file names. SAFARI QUIRK: the
-    // clipboard can only be written while the click is still "live", and
-    // awaiting the mint first would void that — so we give ClipboardItem
-    // PROMISES of the content (allowed, created synchronously in the click).
-    // If no links get minted, the promises reject and the clipboard is left
-    // exactly as it was.
-    const blobOf = (pick: (d: HandoffDraft) => string, type: string) =>
+    // gets the links as rich text — clickable file names. writeRichClipboard
+    // handles the browser quirks (Safari needs promise-based writes inside
+    // the click; some Chromes need resolved blobs). If no links get minted,
+    // the content promises reject and the clipboard is left exactly as it was.
+    const contentOf = (pick: (d: HandoffDraft) => string) =>
       draftPromise.then((d) => {
         if (d.linked === 0) throw new Error('nothing to copy')
-        return new Blob([pick(d)], { type })
+        return pick(d)
       })
     let clipboardOk = false
     try {
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          'text/html': blobOf((d) => d.docsHtml, 'text/html'),
-          'text/plain': blobOf((d) => d.docsText, 'text/plain'),
-        }),
-      ])
+      await writeRichClipboard(contentOf((d) => d.docsHtml), contentOf((d) => d.docsText))
       clipboardOk = true
     } catch {
-      /* no ClipboardItem, write denied, or nothing to copy — handled below */
+      /* clipboard unavailable, or nothing to copy — handled below */
     }
 
     try {

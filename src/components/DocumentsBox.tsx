@@ -119,11 +119,16 @@ function DocumentsBox({ docs, onAddFiles, onRemove }: Props) {
     if (!doc.path) return
     setError(null)
     try {
-      await copyRichLink(doc.name, getShareUrl(doc.path))
+      const flavor = await copyRichLink(doc.name, getShareUrl(doc.path))
       setCopiedRow(index)
       // Let the "✓ Copied" flash for a moment, then put the button back —
       // unless another row was copied in the meantime.
       setTimeout(() => setCopiedRow((cur) => (cur === index ? null : cur)), 2000)
+      // Be honest when the rich flavor didn't land: pasting will show the
+      // raw URL, and the user should know why instead of blaming the paste.
+      if (flavor === 'plain') {
+        setError('Copied as a plain URL — this browser refused the rich-text flavor, so pasting shows the address instead of the file name.')
+      }
     } catch {
       setError('Could not copy a link. Is the file locker set up in Supabase?')
     }
