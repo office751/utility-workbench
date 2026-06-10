@@ -13,6 +13,8 @@ import {
   DEFAULT_APPLY_DUKE_SUBJECT,
   DEFAULT_APPLY_SECO_BODY,
   DEFAULT_APPLY_SECO_SUBJECT,
+  DEFAULT_PERMIT_HANDOFF_BODY,
+  DEFAULT_PERMIT_HANDOFF_SUBJECT,
   DEFAULT_STATUS_DETAILED_BODY,
   DEFAULT_STATUS_SIMPLE_BODY,
   DEFAULT_STATUS_SUBJECT,
@@ -82,9 +84,33 @@ const STATUS_BODY_VARS: TemplateVar[] = [
   { token: '{{nextAction}}', desc: "the project's #1 priority (same as Today)" },
 ]
 
+// What the permit-handoff email to Jennifer can auto-fill. Job cost and
+// financing are deliberately NOT tokens — the app doesn't know them, so the
+// default body carries [FILL IN — …] markers instead.
+const PERMIT_HANDOFF_VARS: TemplateVar[] = [
+  { token: '{{address}}', desc: 'street address' },
+  { token: '{{site}}', desc: 'full site line — address, city, FL zip' },
+  { token: '{{parcel}}', desc: 'parcel number' },
+  { token: '{{model}}', desc: 'house model' },
+  { token: '{{subs}}', desc: 'the standard subcontractor lineup (data/contacts.ts)' },
+  { token: '{{docs}}', desc: "bulleted list of the project's uploaded files" },
+  { token: '{{septic_type}}', desc: 'Sewer / Septic / Septic (ATU…)' },
+]
+
 /** Every editable template, grouped. (Future: more workflows register here.) */
 export function templateSpecs(): TemplateSpec[] {
   return [
+    {
+      id: 'permit:handoff',
+      group: 'Permitting',
+      icon: '📨',
+      name: 'Permit package — Jennifer',
+      description:
+        'Drafted by "📨 Email Jennifer" on a project\'s Permit tab — the new-permit handoff to Jennifer\'s Permitting Service. Fill the [FILL IN] blanks (job cost, financing) and attach the listed files before sending.',
+      vars: PERMIT_HANDOFF_VARS,
+      subject: DEFAULT_PERMIT_HANDOFF_SUBJECT,
+      body: DEFAULT_PERMIT_HANDOFF_BODY,
+    },
     {
       id: 'status:simple',
       group: 'Status reports',

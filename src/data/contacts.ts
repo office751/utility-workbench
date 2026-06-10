@@ -38,6 +38,33 @@ export const MARION_PERMITTING = {
   address: '2710 E. Silver Springs Blvd, Ocala, FL 34470',
 }
 
+/**
+ * Jennifer's Permitting Service — our permitting agent. Every NEW permit
+ * (anything we haven't already started permitting ourselves) gets handed off
+ * to her via the 📨 button on a project's Permit tab. $400 per residential
+ * new home; she obtains whatever documents we don't send.
+ */
+export const JENNIFER = {
+  name: "Jennifer's Permitting Service, LLC",
+  contact: 'Jennifer M. Privateer',
+  phone: '352-817-4988',
+  email: 'jenniferpermitting@yahoo.com',
+}
+
+/**
+ * The standard subcontractor lineup that goes on every permit application.
+ * This is the list Jennifer files with the county — when a sub changes,
+ * edit it HERE and every future handoff email follows.
+ * (Georges Plumbing is intentionally NOT in this list — they're our septic
+ * contractor above, not the permitted plumbing sub.)
+ */
+export const PERMIT_SUBS = [
+  { trade: 'Electrical', company: 'Iron Shield Electric Co.', contact: 'Dale Nadboralski' },
+  { trade: 'Mechanical (HVAC)', company: 'Iron Shield Heating & Air LLC', contact: 'Victor Oquendo' },
+  { trade: 'Plumbing', company: 'Iron Shield Plumbing LLC', contact: 'Loren Nelson' },
+  { trade: 'Roofing', company: 'Southern Pro Roofing LLC', contact: 'Bryan Hudson' },
+]
+
 /** CC'd on outgoing application emails. */
 export const OFFICE_CC = 'office@ironshieldconstruction.com'
 

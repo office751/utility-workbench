@@ -38,6 +38,7 @@ import {
 } from '../lib/nextAction'
 import { shutoffFor } from '../lib/shutoff'
 import { permitExpiresOf, permitExpiryFor } from '../lib/permitExpiry'
+import { permitHandoffMailto } from '../lib/permitHandoff'
 import { isMaterialsDone, ordersSummary } from '../lib/orders'
 import { GEORGES } from '../data/contacts'
 import Checklist from './Checklist'
@@ -434,7 +435,7 @@ function SepticBody({ project: p, ps, toggleStep, setStepNote }: Props) {
 
 /* ===================== PERMITTING ===================== */
 
-function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, updateTask, removeTask, dismissNotification }: Props) {
+function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, updateTask, removeTask, dismissNotification, templates }: Props) {
   const next = nextPermitAction(ps)
   const folder = sharepointFolderOf(p, ps) // hidden link — opened via the button below
   const permitUrl = permitPortalOf(p, ps)
@@ -461,20 +462,25 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, u
 
       {/* Quick-open links — the URL itself stays hidden; you just click to open.
           encodeURI handles spaces in SharePoint folder names. */}
-      {(folder || permitUrl) && (
-        <div className="contact-row">
-          {folder && (
-            <a className="contact" href={encodeURI(folder)} target="_blank" rel="noreferrer">
-              📁 Open project folder
-            </a>
-          )}
-          {permitUrl && (
-            <a className="contact" href={permitUrl} target="_blank" rel="noreferrer">
-              🔗 Open permit record
-            </a>
-          )}
-        </div>
-      )}
+      <div className="contact-row">
+        {/* New-permit handoff: drafts the package email to Jennifer's
+            Permitting Service, pre-filled with site facts, the standard sub
+            lineup, and this project's uploaded files. Fill the [FILL IN]
+            blanks and attach the listed files before sending. */}
+        <a className="contact" href={permitHandoffMailto(p, ps, templates)}>
+          📨 Email Jennifer — permit package
+        </a>
+        {folder && (
+          <a className="contact" href={encodeURI(folder)} target="_blank" rel="noreferrer">
+            📁 Open project folder
+          </a>
+        )}
+        {permitUrl && (
+          <a className="contact" href={permitUrl} target="_blank" rel="noreferrer">
+            🔗 Open permit record
+          </a>
+        )}
+      </div>
 
       {/* Expiry reminder (only when a date is known), colored by urgency. */}
       {expiry && (

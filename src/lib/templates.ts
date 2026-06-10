@@ -65,6 +65,39 @@ export const DEFAULT_APPLY_DUKE_BODY = [
   '352-809-3235',
 ].join('\n')
 
+/** Default wording for the permit-package handoff email to Jennifer's
+ *  Permitting Service ("📨 Email Jennifer" on the Permit tab). Built from her
+ *  own checklist (her email, May 13 2026): location, job cost, subs, AC/energy
+ *  docs, septic, and cash-vs-lender for the Notice of Commencement.
+ *
+ *  Two things the app can't know — JOB COST and FINANCING — appear as loud
+ *  [FILL IN — …] markers so they can't sneak out unfinished. Everything else
+ *  ({{subs}}, {{docs}}, {{septic_type}}, site facts) fills itself in. */
+export const DEFAULT_PERMIT_HANDOFF_SUBJECT = 'Iron Shield: {{address}} — New Permit Package (Parcel {{parcel}})'
+export const DEFAULT_PERMIT_HANDOFF_BODY = [
+  'Hi Jennifer,',
+  '',
+  'We have a new project ready for permitting. Per your checklist:',
+  '',
+  '• Location: {{site}} (Parcel {{parcel}}) — model {{model}}, new single-family residence',
+  '• Job cost: [FILL IN — contract $ amount]',
+  '• Subcontractors:',
+  '{{subs}}',
+  '• Energy calcs: attached — this is a master-filed model',
+  '• Septic: {{septic_type}} — please apply for the septic permit if required',
+  '• Financing: [FILL IN — cash, or bank + lender name] (so you know who handles the Notice of Commencement)',
+  '',
+  'Project documents attached:',
+  '{{docs}}',
+  '',
+  'Let me know if you need anything else to get this submitted.',
+  '',
+  'Thank you,',
+  'Adam Stiles',
+  'Iron Shield Construction LLC',
+  '352-809-3235',
+].join('\n')
+
 /** Default wording for the status report. The SUBJECT is the whole report's
  *  subject ({{date}}/{{count}}/{{scope}}); the BODY is a PER-PROJECT block
  *  ({{address}}, {{electric}}, …) that's rendered once for each house. Edit
