@@ -39,6 +39,7 @@ import {
 import { shutoffFor } from '../lib/shutoff'
 import { permitExpiresOf, permitExpiryFor } from '../lib/permitExpiry'
 import { permitHandoffDraft, permitHandoffDraftWithLinks, type HandoffDraft } from '../lib/permitHandoff'
+import { DUKE_PORTAL_URL, dukeWebPayloadText } from '../lib/dukeWebApply'
 import { getShareUrl } from '../lib/files'
 import { writeRichClipboard } from '../lib/richCopy'
 import { isMaterialsDone, ordersSummary } from '../lib/orders'
@@ -290,6 +291,23 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField }: Pro
   const shutoff = shutoffFor(ps)
   const u = utilityOf(p, ps)
   const eng = engineerOf(p, ps)
+  // ⚡ Duke web application: copied=true flashes the button after the fill
+  // data lands on the clipboard.
+  const [dukeCopied, setDukeCopied] = useState(false)
+
+  /** Copy this project's portal fill-data (JSON) and open the Builder
+   *  Portal. The clipboard payload is what fills the form — Claude driving
+   *  the browser, or the fill helper, reads it from there. */
+  async function openDukePortal() {
+    try {
+      await navigator.clipboard.writeText(dukeWebPayloadText(p, ps))
+      setDukeCopied(true)
+      setTimeout(() => setDukeCopied(false), 2500)
+    } catch {
+      /* clipboard refused — portal still opens; fill data can be re-copied */
+    }
+    window.open(DUKE_PORTAL_URL, '_blank', 'noopener')
+  }
 
   return (
     <>
@@ -304,6 +322,16 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField }: Pro
       <p className="summary">
         ⚡ {u || 'utility?'} · {SERVICE_LABEL[serviceTypeOf(p, ps)]} · Engineer: {eng || '—'}
       </p>
+
+      {/* Duke applies through a multi-page WEB form, not email — this opens
+          the portal with the project's fill data on the clipboard. */}
+      {u === 'DUKE' && (
+        <div className="contact-row">
+          <button className="contact" onClick={openDukePortal}>
+            {dukeCopied ? '✓ Fill data copied — portal opening…' : '⚡ Duke portal — new service application'}
+          </button>
+        </div>
+      )}
 
       <p className="next-line">
         Next: <b>{next.label}</b>
