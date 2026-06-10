@@ -93,7 +93,7 @@ const PERMIT_HANDOFF_VARS: TemplateVar[] = [
   { token: '{{parcel}}', desc: 'parcel number' },
   { token: '{{model}}', desc: 'house model' },
   { token: '{{subs}}', desc: 'the standard subcontractor lineup (data/contacts.ts)' },
-  { token: '{{docs}}', desc: "bulleted list of the project's uploaded files" },
+  { token: '{{docs}}', desc: 'the whole documents section — its own header + each uploaded file with its ~1-year download link (names only if links fail)' },
   { token: '{{septic_type}}', desc: 'Sewer / Septic / Septic (ATU…)' },
 ]
 
@@ -106,7 +106,7 @@ export function templateSpecs(): TemplateSpec[] {
       icon: '📨',
       name: 'Permit package — Jennifer',
       description:
-        'Drafted by "📨 Email Jennifer" on a project\'s Permit tab — the new-permit handoff to Jennifer\'s Permitting Service. Fill the [FILL IN] blanks (job cost, financing) and attach the listed files before sending.',
+        'Drafted by "📨 Email Jennifer" on a project\'s Permit tab — the new-permit handoff to Jennifer\'s Permitting Service. Project files ride along as download links (no heavy attachments); just fill the [FILL IN] blanks (job cost, financing) before sending.',
       vars: PERMIT_HANDOFF_VARS,
       subject: DEFAULT_PERMIT_HANDOFF_SUBJECT,
       body: DEFAULT_PERMIT_HANDOFF_BODY,

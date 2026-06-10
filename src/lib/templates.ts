@@ -72,7 +72,11 @@ export const DEFAULT_APPLY_DUKE_BODY = [
  *
  *  Two things the app can't know — JOB COST and FINANCING — appear as loud
  *  [FILL IN — …] markers so they can't sneak out unfinished. Everything else
- *  ({{subs}}, {{docs}}, {{septic_type}}, site facts) fills itself in. */
+ *  ({{subs}}, {{docs}}, {{septic_type}}, site facts) fills itself in.
+ *
+ *  NOTE: {{docs}} brings its OWN header line ("…download links below:" or a
+ *  plain list when links couldn't be minted) so the wording always matches
+ *  what the email actually contains — don't add a second header above it. */
 export const DEFAULT_PERMIT_HANDOFF_SUBJECT = 'Iron Shield: {{address}} — New Permit Package (Parcel {{parcel}})'
 export const DEFAULT_PERMIT_HANDOFF_BODY = [
   'Hi Jennifer,',
@@ -87,7 +91,6 @@ export const DEFAULT_PERMIT_HANDOFF_BODY = [
   '• Septic: {{septic_type}} — please apply for the septic permit if required',
   '• Financing: [FILL IN — cash, or bank + lender name] (so you know who handles the Notice of Commencement)',
   '',
-  'Project documents attached:',
   '{{docs}}',
   '',
   'Let me know if you need anything else to get this submitted.',

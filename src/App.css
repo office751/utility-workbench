@@ -863,20 +863,32 @@ button.gear.on {
   margin: 0 0 14px;
 }
 
-a.contact {
+/* Some "contacts" are links, some are buttons that do async work first
+   (e.g. 📨 Email Jennifer mints download links before opening the draft) —
+   style them identically so the row reads as one set of actions. */
+a.contact,
+button.contact {
   display: inline-block;
   text-decoration: none;
   font-size: 13px;
+  font-family: inherit;
   padding: 7px 13px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--panel);
   color: var(--text);
+  cursor: pointer;
 }
 
-a.contact:hover {
+a.contact:hover,
+button.contact:hover:not(:disabled) {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+button.contact:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }
 
 .io {

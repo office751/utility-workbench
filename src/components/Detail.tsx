@@ -38,7 +38,8 @@ import {
 } from '../lib/nextAction'
 import { shutoffFor } from '../lib/shutoff'
 import { permitExpiresOf, permitExpiryFor } from '../lib/permitExpiry'
-import { permitHandoffMailto } from '../lib/permitHandoff'
+import { permitHandoffDraft, permitHandoffDraftWithLinks } from '../lib/permitHandoff'
+import { getShareUrl } from '../lib/files'
 import { isMaterialsDone, ordersSummary } from '../lib/orders'
 import { GEORGES } from '../data/contacts'
 import Checklist from './Checklist'
@@ -436,6 +437,41 @@ function SepticBody({ project: p, ps, toggleStep, setStepNote }: Props) {
 /* ===================== PERMITTING ===================== */
 
 function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, updateTask, removeTask, dismissNotification, templates }: Props) {
+  // 📨 Email Jennifer needs a moment to mint download links for the project's
+  // files (a cloud call per file), so it's a button with a busy state rather
+  // than a plain link.
+  const [drafting, setDrafting] = useState(false)
+  const [draftNote, setDraftNote] = useState<string | null>(null)
+
+  async function emailJennifer() {
+    setDrafting(true)
+    setDraftNote(null)
+    try {
+      const draft = await permitHandoffDraftWithLinks(p, ps, templates, getShareUrl)
+      // Signed links are LONG, and some mail apps (notably on Windows)
+      // silently trim very long mailto: drafts — sometimes mid-link, leaving
+      // a dead URL that still looks fine. So the full text also goes on the
+      // clipboard: if the draft looks cut short, paste over it.
+      try {
+        await navigator.clipboard.writeText(draft.text)
+      } catch {
+        /* clipboard is best-effort — the draft itself still opens */
+      }
+      window.location.href = draft.mailto
+      if (draft.failed > 0) {
+        setDraftNote(`⚠️ Couldn't create links for ${draft.failed} file(s) — those are listed by name only. The full email text is on your clipboard.`)
+      } else if (draft.linked > 0) {
+        setDraftNote(`✓ Draft opened with ${draft.linked} download link(s). Full text is also on your clipboard — paste it if your mail app cut the draft short.`)
+      }
+    } catch {
+      // Couldn't reach the cloud at all — still open a draft, just without links.
+      setDraftNote('⚠️ Could not create download links — the draft lists file names only. Share links from the 📂 Files box instead.')
+      window.location.href = permitHandoffDraft(p, ps, templates).mailto
+    } finally {
+      setDrafting(false)
+    }
+  }
+
   const next = nextPermitAction(ps)
   const folder = sharepointFolderOf(p, ps) // hidden link — opened via the button below
   const permitUrl = permitPortalOf(p, ps)
@@ -465,11 +501,11 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, u
       <div className="contact-row">
         {/* New-permit handoff: drafts the package email to Jennifer's
             Permitting Service, pre-filled with site facts, the standard sub
-            lineup, and this project's uploaded files. Fill the [FILL IN]
-            blanks and attach the listed files before sending. */}
-        <a className="contact" href={permitHandoffMailto(p, ps, templates)}>
-          📨 Email Jennifer — permit package
-        </a>
+            lineup, and a download link for every uploaded file (plan sets are
+            too heavy to attach). Fill the [FILL IN] blanks before sending. */}
+        <button className="contact" onClick={emailJennifer} disabled={drafting}>
+          {drafting ? '⏳ Creating download links…' : '📨 Email Jennifer — permit package'}
+        </button>
         {folder && (
           <a className="contact" href={encodeURI(folder)} target="_blank" rel="noreferrer">
             📁 Open project folder
@@ -481,6 +517,9 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, u
           </a>
         )}
       </div>
+
+      {/* Feedback after drafting: ✓ links minted (plain) or ⚠️ fallback (warn). */}
+      {draftNote && <p className={'shutoff' + (draftNote.startsWith('⚠️') ? ' warn' : '')}>{draftNote}</p>}
 
       {/* Expiry reminder (only when a date is known), colored by urgency. */}
       {expiry && (
