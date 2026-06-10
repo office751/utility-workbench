@@ -13,7 +13,7 @@
  */
 import type { Project, ProjectState, Stream } from '../types'
 import { septicSourceOf, utilityOf, waterSourceOf } from '../lib/nextAction'
-import { DUKE_EMAIL, GEORGES, MARION_PERMITTING, MCU, OFFICE_CC, SECO_EMAIL, SIGNATURE, UTILITY_PHONES } from '../data/contacts'
+import { DUKE_EMAIL, GEORGES, MARION_PERMITTING, MCU, OFFICE_CC, SECO_EMAIL, UTILITY_PHONES } from '../data/contacts'
 
 interface Props {
   stream: Stream
@@ -50,7 +50,7 @@ function ContactLinks({ stream, p, ps }: Props) {
         href: mailto(
           SECO_EMAIL,
           `New Construction Application – ${addrFull}`,
-          `Hello,\n\nWe'd like to apply for new construction electric service at ${addrFull} (parcel ${p.parcel}). The completed load form and site plan are attached.\n\nAccount holder: Iron Shield Construction LLC\n\n${SIGNATURE}`,
+          `Hello,\n\nWe'd like to apply for new construction electric service at ${addrFull} (parcel ${p.parcel}). The completed load form and site plan are attached.\n\nAccount holder: Iron Shield Construction LLC`,
         ),
         label: '✉ Email SECO',
       })
@@ -60,7 +60,7 @@ function ContactLinks({ stream, p, ps }: Props) {
         href: mailto(
           DUKE_EMAIL,
           (p.workOrder ? `WO#${p.workOrder} - ` : 'New Service - ') + addrFull,
-          `Hi,\n\nAttached is the completed Residential Service Information Form and site plan for ${addrFull}${p.workOrder ? ` (WO#${p.workOrder})` : ''}.\n\n${SIGNATURE}`,
+          `Hi,\n\nAttached is the completed Residential Service Information Form and site plan for ${addrFull}${p.workOrder ? ` (WO#${p.workOrder})` : ''}.`,
         ),
         label: '✉ Email Duke',
       })
@@ -75,7 +75,7 @@ function ContactLinks({ stream, p, ps }: Props) {
         href: mailto(
           MCU.email,
           `Start Water Service - ${p.address}, ${p.city}${p.permit ? `  ${p.permit}` : ''}`,
-          `Hi ${MCU.contact.split(' ')[0]},\n\nWe'd like to start water service for the new-construction home below. Account holder: Iron Shield Construction LLC.\n\nService address: ${addrFull}\nParcel ID: ${p.parcel}${p.permit ? `\nPermit #: ${p.permit}` : ''}\n\nPlease let me know what paperwork and capacity/meter charges are needed to proceed.\n\n${SIGNATURE}`,
+          `Hi ${MCU.contact.split(' ')[0]},\n\nWe'd like to start water service for the new-construction home below. Account holder: Iron Shield Construction LLC.\n\nService address: ${addrFull}\nParcel ID: ${p.parcel}${p.permit ? `\nPermit #: ${p.permit}` : ''}\n\nPlease let me know what paperwork and capacity/meter charges are needed to proceed.`,
           OFFICE_CC,
         ),
         label: `✉ Email MCU (${MCU.contact})`,
@@ -90,7 +90,7 @@ function ContactLinks({ stream, p, ps }: Props) {
         href: mailto(
           GEORGES.email,
           `Septic - ${p.address}, ${p.city}${p.permit ? `  ${p.permit}` : ''}`,
-          `Hi ${GEORGES.contact.split(' ')[0]},\n\nUpdate on ${addrFull} (parcel ${p.parcel}${p.permit ? `, permit ${p.permit}` : ''}).\n\n[ well installed / water line hooked up / SOD laid / recorded NRB notice attached ]\n\n${SIGNATURE}`,
+          `Hi ${GEORGES.contact.split(' ')[0]},\n\nUpdate on ${addrFull} (parcel ${p.parcel}${p.permit ? `, permit ${p.permit}` : ''}).\n\n[ well installed / water line hooked up / SOD laid / recorded NRB notice attached ]`,
           OFFICE_CC,
         ),
         label: `✉ Email ${GEORGES.contact} (Georges)`,

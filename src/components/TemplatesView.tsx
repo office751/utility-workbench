@@ -16,7 +16,7 @@ import { templateSpecs, type TemplateSpec } from '../data/templates'
 import { effectiveTemplate, renderTemplate } from '../lib/templates'
 import { VENDORS, vendorTemplateVars } from '../data/vendors'
 import { buildDukePacket, buildSecoPacket } from '../lib/loadForm'
-import { permitHandoffVars } from '../lib/permitHandoff'
+import { DOCS_MARKER, permitHandoffVars } from '../lib/permitHandoff'
 import { projectStatusVars } from '../lib/statusReport'
 
 interface Props {
@@ -46,16 +46,12 @@ function previewVars(spec: TemplateSpec, sample: Project | undefined, getPS: (id
     }
   }
   if (spec.id.startsWith('permit:') && sample) {
-    // Preview with PRETEND download links (minting real ones is a cloud call
-    // per file — too heavy for a settings page) so the card shows the true
-    // shape of the email: header line + name/link pairs.
-    const ps = getPS(sample.id)
-    const fakeLinks = Object.fromEntries(
-      (ps.docs ?? [])
-        .filter((d) => d.path)
-        .map((d) => [d.path!, 'https://…signed-download-link-goes-here…']),
-    )
-    return permitHandoffVars(sample, ps, fakeLinks)
+    // Preview exactly what the draft will contain: the {{docs}} section is
+    // the [PASTE HERE] marker (the real download links ride the clipboard,
+    // minted at click time — not on a settings page).
+    const vars = permitHandoffVars(sample, getPS(sample.id))
+    vars.docs = DOCS_MARKER
+    return vars
   }
   if (spec.id.startsWith('status:') && sample) {
     // Subject tokens (date/count/scope) + the per-project body tokens together,

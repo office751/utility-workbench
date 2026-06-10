@@ -38,7 +38,7 @@ import {
 } from '../lib/nextAction'
 import { shutoffFor } from '../lib/shutoff'
 import { permitExpiresOf, permitExpiryFor } from '../lib/permitExpiry'
-import { permitHandoffDraft, permitHandoffDraftWithLinks } from '../lib/permitHandoff'
+import { permitHandoffDraft, permitHandoffDraftWithLinks, type HandoffDraft } from '../lib/permitHandoff'
 import { getShareUrl } from '../lib/files'
 import { isMaterialsDone, ordersSummary } from '../lib/orders'
 import { GEORGES } from '../data/contacts'
@@ -446,25 +446,62 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, u
   async function emailJennifer() {
     setDrafting(true)
     setDraftNote(null)
+
+    // Kick off the link minting, but DON'T await it yet — see the Safari
+    // note below. We hand this same promise to the clipboard and then await
+    // it ourselves for the mailto.
+    const draftPromise = permitHandoffDraftWithLinks(p, ps, templates, getShareUrl)
+
+    // Raw signed URLs are 300+ characters of token soup, so they don't go in
+    // the draft. The docs section is a [PASTE HERE] marker and the CLIPBOARD
+    // gets the links as rich text — clickable file names. SAFARI QUIRK: the
+    // clipboard can only be written while the click is still "live", and
+    // awaiting the mint first would void that — so we give ClipboardItem
+    // PROMISES of the content (allowed, created synchronously in the click).
+    // If no links get minted, the promises reject and the clipboard is left
+    // exactly as it was.
+    const blobOf = (pick: (d: HandoffDraft) => string, type: string) =>
+      draftPromise.then((d) => {
+        if (d.linked === 0) throw new Error('nothing to copy')
+        return new Blob([pick(d)], { type })
+      })
+    let clipboardOk = false
     try {
-      const draft = await permitHandoffDraftWithLinks(p, ps, templates, getShareUrl)
-      // Signed links are LONG, and some mail apps (notably on Windows)
-      // silently trim very long mailto: drafts — sometimes mid-link, leaving
-      // a dead URL that still looks fine. So the full text also goes on the
-      // clipboard: if the draft looks cut short, paste over it.
-      try {
-        await navigator.clipboard.writeText(draft.text)
-      } catch {
-        /* clipboard is best-effort — the draft itself still opens */
-      }
-      window.location.href = draft.mailto
-      if (draft.failed > 0) {
-        setDraftNote(`⚠️ Couldn't create links for ${draft.failed} file(s) — those are listed by name only. The full email text is on your clipboard.`)
-      } else if (draft.linked > 0) {
-        setDraftNote(`✓ Draft opened with ${draft.linked} download link(s). Full text is also on your clipboard — paste it if your mail app cut the draft short.`)
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html': blobOf((d) => d.docsHtml, 'text/html'),
+          'text/plain': blobOf((d) => d.docsText, 'text/plain'),
+        }),
+      ])
+      clipboardOk = true
+    } catch {
+      /* no ClipboardItem, write denied, or nothing to copy — handled below */
+    }
+
+    try {
+      const draft = await draftPromise
+      if (draft.linked === 0) {
+        // Nothing linkable (no files, or every mint failed) — names-only draft.
+        window.location.href = draft.mailto
+        if (draft.failed > 0) {
+          setDraftNote('⚠️ Could not create download links — the draft lists file names only. Share links from the 📂 Files box instead.')
+        }
+      } else if (clipboardOk) {
+        window.location.href = draft.mailto // [PASTE HERE] marker flavor
+        setDraftNote(
+          draft.failed > 0
+            ? `⚠️ ${draft.linked} download link(s) are on your clipboard — paste them over the [PASTE HERE] line. ${draft.failed} file(s) couldn't be linked and show "(link to follow)".`
+            : `✓ Draft opened. ${draft.linked} download link(s) are on your clipboard as clickable file names — paste them over the [PASTE HERE] line.`,
+        )
+      } else {
+        // Links exist but the clipboard write failed — never leave a
+        // [PASTE HERE] marker pointing at an empty clipboard. Fall back to
+        // the flavor with raw URLs in the body: uglier, still works.
+        window.location.href = draft.mailtoWithUrls
+        setDraftNote("⚠️ Couldn't copy the clickable links, so the draft carries the raw URLs instead.")
       }
     } catch {
-      // Couldn't reach the cloud at all — still open a draft, just without links.
+      // Couldn't build the linked draft at all — still open one, names only.
       setDraftNote('⚠️ Could not create download links — the draft lists file names only. Share links from the 📂 Files box instead.')
       window.location.href = permitHandoffDraft(p, ps, templates).mailto
     } finally {
@@ -500,9 +537,10 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, u
           encodeURI handles spaces in SharePoint folder names. */}
       <div className="contact-row">
         {/* New-permit handoff: drafts the package email to Jennifer's
-            Permitting Service, pre-filled with site facts, the standard sub
-            lineup, and a download link for every uploaded file (plan sets are
-            too heavy to attach). Fill the [FILL IN] blanks before sending. */}
+            Permitting Service, pre-filled with site facts and the standard
+            sub lineup. File download links land on the CLIPBOARD as clickable
+            names — paste them over the draft's [PASTE HERE] marker, fill the
+            [FILL IN] blanks, send. */}
         <button className="contact" onClick={emailJennifer} disabled={drafting}>
           {drafting ? '⏳ Creating download links…' : '📨 Email Jennifer — permit package'}
         </button>

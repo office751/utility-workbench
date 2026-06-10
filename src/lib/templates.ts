@@ -27,11 +27,8 @@ export const DEFAULT_VENDOR_BODY = [
   '',
   'Item(s):',
   '{{items}}',
-  '',
-  'Thanks,',
-  'Adam Stiles',
-  'Iron Shield Construction',
 ].join('\n')
+// ^ No sign-off — the mail client appends Adam's real signature.
 
 /** Default wording for the SECO / Duke electric application emails.
  *  {{packet}} injects the fully-filled notification/service form. */
@@ -43,12 +40,8 @@ export const DEFAULT_APPLY_SECO_BODY = [
   'The completed notification details are below; the signed form and site plan are attached.',
   '',
   '{{packet}}',
-  '',
-  'Thank you,',
-  'Adam Stiles',
-  'Iron Shield Construction LLC',
-  '352-809-3235',
 ].join('\n')
+// ^ No sign-off — the mail client appends Adam's real signature.
 
 export const DEFAULT_APPLY_DUKE_SUBJECT = 'New Service - {{address}}'
 export const DEFAULT_APPLY_DUKE_BODY = [
@@ -58,12 +51,8 @@ export const DEFAULT_APPLY_DUKE_BODY = [
   'The service information is below; site plan attached.',
   '',
   '{{packet}}',
-  '',
-  'Thank you,',
-  'Adam Stiles',
-  'Iron Shield Construction LLC',
-  '352-809-3235',
 ].join('\n')
+// ^ No sign-off — the mail client appends Adam's real signature.
 
 /** Default wording for the permit-package handoff email to Jennifer's
  *  Permitting Service ("📨 Email Jennifer" on the Permit tab). Built from her
@@ -72,11 +61,14 @@ export const DEFAULT_APPLY_DUKE_BODY = [
  *
  *  Two things the app can't know — JOB COST and FINANCING — appear as loud
  *  [FILL IN — …] markers so they can't sneak out unfinished. Everything else
- *  ({{subs}}, {{docs}}, {{septic_type}}, site facts) fills itself in.
+ *  ({{subs}}, {{docs}}, {{septic_line}}, site facts) fills itself in.
+ *  Jennifer prepares and records the Notice of Commencement, so the financing
+ *  line exists to hand her the lender details the NOC form needs.
  *
- *  NOTE: {{docs}} brings its OWN header line ("…download links below:" or a
- *  plain list when links couldn't be minted) so the wording always matches
- *  what the email actually contains — don't add a second header above it. */
+ *  NOTE: {{docs}} fills with its OWN header + content and changes shape with
+ *  reality: a [PASTE HERE] marker when clickable links are on the clipboard,
+ *  a plain name list when links couldn't be minted, a loud warning when no
+ *  files are uploaded. Don't add a second header above it. */
 export const DEFAULT_PERMIT_HANDOFF_SUBJECT = 'Iron Shield: {{address}} — New Permit Package (Parcel {{parcel}})'
 export const DEFAULT_PERMIT_HANDOFF_BODY = [
   'Hi Jennifer,',
@@ -88,18 +80,15 @@ export const DEFAULT_PERMIT_HANDOFF_BODY = [
   '• Subcontractors:',
   '{{subs}}',
   '• Energy calcs: attached — this is a master-filed model',
-  '• Septic: {{septic_type}} — please apply for the septic permit if required',
-  '• Financing: [FILL IN — cash, or bank + lender name] (so you know who handles the Notice of Commencement)',
+  '• Septic: {{septic_line}}',
+  '• Financing: [FILL IN — cash, or lender name & address] — please prepare and record the Notice of Commencement',
   '',
   '{{docs}}',
   '',
   'Let me know if you need anything else to get this submitted.',
-  '',
-  'Thank you,',
-  'Adam Stiles',
-  'Iron Shield Construction LLC',
-  '352-809-3235',
 ].join('\n')
+// ^ No sign-off here on purpose: the mail client appends the real signature.
+//   Adding one in the template means deleting a duplicate from every draft.
 
 /** Default wording for the status report. The SUBJECT is the whole report's
  *  subject ({{date}}/{{count}}/{{scope}}); the BODY is a PER-PROJECT block

@@ -132,9 +132,13 @@ on the Mac, so plan it for a Mac session).
 
 - SharePoint / Monday sync (was milestone 8 of the original Full spec)
 - Auto-reminder to export a backup every N days
-- **Real document storage for the permit tab** — the upload UI keeps file
-  NAMES only right now. Wire to actual storage (ties into the planned file
-  restructure / the Full-spec backend).
+- ~~**Real document storage for the permit tab**~~ — DONE: files live in the
+  private Supabase `project-files` bucket (lib/files.ts), shareable via signed
+  ~1-year links from the 📂 Files box and the 📨 Jennifer permit handoff.
+- **Pretty link copy in the 📂 Files box share menu** — per-file
+  "📋 Copy link" still copies the raw 300-char signed URL. Reuse the permit
+  handoff's rich-text clipboard trick (clickable file name, no URL soup) so
+  emailing plans to ANYONE — not just Jennifer — looks clean.
 - **Refresh permit dates/status** — `data/permitDates.ts` is a snapshot read
   from the county portal (2026-06-03) via Claude in Chrome. Re-read the portal
   pages to refresh; the checklist auto-syncs from it on load unless a step was

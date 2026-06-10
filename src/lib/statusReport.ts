@@ -29,7 +29,6 @@ import {
 import { isMaterialsDone, ordersSummary } from './orders'
 import { permitExpiresOf } from './permitExpiry'
 import { buildActionCenter } from './actionCenter'
-import { SIGNATURE } from '../data/contacts'
 import {
   DEFAULT_STATUS_DETAILED_BODY,
   DEFAULT_STATUS_SIMPLE_BODY,
@@ -137,7 +136,7 @@ export function buildStatusReport(
   const parts: string[] = []
   if (opts.note?.trim()) parts.push(opts.note.trim())
   parts.push(blocks.join(sep) || '(no projects selected)')
-  parts.push(SIGNATURE)
+  // No sign-off — the mail client appends Adam's real signature.
   const body = parts.join('\n\n')
 
   const fullText = `${subject}\n${'='.repeat(Math.min(subject.length, 50))}\n\n${body}`

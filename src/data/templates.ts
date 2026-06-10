@@ -92,8 +92,9 @@ const PERMIT_HANDOFF_VARS: TemplateVar[] = [
   { token: '{{site}}', desc: 'full site line — address, city, FL zip' },
   { token: '{{parcel}}', desc: 'parcel number' },
   { token: '{{model}}', desc: 'house model' },
-  { token: '{{subs}}', desc: 'the standard subcontractor lineup (data/contacts.ts)' },
-  { token: '{{docs}}', desc: 'the whole documents section — its own header + each uploaded file with its ~1-year download link (names only if links fail)' },
+  { token: '{{subs}}', desc: 'the standard sub lineup with county-portal Contact IDs + emails (data/contacts.ts)' },
+  { token: '{{docs}}', desc: 'the whole documents section — a [PASTE HERE] marker for the clickable links on your clipboard (plain names if links fail)' },
+  { token: '{{septic_line}}', desc: '"septic required — please apply…" or "sewer connection — no septic permit needed"' },
   { token: '{{septic_type}}', desc: 'Sewer / Septic / Septic (ATU…)' },
 ]
 
@@ -106,7 +107,7 @@ export function templateSpecs(): TemplateSpec[] {
       icon: '📨',
       name: 'Permit package — Jennifer',
       description:
-        'Drafted by "📨 Email Jennifer" on a project\'s Permit tab — the new-permit handoff to Jennifer\'s Permitting Service. Project files ride along as download links (no heavy attachments); just fill the [FILL IN] blanks (job cost, financing) before sending.',
+        'Drafted by "📨 Email Jennifer" on a project\'s Permit tab — the new-permit handoff to Jennifer\'s Permitting Service. File download links land on your clipboard as clickable names: paste them over the [PASTE HERE] marker, fill the [FILL IN] blanks (job cost, financing), send.',
       vars: PERMIT_HANDOFF_VARS,
       subject: DEFAULT_PERMIT_HANDOFF_SUBJECT,
       body: DEFAULT_PERMIT_HANDOFF_BODY,

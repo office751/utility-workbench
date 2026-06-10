@@ -55,14 +55,18 @@ export const JENNIFER = {
  * The standard subcontractor lineup that goes on every permit application.
  * This is the list Jennifer files with the county — when a sub changes,
  * edit it HERE and every future handoff email follows.
+ *
+ * `contactId` is the contact record ID in the Marion County permit portal
+ * (EnerGov) — Jennifer attaches these existing contacts to new applications,
+ * so the handoff email passes ID + email along with each name.
  * (Georges Plumbing is intentionally NOT in this list — they're our septic
  * contractor above, not the permitted plumbing sub.)
  */
 export const PERMIT_SUBS = [
-  { trade: 'Electrical', company: 'Iron Shield Electric Co.', contact: 'Dale Nadboralski' },
-  { trade: 'Mechanical (HVAC)', company: 'Iron Shield Heating & Air LLC', contact: 'Victor Oquendo' },
-  { trade: 'Plumbing', company: 'Iron Shield Plumbing LLC', contact: 'Loren Nelson' },
-  { trade: 'Roofing', company: 'Southern Pro Roofing LLC', contact: 'Bryan Hudson' },
+  { trade: 'Electrical', company: 'Iron Shield Electric Co.', contact: 'Dale Nadboralski', contactId: '21298', email: 'Mindywisenbaker@ironshieldelectric.com' },
+  { trade: 'Mechanical (HVAC)', company: 'Iron Shield Heating & Air LLC', contact: 'Victor Oquendo', contactId: '22089', email: 'victor@ironshieldheatingandair.com' },
+  { trade: 'Plumbing', company: 'Iron Shield Plumbing LLC', contact: 'Loren Nelson', contactId: '23046', email: 'wfstiles@gmail.com' },
+  { trade: 'Roofing', company: 'Southern Pro Roofing LLC', contact: 'Bryan Hudson', contactId: '21603', email: 'southernproroofingllc@gmail.com' },
 ]
 
 /** CC'd on outgoing application emails. */
@@ -79,5 +83,6 @@ export const COMPANY = {
   siteContact: 'Adam Stiles',
 }
 
-/** Standard email signature. */
-export const SIGNATURE = 'Thank you,\nAdam Stiles\nIron Shield Construction LLC\n352-809-3235'
+// (No SIGNATURE constant anymore, on purpose: Adam's mail client appends his
+// real signature to every draft, so app-added sign-offs were duplicates he
+// had to delete each time. Drafts end at their content.)
