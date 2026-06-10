@@ -69,6 +69,10 @@ vendors.ts), user overrides in `WorkbenchState.templates`, edited in
    is in git; don't try to run it on other machines). Its sync is ADD-ONLY
    by default; clearing requires `--prune`. Never weaken the
    "never clear a category whose tab didn't render" rule in scan.mjs.
+   **`mailclip/` is isolated the same way** — a launchd clipboard daemon
+   (installed June 2026, Adam's Mac only) that makes Workbench file links
+   paste as clickable names in Apple Mail. Read mailclip/README.md before
+   changing clipboard/copy code — Mail's paste behavior depends on it.
 5. **TS is strict**: unused params fail the build — name them `_p`.
    SheetJS must stay a lazy `await import('xlsx')` (bundle size).
 6. **Vite dev server**: Adam usually has his own `npm run dev` on port 5173.
