@@ -95,7 +95,14 @@ function normalize(ps: ProjectState): ProjectState {
  * older version?" — this is ours.)
  */
 function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
-  const roster = Array.isArray(parsed.roster) ? parsed.roster : PROJECTS
+  const savedRoster = Array.isArray(parsed.roster) ? parsed.roster : PROJECTS
+  // FACT CORRECTIONS: the saved roster wins over PROJECTS, so typos found in
+  // the original import have to be patched here too (idempotent).
+  // 13 Almond Pass: county records say parcel 9023-0489-16 — ours had an
+  // extra zero, which made the legal-description lookup miss.
+  const roster = savedRoster.map((p) =>
+    p.parcel === '9023-0489-016' ? { ...p, parcel: '9023-0489-16' } : p,
+  )
   // permit number per project id, so we can backfill permit status below
   const permitById = new Map(roster.map((p) => [p.id, p.permit]))
 

@@ -1939,6 +1939,14 @@ button.danger:hover {
   color: var(--text);
 }
 
+/* 🗺️ map link in the project header — an <a> dressed as a .mini button */
+a.map-btn {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
 /* ---------- 📋 Status report ---------- */
 .status-report {
   max-width: 880px;

@@ -133,6 +133,21 @@ function Detail(props: Props) {
         <button className="mini back" onClick={onBack}>
           ← All projects
         </button>
+        {/* 🗺️ jump to the site on Google Maps (TBD addresses fall back to the
+            subdivision, which at least lands you in the right neighborhood) */}
+        <a
+          className="mini map-btn"
+          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+            /^tbd\b/i.test(p.address)
+              ? `${p.subdivision}, ${p.city}, FL ${p.zip}`
+              : `${p.address}, ${p.city}, FL ${p.zip}`,
+          )}`}
+          target="_blank"
+          rel="noreferrer"
+          title="Open this site in Google Maps"
+        >
+          🗺️ Map
+        </a>
         <button
           className={'mini gear' + (showSettings ? ' on' : '')}
           onClick={() => setShowSettings((s) => !s)}
