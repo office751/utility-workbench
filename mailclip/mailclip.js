@@ -79,11 +79,15 @@ while (ticks++ < 54000) {
     const rtf = $.NSData.dataWithContentsOfFile(TMP_RTF)
     const wa = $.NSData.dataWithContentsOfFile(TMP_WA)
 
-    // Keep the original flavors, add the rich ones.
-    const plain = has('public.utf8-plain-text') ? pb.stringForType('public.utf8-plain-text') : null
+    // Rewrite with the rich flavors and NO explicit plain text. Proven by
+    // testing on this Mac (June 2026): Apple Mail grabs an explicitly-
+    // declared plain flavor (the raw URL) even when RTF/WebArchive exist —
+    // but with plain absent, macOS synthesizes a plain rendering FROM the
+    // RTF (= the file name) and Mail takes the rich flavor: blue clickable
+    // name. Trade-off: pasting into a plain-text field gives the file NAME,
+    // not the URL — for a raw URL use 📤 Share → Text, or ⬇ Open.
     pb.clearContents
     pb.setDataForType(htmlData, 'public.html')
-    if (plain && !plain.isNil()) pb.setStringForType(plain, 'public.utf8-plain-text')
     if (rtf && !rtf.isNil()) pb.setDataForType(rtf, 'public.rtf')
     if (wa && !wa.isNil()) pb.setDataForType(wa, 'com.apple.webarchive')
 

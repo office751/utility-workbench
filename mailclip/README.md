@@ -13,6 +13,11 @@ same content. Then ⌘V in Mail pastes the blue clickable file name.
 - **Logs:** `logs/mailclip.log`
 - **Privacy scope:** copies that don't contain `supabase.co/storage` are
   never read past the type check and never modified.
+- **Trade-off (deliberate):** enriched copies carry NO explicit plain-text
+  flavor — Mail was proven (June 2026, this Mac) to grab an explicit plain
+  URL over the rich flavors. macOS synthesizes plain text from the RTF
+  instead, so plain-text fields paste the file NAME. Need the raw URL?
+  📤 Share → Text, or ⬇ Open and copy from the address bar.
 - **Mac-pinned** like `scanner/` — this folder is never imported by the
   web app. Adam's other machines don't need it unless they also compose
   in Apple Mail.
