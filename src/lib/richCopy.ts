@@ -36,21 +36,23 @@ export function richLinkHtml(name: string, url: string): string {
  * could be copied (older browser without ClipboardItem). Throws only when
  * the clipboard is entirely unavailable — caller shows the error.
  *
- * No Safari gesture worry here (unlike the permit handoff): the URL is
- * already minted when the user clicks Copy, so the write happens directly
- * inside the click with no await in front of it.
+ * `url` may be a PROMISE of the link (e.g. one still being minted). That's
+ * the Safari-safe shape: Safari only allows clipboard writes while the
+ * click is "live", so instead of awaiting the mint first we hand
+ * ClipboardItem promises created synchronously inside the click.
  */
-export async function copyRichLink(name: string, url: string): Promise<'rich' | 'plain'> {
+export async function copyRichLink(name: string, url: string | Promise<string>): Promise<'rich' | 'plain'> {
+  const urlPromise = Promise.resolve(url)
   try {
     await navigator.clipboard.write([
       new ClipboardItem({
-        'text/html': new Blob([richLinkHtml(name, url)], { type: 'text/html' }),
-        'text/plain': new Blob([url], { type: 'text/plain' }),
+        'text/html': urlPromise.then((u) => new Blob([richLinkHtml(name, u)], { type: 'text/html' })),
+        'text/plain': urlPromise.then((u) => new Blob([u], { type: 'text/plain' })),
       }),
     ])
     return 'rich'
   } catch {
-    await navigator.clipboard.writeText(url)
+    await navigator.clipboard.writeText(await urlPromise)
     return 'plain'
   }
 }

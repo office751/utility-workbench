@@ -2,7 +2,9 @@
  * DocumentsBox.tsx — files attached to a project: upload, open, and SHARE.
  *
  * The real files live in Supabase Storage (see lib/files.ts); this component
- * just shows the list and the buttons. Three things you can do per file:
+ * just shows the list and the buttons. Four things you can do per file:
+ *   📋 Copy link — one click: a fresh link lands on the clipboard as the
+ *              clickable FILE NAME (rich text); plain fields get the raw URL.
  *   📤 Share — on a phone, the native share sheet (Messages, Mail, AirDrop…);
  *              on a desktop without that, a small Copy / Email / Text menu.
  *   ⬇︎ Open  — opens the file in a new tab (view or download).
@@ -45,6 +47,8 @@ function DocumentsBox({ docs, onAddFiles, onRemove }: Props) {
   // Desktop share fallback: which row's menu is open + the fresh link in it.
   const [menu, setMenu] = useState<{ index: number; url: string } | null>(null)
   const [copied, setCopied] = useState(false)
+  // Which row's 📋 Copy link just succeeded (shows "✓ Copied" for a moment).
+  const [copiedRow, setCopiedRow] = useState<number | null>(null)
 
   /** Upload whatever files were chosen / dropped. */
   async function take(files: FileList | null) {
@@ -96,14 +100,32 @@ function DocumentsBox({ docs, onAddFiles, onRemove }: Props) {
     }
   }
 
-  /** 📋 Copy link — lands as a clickable FILE NAME in rich editors (Mail,
-   *  Word, Teams); plain fields (SMS, notes) still get the raw URL. */
+  /** 📋 Copy link (inside the desktop share menu) — link already minted. */
   async function copy(name: string, url: string) {
     try {
       await copyRichLink(name, url)
       setCopied(true)
     } catch {
       setError('Copy failed — select and copy the link manually.')
+    }
+  }
+
+  /** 📋 Copy link (the row button) — mints a fresh link AND copies it, one
+   *  click. Lands as a clickable FILE NAME in rich editors (Mail, Word,
+   *  Teams); plain fields (SMS, notes) still get the raw URL. We pass the
+   *  mint PROMISE straight to copyRichLink — Safari only allows clipboard
+   *  writes while the click is "live", so no awaiting before the copy. */
+  async function copyLink(doc: ProjectDoc, index: number) {
+    if (!doc.path) return
+    setError(null)
+    try {
+      await copyRichLink(doc.name, getShareUrl(doc.path))
+      setCopiedRow(index)
+      // Let the "✓ Copied" flash for a moment, then put the button back —
+      // unless another row was copied in the meantime.
+      setTimeout(() => setCopiedRow((cur) => (cur === index ? null : cur)), 2000)
+    } catch {
+      setError('Could not copy a link. Is the file locker set up in Supabase?')
     }
   }
 
@@ -174,6 +196,13 @@ function DocumentsBox({ docs, onAddFiles, onRemove }: Props) {
               <div className="doc-actions">
                 {d.path ? (
                   <>
+                    <button
+                      className="doc-btn"
+                      onClick={() => copyLink(d, i)}
+                      title="Copy link — pastes as the clickable file name, not the URL"
+                    >
+                      {copiedRow === i ? '✓ Copied' : '📋 Copy link'}
+                    </button>
                     <button className="doc-btn" onClick={() => share(d, i)} title="Share by text / email">
                       📤 Share
                     </button>
