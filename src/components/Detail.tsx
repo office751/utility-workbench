@@ -39,7 +39,7 @@ import {
 import { shutoffFor } from '../lib/shutoff'
 import { permitExpiresOf, permitExpiryFor } from '../lib/permitExpiry'
 import { permitHandoffDraft, permitHandoffDraftWithLinks, type HandoffDraft } from '../lib/permitHandoff'
-import { DUKE_PORTAL_URL, dukeWebPayloadText } from '../lib/dukeWebApply'
+import { DUKE_PORTAL_URL, dukeWebPayloadText, dukeWebPayloadTextWithDirections } from '../lib/dukeWebApply'
 import { getShareUrl } from '../lib/files'
 import { writeRichClipboard } from '../lib/richCopy'
 import { isMaterialsDone, ordersSummary } from '../lib/orders'
@@ -291,20 +291,29 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField }: Pro
   const shutoff = shutoffFor(ps)
   const u = utilityOf(p, ps)
   const eng = engineerOf(p, ps)
-  // ⚡ Duke web application: copied=true flashes the button after the fill
-  // data lands on the clipboard.
-  const [dukeCopied, setDukeCopied] = useState(false)
+  // ⚡ Duke web application: building → computing directions from the map
+  // services; copied → fill data is on the clipboard.
+  const [dukeState, setDukeState] = useState<'idle' | 'building' | 'copied'>('idle')
 
-  /** Copy this project's portal fill-data (JSON) and open the Builder
-   *  Portal. The clipboard payload is what fills the form — Claude driving
-   *  the browser, or the fill helper, reads it from there. */
+  /** Copy this project's portal fill-data (JSON) — including computed
+   *  turn-by-turn directions from the nearest main road — and open the
+   *  Builder Portal. The clipboard payload is what fills the form: Claude
+   *  driving the browser reads it from there. */
   async function openDukePortal() {
+    setDukeState('building')
+    let text: string
     try {
-      await navigator.clipboard.writeText(dukeWebPayloadText(p, ps))
-      setDukeCopied(true)
-      setTimeout(() => setDukeCopied(false), 2500)
+      // ~2s: geocode + nearest main road + route (OSM/OSRM, see directions.ts)
+      text = await dukeWebPayloadTextWithDirections(p, ps)
     } catch {
-      /* clipboard refused — portal still opens; fill data can be re-copied */
+      text = dukeWebPayloadText(p, ps) // offline → no directions, still fills
+    }
+    try {
+      await navigator.clipboard.writeText(text)
+      setDukeState('copied')
+      setTimeout(() => setDukeState('idle'), 2500)
+    } catch {
+      setDukeState('idle') // clipboard refused — portal still opens
     }
     window.open(DUKE_PORTAL_URL, '_blank', 'noopener')
   }
@@ -327,8 +336,12 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField }: Pro
           the portal with the project's fill data on the clipboard. */}
       {u === 'DUKE' && (
         <div className="contact-row">
-          <button className="contact" onClick={openDukePortal}>
-            {dukeCopied ? '✓ Fill data copied — portal opening…' : '⚡ Duke portal — new service application'}
+          <button className="contact" onClick={openDukePortal} disabled={dukeState === 'building'}>
+            {dukeState === 'building'
+              ? '⏳ Computing directions + fill data…'
+              : dukeState === 'copied'
+                ? '✓ Fill data copied — portal opening…'
+                : '⚡ Duke portal — new service application'}
           </button>
         </div>
       )}

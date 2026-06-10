@@ -17,6 +17,7 @@ import type { Project, ProjectState } from '../types'
 import { COMPANY } from '../data/contacts'
 import { legalFor } from '../data/legal'
 import { specFor } from '../data/models'
+import { directionsFromMainRoad } from './directions'
 import { serviceTypeOf } from './nextAction'
 
 export const DUKE_PORTAL_URL = 'https://builderportal.duke-energy.app'
@@ -76,11 +77,40 @@ export function dukeWebPayload(p: Project, ps: ProjectState) {
     siteContactPhone: COMPANY.phone,
     siteContactEmail: COMPANY.email,
     electrician: COMPANY.electrician,
+
+    // ---- Portal questions with no per-project data (review at submit) ----
+    ohLinesAdjacent: 'Unsure', // "OH lines attached to a Duke pole adjacent?"
+  }
+}
+
+/**
+ * The full payload, with real turn-by-turn DIRECTIONS from the nearest main
+ * road (computed from OpenStreetMap — see directions.ts) plus the cross
+ * street the route turns onto. Falls back to the lot/parcel description
+ * when the map services come up empty — the form still gets filled, the
+ * directions box just needs a human sentence.
+ */
+export async function dukeWebPayloadWithDirections(p: Project, ps: ProjectState) {
+  const base = dukeWebPayload(p, ps)
+  const fallback = `${base.legalDescription} — parcel ${p.parcel}${p.permit ? ` — permit ${p.permit}` : ''}`
+  const route = await directionsFromMainRoad(p.address, p.city, p.zip)
+  return {
+    ...base,
+    directions: route
+      ? `${route.text} (${base.legalDescription}, parcel ${p.parcel})`.slice(0, 300)
+      : fallback,
+    crossStreet: route?.firstStreet ?? '',
+    directionsSource: route ? `computed from OSM via ${route.mainRoad}` : 'FALLBACK — lot/parcel only, write directions by hand',
   }
 }
 
 /** The clipboard form of the payload (pretty JSON — also human-readable as a
- *  cheat sheet if pasted anywhere). */
+ *  cheat sheet if pasted anywhere). Use the async variant when you can wait
+ *  the ~2s for real directions. */
 export function dukeWebPayloadText(p: Project, ps: ProjectState): string {
   return JSON.stringify(dukeWebPayload(p, ps), null, 2)
+}
+
+export async function dukeWebPayloadTextWithDirections(p: Project, ps: ProjectState): Promise<string> {
+  return JSON.stringify(await dukeWebPayloadWithDirections(p, ps), null, 2)
 }
