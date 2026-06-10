@@ -13,11 +13,12 @@
  * "LIFTING STATE UP": which project is selected matters across the UI, so it
  * lives here and flows down.
  */
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import type { Stream } from './types'
 import { useProjects } from './hooks/useProjects'
 import { supabase, hasSupabase } from './lib/supabase'
+import { buildActionCenter } from './lib/actionCenter'
 import { daysUntilDue, dueSoonTasks, waitingOnTasks } from './lib/tasks'
 import { useTheme } from './hooks/useTheme'
 import { useDensity } from './hooks/useDensity'
@@ -104,6 +105,42 @@ function App() {
     fire: taskFires.some((t) => (daysUntilDue(t) ?? 1) < 0),
   }
 
+  // The action center does DAY MATH (days-left, days-at-stage), so "what day
+  // is it?" is a real input alongside the saved state. Track it as state and
+  // refresh hourly + whenever you come back to the tab — otherwise an app left
+  // open overnight would keep yesterday's badge until you edited something.
+  const [dayKey, setDayKey] = useState(() => new Date().toDateString())
+  useEffect(() => {
+    const refresh = () => setDayKey(new Date().toDateString()) // same day = no-op, no re-render
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    const timer = setInterval(refresh, 60 * 60 * 1000) // hourly is plenty for whole-day math
+    return () => {
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', refresh)
+      clearInterval(timer)
+    }
+  }, [])
+
+  // The whole command-center picture — computed ONCE per (state, day) change
+  // and shared by the 🏠 tab badge and the Today view, so the number on the
+  // badge can never disagree with the rows you see after clicking it ("one
+  // prioritization, never two"). useMemo = "only recompute when a dependency
+  // changes" (it walks every project, no need to redo that on every keystroke).
+  const ac = useMemo(
+    () => buildActionCenter(state.roster, getProjectState, state.modelTakeoffs),
+    // Two real dependencies: the data (getProjectState only reads `state`)
+    // and the calendar day the math is relative to.
+    [state, dayKey], // eslint-disable-line react-hooks/exhaustive-deps
+  )
+  // The 🏠 Today tab badge: construction fires — deadlines (permit expiry,
+  // shut-offs, blocked takeoffs) + stages gone quiet. Tasks have their own
+  // badge above, so the two never double-count. Red when anything is critical.
+  const todayBadge = {
+    count: ac.stats.attention,
+    fire: ac.attention.some((i) => i.severity === 'crit'),
+  }
+
   return (
     <div className="app">
       <header className="app-header">
@@ -122,6 +159,9 @@ function App() {
               }}
             >
               {t.label}
+              {t.key === 'today' && todayBadge.count > 0 && (
+                <span className={'tab-badge' + (todayBadge.fire ? ' fire' : '')}>{todayBadge.count}</span>
+              )}
               {t.key === 'tasks' && taskBadge.count > 0 && (
                 <span className={'tab-badge' + (taskBadge.fire ? ' fire' : '')}>{taskBadge.count}</span>
               )}
@@ -158,10 +198,8 @@ function App() {
 
       {tab === 'today' && (
         <Today
-          projects={projects}
-          getProjectState={getProjectState}
+          ac={ac}
           tasks={state.tasks}
-          modelTakeoffs={state.modelTakeoffs}
           onOpen={openProject}
           onCompleteTask={(id) => updateTask(id, { done: true, doneAt: new Date().toISOString() })}
           onGoTasks={() => setTab('tasks')}

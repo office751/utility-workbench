@@ -4,7 +4,9 @@
  * Top to bottom:
  *   - ⭐ Today's Focus     — the few tasks you starred; your chosen priorities.
  *   - 🔥 Needs attention   — time fires: overdue/due-soon TASKS + construction
- *                            deadlines (permit expiry, shut-offs) + stalled stages.
+ *                            deadlines (permit expiry, shut-offs, blocked takeoffs).
+ *   - ⚠ Gone quiet         — projects parked past the expected duration for
+ *                            their current step (the stale-status flags).
  *   - ⏳ Waiting on you     — open tasks where someone's blocked on you.
  *   - ✅ Ready for your move — the construction backlog, grouped by action.
  *
@@ -12,17 +14,18 @@
  * surface a task here without you having to star it (that's the auto-urgency).
  */
 import { useState } from 'react'
-import type { Project, ProjectState, Stream, Task, WorkbenchState } from '../types'
-import { buildActionCenter, type ActionItem } from '../lib/actionCenter'
+import type { Stream, Task } from '../types'
+import type { ActionCenter, ActionItem } from '../lib/actionCenter'
 import { daysUntilDue, dueLabel, dueSoonTasks, focusTasks, waitingOnTasks } from '../lib/tasks'
 import { hatOf } from '../data/hats'
 
 interface Props {
-  projects: Project[]
-  getProjectState: (id: number) => ProjectState
+  /**
+   * The command-center picture, computed ONCE in App.tsx (it also drives the
+   * 🏠 tab badge — sharing one computation keeps badge and view in agreement).
+   */
+  ac: ActionCenter
   tasks: Task[]
-  /** Per-model takeoff status — drives the missing-takeoffs urgency. */
-  modelTakeoffs?: WorkbenchState['modelTakeoffs']
   /** Open a project on a specific tab (e.g. an expiring permit → its Permit tab). */
   onOpen: (id: number, stream: Stream) => void
   /** Mark a task done from the home screen. */
@@ -133,9 +136,16 @@ function MoveGroup({
   )
 }
 
-function Today({ projects, getProjectState, tasks, modelTakeoffs, onOpen, onCompleteTask, onGoTasks }: Props) {
-  const ac = buildActionCenter(projects, getProjectState, modelTakeoffs)
+function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks }: Props) {
   const focus = focusTasks(tasks)
+
+  // Split the construction attention list for display: hard DEADLINES (🔥 —
+  // permit expiry, shut-offs, blocked takeoffs) vs projects that simply went
+  // QUIET at a stage (⚠ — the stale flags from lib/staleness.ts). Same
+  // prioritized list underneath, two sections so a wall of stalled projects
+  // can't bury a real deadline.
+  const fires = ac.attention.filter((i) => i.kind !== 'stale')
+  const stalled = ac.attention.filter((i) => i.kind === 'stale')
 
   // Auto-urgency: time fires first (overdue floats to the top), then the people
   // you're holding up (excluding any already shown as a time fire), oldest first.
@@ -150,6 +160,8 @@ function Today({ projects, getProjectState, tasks, modelTakeoffs, onOpen, onComp
     .filter((t) => !attnIds.has(t.id) && !focusIds.has(t.id))
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
 
+  // The hero number = everything urgent: due tasks + both construction
+  // sections below (🔥 deadlines AND ⚠ gone-quiet — ac.stats.attention is their sum).
   const attentionCount = ac.stats.attention + attnTasks.length
   const everythingClear =
     ac.stats.allClear && attnTasks.length === 0 && waiting.length === 0 && focus.length === 0
@@ -233,11 +245,11 @@ function Today({ projects, getProjectState, tasks, modelTakeoffs, onOpen, onComp
         )}
       </div>
 
-      {/* 🔥 Needs attention — task fires first, then construction deadlines/stalls */}
-      {(attnTasks.length > 0 || ac.attention.length > 0) && (
+      {/* 🔥 Needs attention — task fires first, then construction deadlines */}
+      {(attnTasks.length > 0 || fires.length > 0) && (
         <div className="today-section">
           <h3 className="today-h">
-            🔥 Needs attention <span className="cnt">{attentionCount}</span>
+            🔥 Needs attention <span className="cnt">{attnTasks.length + fires.length}</span>
           </h3>
           <div className="action-list">
             {attnTasks.map((t) => (
@@ -250,8 +262,26 @@ function Today({ projects, getProjectState, tasks, modelTakeoffs, onOpen, onComp
                 onCompleteTask={onCompleteTask}
               />
             ))}
-            {ac.attention.map((it, i) => (
+            {fires.map((it, i) => (
               <AttentionRow key={`a${i}`} item={it} onOpen={onOpen} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ⚠ Gone quiet — parked past the expected duration for their current step
+          (the stale-status flags; thresholds are tuned in data/thresholds.ts) */}
+      {stalled.length > 0 && (
+        <div className="today-section">
+          <h3 className="today-h">
+            ⚠ Gone quiet — overdue at a stage <span className="cnt">{stalled.length}</span>
+          </h3>
+          <p className="meta">
+            These have sat at their current step longer than expected — time for a nudge.
+          </p>
+          <div className="action-list">
+            {stalled.map((it, i) => (
+              <AttentionRow key={`s${i}`} item={it} onOpen={onOpen} />
             ))}
           </div>
         </div>
