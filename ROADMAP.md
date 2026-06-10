@@ -9,8 +9,9 @@ this file is the to-do list, the code is the truth.
 
 ## Up next (high value)
 
-Suggested order: the UI sizing quick-wins first (small, no data risk), then
-Permitting, then in-app notifications (needs the timestamp change below).
+Suggested order: the SECO/Duke packet generator is the natural next item
+(~one session — note its source data tables live in the original HTML file
+on the Mac, so plan it for a Mac session).
 
 - [x] **UI sizing — two parts** *(June 2026)*: draggable list/detail divider
       (`hooks/useResizableSidebar.ts`, persists width) + compact/comfortable
@@ -29,14 +30,17 @@ Permitting, then in-app notifications (needs the timestamp change below).
       shutoff.ts) computes days-left; expiring-within-7-days (or expired) shows
       as a detail banner, a top "⏰ Permit expiring (≤7 days)" dashboard bucket,
       and an ⏰ marker in the permit list. Groundwork for full notifications.
-- [ ] **In-app notifications / stale-status flags.** A "⚠ Needs attention /
-      overdue" dashboard bucket + header count badge for projects parked too
-      long at a stage. Add per-stage expected-duration thresholds as config
-      (lifecycles-style). **Depends on:** storing a machine timestamp
-      (`doneAt`, ISO) on completed steps instead of today's display-only date
-      string — small data-model change + migration (same pattern as the
-      Add-project work). NOTE: alerts that reach you when the app is CLOSED
-      (phone/email/push) require the Full-spec backend — see "Later".
+- [x] **In-app notifications / stale-status flags** *(June 2026)*. Landed in
+      two passes: the Today command-center work brought the `doneAt` machine
+      timestamps + migration, `data/thresholds.ts` (per-step expected
+      durations), and the `lib/staleness.ts` engine; this pass finished the
+      item — a dedicated "⚠ Gone quiet — overdue at a stage" section on
+      🏠 Today (split out from the 🔥 deadlines so stalls can't bury a real
+      deadline), a count badge on the 🏠 Today tab (red when anything is
+      critical), and stalled severity that escalates warn → crit at 2× the
+      expected duration. Tune the day-counts in `data/thresholds.ts`.
+      NOTE: alerts that reach you when the app is CLOSED (phone/email/push)
+      still require the Full-spec backend — see "Later".
 - [ ] **SECO/Duke application packet generator** — port from the original
       HTML: ready-to-paste packet with legal description (Lot/Block/Sec/Twp/
       Rge), model sqft + tonnage (whole numbers for Duke), OH/UG, copy
@@ -53,8 +57,9 @@ Permitting, then in-app notifications (needs the timestamp change below).
       when in-app notifications aren't enough because you're not at the desk.
 - [ ] **Tests for the brains** — Vitest tests for `lib/shutoff.ts` (business-
       day math) and `lib/nextAction.ts` (bucket logic). ~an hour, great
-      learning value. (Bonus: the stale-status math is another great test
-      target once notifications land.)
+      learning value. (Bonus: now that the stale-status flags have landed,
+      `lib/staleness.ts` and the attention ranking in `lib/actionCenter.ts`
+      are two more great targets.)
 
 ## Polish (small, anytime)
 
@@ -116,8 +121,10 @@ Permitting, then in-app notifications (needs the timestamp change below).
       services" separately from materials in the UI.
 - [ ] **Fully-automatic Messages→orders** — needs the backend (a small service
       watching for Josh's texts); until then it's the on-request script above.
-- [ ] **Action Center** — one "needs attention" home aggregating permit expiry,
-      electric shut-offs, and materials to order / overdue across all projects.
+- [x] **Action Center** *(June 2026)* — `lib/actionCenter.ts` + the 🏠 Today
+      command center aggregate permit expiry, electric shut-offs, stalled
+      stages, and materials to order across all projects — one prioritization
+      feeding both the view and the header badge.
 
 ## Ideas parking lot
 

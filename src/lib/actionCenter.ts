@@ -161,7 +161,11 @@ export function buildActionCenter(
           icon: '⚠',
           text: `Stalled: ${info.label}`,
           detail: `${info.daysAtStage}d at this stage`,
-          severity: 'warn',
+          // Past the threshold = warn; parked at least TWICE the expected
+          // duration = crit (a project quiet for months shouldn't look the
+          // same as one a day over the line). Crit also turns the 🏠 tab
+          // badge red — see todayBadge in App.tsx.
+          severity: info.overdueDays >= info.threshold ? 'crit' : 'warn',
           sortDays: -info.overdueDays, // the more overdue, the higher it floats
         })
       }
@@ -199,8 +203,19 @@ export function buildActionCenter(
     }
   }
 
-  // Rank attention: criticals first, then by urgency (soonest / most overdue).
-  attention.sort((a, b) => SEV_RANK[a.severity] - SEV_RANK[b.severity] || a.sortDays - b.sortDays)
+  // Rank attention: criticals first; within a severity, hard DEADLINES outrank
+  // gone-quiet stalls — their sortDays scales aren't comparable (a permit
+  // expired 3 days ago is -3; a 30-day-overdue stall is -30), and an expired
+  // permit must never lose the top spot to a stall. Then by urgency. Every
+  // consumer inherits this one order — Today, the 🏠 badge, and the status
+  // report's {{nextAction}} headline.
+  const staleLast = (i: ActionItem) => (i.kind === 'stale' ? 1 : 0)
+  attention.sort(
+    (a, b) =>
+      SEV_RANK[a.severity] - SEV_RANK[b.severity] ||
+      staleLast(a) - staleLast(b) ||
+      a.sortDays - b.sortDays,
+  )
   // Moves: cluster the do-something-now to-dos above the shopping list.
   const KIND_ORDER: Record<string, number> = { takeoff: 0, todo: 1, order: 2 }
   moves.sort((a, b) => (KIND_ORDER[a.kind] ?? 9) - (KIND_ORDER[b.kind] ?? 9))
