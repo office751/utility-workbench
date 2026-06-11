@@ -126,14 +126,14 @@ on the Mac, so plan it for a Mac session).
       stages, and materials to order across all projects — one prioritization
       feeding both the view and the header badge.
 
-- [ ] **SharePoint → project Files sync** (Adam, June 11): pull each project's
-      files from SharePoint (`Active Projects/Iron Shield Construction LLC/
-      <parcel>/`) into the matching Workbench project's Files box — SITE PLANS
-      especially, so permit handoffs and load-form replies never hunt for
-      them. One-time backfill + (later) keep-in-sync. The OneDrive folder is
-      synced locally on the Mac (`~/Library/CloudStorage/...`), so the
-      backfill can be a local script: upload to the `project-files` bucket +
-      append doc pointers via the app.
+- [x] **SharePoint → project Files sync** *(June 11 2026)* — DONE: 1,033
+      files (1.37 GB) backfilled into 58 projects' Files boxes via
+      `scripts/sharepoint-files-sync.mjs`. Each project's SharePoint sharing
+      LINK was resolved through Adam's signed-in Chrome (folder names follow
+      no convention — links are the only truth; resolved map saved at
+      `scripts/sp-paths.resolved.json`). SFR/ADU pairs share one upload via
+      pointer reuse. Re-running is incremental (name-deduped) — later:
+      schedule it nightly alongside the scanner for keep-in-sync.
 - [x] **Vendor emails to fill in** *(June 11 2026)* — mined from Adam's sent
       mail: Tibbetts (Tina + CC Mark), Marion Masonry (dispatch@), FGT
       Cabinetry (orlando@), Florida Express (csr@ — dumpster AND porta-potty,
