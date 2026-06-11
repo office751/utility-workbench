@@ -52,50 +52,13 @@
   color: #fff;
 }
 
-/* ---------- two-column layout: sidebar | detail ---------- */
-
-.layout {
-  display: grid;
-  /* sidebar | drag-handle | detail. The sidebar width comes from a CSS
-     variable that App.tsx sets (and the drag hook updates live); it falls
-     back to 330px if unset. */
-  grid-template-columns: var(--sidebar-w, 330px) 14px 1fr;
-  align-items: start;
-}
-
-/* The draggable divider between the two panels. It's a 14px-wide hit area
-   with a thin line drawn down the middle (via a gradient), so it's easy to
-   grab but visually subtle. */
-.resizer {
-  align-self: stretch; /* span the full height of the taller panel */
-  cursor: col-resize;
-  border-radius: 2px;
-  background: linear-gradient(var(--border), var(--border)) center / 2px 100% no-repeat;
-}
-
-.resizer:hover {
-  background: linear-gradient(var(--accent), var(--accent)) center / 2px 100% no-repeat;
-}
-
-/* On narrow windows, stack everything in one column and hide the handle
-   (this full-property rule overrides the variable-based one above). */
-@media (max-width: 800px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-  .resizer {
-    display: none;
-  }
-}
-
-/* ---------- sidebar ---------- */
-
-.sidebar {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 10px;
-}
+/* ---------- project list (search + rows) ----------
+   The old two-column wrapper (.layout grid + .resizer drag-handle + .sidebar
+   panel, with an 800px stacking media query) was removed June 2026: the app
+   went project-first — a full-width landing (QuickAdd + the list) OR a
+   full-width Detail, never side-by-side — so none of those rules matched any
+   element anymore. The search/list/item rules below ARE still used, now by
+   ProjectList.tsx. */
 
 .search {
   width: 100%;
@@ -124,10 +87,8 @@
   background: var(--bg);
 }
 
-.item.sel {
-  background: var(--bg);
-  border-color: var(--accent);
-}
+/* (.item.sel removed June 2026 — project-first nav navigates to a full-width
+   Detail on select, so the list never shows a persistent selected row.) */
 
 .item-top {
   display: flex;
@@ -1122,7 +1083,7 @@ button.danger:hover {
  * fits on screen; comfortable mode is just the absence of these.
  */
 
-/* sidebar rows */
+/* project-list rows */
 [data-density='compact'] .item {
   padding: 5px 8px;
 }
