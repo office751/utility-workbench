@@ -52,7 +52,7 @@ function ContactLinks({ stream, p, ps }: Props) {
           `New Construction Application – ${addrFull}`,
           `Hello,\n\nWe'd like to apply for new construction electric service at ${addrFull} (parcel ${p.parcel}). The completed load form and site plan are attached.\n\nAccount holder: Iron Shield Construction LLC`,
         ),
-        label: '✉ Email SECO',
+        label: '✉️ Email SECO',
       })
     }
     if (u === 'DUKE') {
@@ -62,7 +62,7 @@ function ContactLinks({ stream, p, ps }: Props) {
           (p.workOrder ? `WO#${p.workOrder} - ` : 'New Service - ') + addrFull,
           `Hi,\n\nAttached is the completed Residential Service Information Form and site plan for ${addrFull}${p.workOrder ? ` (WO#${p.workOrder})` : ''}.`,
         ),
-        label: '✉ Email Duke',
+        label: '✉️ Email Duke',
       })
     }
   }
@@ -78,7 +78,7 @@ function ContactLinks({ stream, p, ps }: Props) {
           `Hi ${MCU.contact.split(' ')[0]},\n\nWe'd like to start water service for the new-construction home below. Account holder: Iron Shield Construction LLC.\n\nService address: ${addrFull}\nParcel ID: ${p.parcel}${p.permit ? `\nPermit #: ${p.permit}` : ''}\n\nPlease let me know what paperwork and capacity/meter charges are needed to proceed.`,
           OFFICE_CC,
         ),
-        label: `✉ Email MCU (${MCU.contact})`,
+        label: `✉️ Email MCU (${MCU.contact})`,
       })
     }
   }
@@ -93,7 +93,7 @@ function ContactLinks({ stream, p, ps }: Props) {
           `Hi ${GEORGES.contact.split(' ')[0]},\n\nUpdate on ${addrFull} (parcel ${p.parcel}${p.permit ? `, permit ${p.permit}` : ''}).\n\n[ well installed / water line hooked up / SOD laid / recorded NRB notice attached ]`,
           OFFICE_CC,
         ),
-        label: `✉ Email ${GEORGES.contact} (Georges)`,
+        label: `✉️ Email ${GEORGES.contact} (Georges)`,
       })
     } else {
       links.push({ href: tel(MCU.phone), label: `📞 Call MCU — ${MCU.phone}` })

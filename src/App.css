@@ -659,6 +659,13 @@ button.mini {
   color: var(--text);
   cursor: pointer;
 }
+/* Every neighboring button lights up on hover — .mini was the one that
+   didn't (audit finding, June 2026). */
+button.mini:hover,
+.filter-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
 
 /* The per-order one-click email draft (an <a> dressed like a mini button,
    green-tinted so the "ready to order" action pops on to-order rows). */
@@ -1857,8 +1864,12 @@ button.danger:hover {
   opacity: 0.75;
 }
 
-/* CO / HOLD status pills (list rows + detail header) */
-.status-pill {
+/* ONE tiny-uppercase-pill recipe for the whole app — CO/HOLD on projects,
+   MISSING/OK on takeoffs, CUSTOMIZED on templates. Families below add color
+   only. (Was three identical copies — audit finding, June 2026.) */
+.status-pill,
+.tko-pill,
+.tpl-pill {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.03em;
@@ -2156,13 +2167,7 @@ a.map-btn {
   margin-bottom: 14px;
 }
 .tko-pill {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 2px 7px;
-  border-radius: 999px;
-  color: #fff;
+  color: #fff; /* base pill style shared — see .status-pill */
 }
 .tko-pill.miss {
   background: #c0492f;
@@ -2245,13 +2250,7 @@ a.map-btn {
   gap: 8px;
 }
 .tpl-pill {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: var(--accent);
+  background: var(--accent); /* base pill style shared — see .status-pill */
   color: #fff;
 }
 .tpl-toggle {
