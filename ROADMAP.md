@@ -134,10 +134,11 @@ on the Mac, so plan it for a Mac session).
       synced locally on the Mac (`~/Library/CloudStorage/...`), so the
       backfill can be a local script: upload to the `project-files` bucket +
       append doc pointers via the app.
-- [ ] **Vendor emails to fill in** — the per-order ✉️ button lights up once a
-      vendor has an email in `data/vendors.ts`: Marion Masonry, FGT
-      (cabinets), dumpster service, porta-potty service. (Tibbetts done:
-      Tina + CC Mark.)
+- [x] **Vendor emails to fill in** *(June 11 2026)* — mined from Adam's sent
+      mail: Tibbetts (Tina + CC Mark), Marion Masonry (dispatch@), FGT
+      Cabinetry (orlando@), Florida Express (csr@ — dumpster AND porta-potty,
+      one vendor). Categories without a one-click button left: Flooring,
+      Lighting package, Bathroom tile, Garage door — add vendors when known.
 
 ## Ideas parking lot
 

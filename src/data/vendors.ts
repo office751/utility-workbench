@@ -45,34 +45,28 @@ export const VENDORS: Vendor[] = [
   {
     id: 'marion-masonry',
     name: 'Marion Masonry',
-    email: '',
+    email: 'dispatch@marionmasonry.com', // from Adam's sent lintel/slab orders
     icon: '🧱',
     supplies: 'Slab package · block · lintels · sand',
     categories: ['Slab package', 'Block', 'Lintels', 'Sand'],
   },
   {
     id: 'fgt',
-    name: 'FGT',
-    email: '',
+    name: 'FGT Cabinetry',
+    email: 'orlando@fgtcabinetry.com', // from Adam's sent cabinet orders
     icon: '🗄️',
     supplies: 'Cabinets',
     categories: ['Cabinets'],
   },
   {
-    id: 'dumpster',
-    name: 'Dumpster service',
-    email: '',
+    // One vendor covers both site services — Adam orders "a dumpster & porta
+    // potty" from Florida Express in a single email.
+    id: 'florida-express',
+    name: 'Florida Express',
+    email: 'csr@floridaexpress.us', // from Adam's sent service requests
     icon: '🗑️',
-    supplies: 'Dumpster delivery / swap-out',
-    categories: ['Dumpster'],
-  },
-  {
-    id: 'porta-potty',
-    name: 'Porta-potty service',
-    email: '',
-    icon: '🚽',
-    supplies: 'Porta-potty delivery / service',
-    categories: ['Porta-potty'],
+    supplies: 'Dumpster & porta-potty delivery / swap-outs',
+    categories: ['Dumpster', 'Porta-potty'],
   },
 ]
 
