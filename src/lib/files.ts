@@ -30,18 +30,18 @@ function safeName(name: string): string {
 }
 
 /**
- * Upload ONE file for a project. Returns the pointer we save in app state.
- * Throws if there's no cloud connection or the upload fails (the caller shows
- * the message).
+ * Upload ONE file under a folder prefix. Returns the pointer we save in app
+ * state. Throws if there's no cloud connection or the upload fails (the
+ * caller shows the message).
  *
- * Path shape: `<projectId>/<random>/<filename>`. The random part is its OWN
+ * Path shape: `<prefix>/<random>/<filename>`. The random part is its OWN
  * folder, NOT a name prefix — that keeps two files with the same name from
  * colliding while leaving the LAST path segment a clean filename. So a shared
  * link previews as "Energy_Calcs.pdf", not "<long-random-id>-Energy_Calcs.pdf".
  */
-export async function uploadProjectFile(projectId: number, file: File): Promise<ProjectDoc> {
+async function uploadTo(prefix: string, file: File): Promise<ProjectDoc> {
   if (!supabase) throw new Error('No cloud connection — files need the Supabase backend.')
-  const path = `${projectId}/${crypto.randomUUID()}/${safeName(file.name)}`
+  const path = `${prefix}/${crypto.randomUUID()}/${safeName(file.name)}`
   const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
     contentType: file.type || undefined,
     upsert: false,
@@ -54,6 +54,16 @@ export async function uploadProjectFile(projectId: number, file: File): Promise<
     size: file.size,
     type: file.type || undefined,
   }
+}
+
+/** A project's file (Files box on the project pages): `<projectId>/…`. */
+export function uploadProjectFile(projectId: number, file: File): Promise<ProjectDoc> {
+  return uploadTo(String(projectId), file)
+}
+
+/** A model's plan file (📐 Models library): `models/<modelKey>/…`. */
+export function uploadModelFile(modelKey: string, file: File): Promise<ProjectDoc> {
+  return uploadTo(`models/${safeName(modelKey)}`, file)
 }
 
 /** Delete a file from the locker. No-op without a connection. */

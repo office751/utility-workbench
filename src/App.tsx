@@ -28,6 +28,7 @@ import StatusReport from './components/StatusReport'
 import Detail from './components/Detail'
 import Today from './components/Today'
 import TasksView from './components/TasksView'
+import ModelsView from './components/ModelsView'
 import TemplatesView from './components/TemplatesView'
 import TakeoffsView from './components/TakeoffsView'
 import ExportImport from './components/ExportImport'
@@ -35,13 +36,14 @@ import AddProject from './components/AddProject'
 import QuickAdd from './components/QuickAdd'
 
 /** A top-level view. 'settings' is reached via the 🛠 header button, not a tab. */
-type View = 'today' | 'tasks' | 'projects' | 'settings'
+type View = 'today' | 'tasks' | 'projects' | 'models' | 'settings'
 
 // The three top tabs. Pure config.
 const TABS: { key: View; label: string }[] = [
   { key: 'today', label: '🏠 Today' },
   { key: 'tasks', label: '✓ Tasks' },
   { key: 'projects', label: '🏗️ Projects' },
+  { key: 'models', label: '📐 Models' },
 ]
 
 function App() {
@@ -61,6 +63,9 @@ function App() {
     dismissNotification,
     setModelTakeoff,
     setModelOrderList,
+    addModelFiles,
+    removeModelFile,
+    setModelInfo,
     addOrder,
     updateOrder,
     removeOrder,
@@ -208,6 +213,17 @@ function App() {
 
       {tab === 'tasks' && (
         <TasksView tasks={state.tasks} addTask={addTask} updateTask={updateTask} removeTask={removeTask} />
+      )}
+
+      {tab === 'models' && (
+        <ModelsView
+          roster={projects}
+          models={state.models}
+          modelTakeoffs={state.modelTakeoffs}
+          addModelFiles={addModelFiles}
+          removeModelFile={removeModelFile}
+          setModelInfo={setModelInfo}
+        />
       )}
 
       {tab === 'settings' && (

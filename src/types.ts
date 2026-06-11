@@ -242,4 +242,22 @@ export interface WorkbenchState {
    * vendor order email includes the list under that item.
    */
   modelOrderLists?: Record<string, Record<string, string>>
+  /**
+   * The MODEL LIBRARY (📐 Models tab), keyed by model key ('A'…'E2'…).
+   * Each model gets a shareable plans locker (same signed-link mechanics as
+   * project files) plus editable facts the roster can't hold.
+   */
+  models?: Record<string, ModelState>
+}
+
+/** One model's library page: its plan files + editable facts. */
+export interface ModelState {
+  /** Plan files (PDFs, calcs, zips) — bytes live in Supabase Storage under
+   *  models/<key>/, these are the pointers (same shape as project docs). */
+  docs?: ProjectDoc[]
+  /** Master-filed with the county: plans are on file, so permits reference
+   *  the master file and energy calcs ride along (E2 is; see Jennifer flow). */
+  masterFiled?: boolean
+  /** Free-form notable info — revisions, engineer notes, quirks. */
+  notes?: string
 }

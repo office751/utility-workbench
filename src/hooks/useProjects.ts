@@ -31,7 +31,7 @@ import { buildInitialState, emptyProjectState, inferPermitSteps, seedStateFor } 
 import { ESTABLISHED_MODELS, TAKEOFF_TYPES } from '../data/takeoffs'
 import { PROJECTS } from '../data/projects'
 import { supabase } from '../lib/supabase'
-import { deleteProjectFile, uploadProjectFile } from '../lib/files'
+import { deleteProjectFile, uploadModelFile, uploadProjectFile } from '../lib/files'
 
 /** The key our data is filed under in the browser's localStorage. */
 const STORAGE_KEY = 'isc_workbench_v1'
@@ -141,6 +141,9 @@ function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
     templates: parsed.templates ?? {},
     modelTakeoffs,
     modelOrderLists: parsed.modelOrderLists ?? {},
+    // Model library: seed once with what we know (E2 is master-filed); after
+    // that the saved object is the source of truth, edits included.
+    models: parsed.models ?? { E2: { masterFiled: true } },
   }
   // One-time: fold in the C.O./Hold homes if this save predates them.
   return result.extrasSeeded ? result : mergeExtraProjects(result)
@@ -512,6 +515,63 @@ export function useProjects() {
 
   /** Mark one takeoff gathered (or not) for a house MODEL — shared across all
    *  projects of that model. */
+  /** Upload plan files into a MODEL's library (📐 Models tab). Mirrors
+   *  addProjectFiles: bytes to storage first, then the pointer into state. */
+  async function addModelFiles(
+    modelK: string,
+    files: File[],
+  ): Promise<{ ok: number; failed: string[] }> {
+    const failed: string[] = []
+    let ok = 0
+    for (const file of files) {
+      try {
+        const doc = await uploadModelFile(modelK, file)
+        setState((prev) => {
+          const cur = prev.models?.[modelK] ?? {}
+          return {
+            ...prev,
+            models: { ...prev.models, [modelK]: { ...cur, docs: [...(cur.docs ?? []), doc] } },
+          }
+        })
+        ok++
+      } catch (e) {
+        console.warn('[models] upload failed:', file.name, e)
+        failed.push(file.name)
+      }
+    }
+    return { ok, failed }
+  }
+
+  /** Remove a model plan file: pointer first, then the bytes. */
+  async function removeModelFile(modelK: string, index: number) {
+    const doc = (state.models?.[modelK]?.docs ?? [])[index]
+    setState((prev) => {
+      const cur = prev.models?.[modelK] ?? {}
+      return {
+        ...prev,
+        models: {
+          ...prev.models,
+          [modelK]: { ...cur, docs: (cur.docs ?? []).filter((_, i) => i !== index) },
+        },
+      }
+    })
+    if (doc?.path) {
+      try {
+        await deleteProjectFile(doc.path)
+      } catch (e) {
+        console.warn('[models] storage delete failed (pointer already removed):', e)
+      }
+    }
+  }
+
+  /** Patch a model's editable facts (master-filed, notes) — ONE setState. */
+  function setModelInfo(modelK: string, patch: Partial<import('../types').ModelState>) {
+    setState((prev) => ({
+      ...prev,
+      models: { ...prev.models, [modelK]: { ...(prev.models?.[modelK] ?? {}), ...patch } },
+    }))
+  }
+
   function setModelTakeoff(modelK: string, takeoffId: string, done: boolean) {
     setState((prev) => {
       const all = { ...(prev.modelTakeoffs ?? {}) }
@@ -604,6 +664,9 @@ export function useProjects() {
     setTemplate,
     setModelTakeoff,
     setModelOrderList,
+    addModelFiles,
+    removeModelFile,
+    setModelInfo,
     addOrder,
     updateOrder,
     removeOrder,
