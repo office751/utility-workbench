@@ -30,7 +30,6 @@ import Today from './components/Today'
 import TasksView from './components/TasksView'
 import ModelsView from './components/ModelsView'
 import TemplatesView from './components/TemplatesView'
-import TakeoffsView from './components/TakeoffsView'
 import ExportImport from './components/ExportImport'
 import AddProject from './components/AddProject'
 import QuickAdd from './components/QuickAdd'
@@ -220,28 +219,22 @@ function App() {
           roster={projects}
           models={state.models}
           modelTakeoffs={state.modelTakeoffs}
+          modelOrderLists={state.modelOrderLists}
           addModelFiles={addModelFiles}
           removeModelFile={removeModelFile}
           setModelInfo={setModelInfo}
+          setModelTakeoff={setModelTakeoff}
+          setModelOrderList={setModelOrderList}
         />
       )}
 
       {tab === 'settings' && (
-        <>
-          <TakeoffsView
-            roster={projects}
-            modelTakeoffs={state.modelTakeoffs}
-            modelOrderLists={state.modelOrderLists}
-            setModelTakeoff={setModelTakeoff}
-            setModelOrderList={setModelOrderList}
-          />
-          <TemplatesView
-            templates={state.templates}
-            setTemplate={setTemplate}
-            sampleProject={projects.find((p) => p.listStatus !== 'CO') ?? projects[0]}
-            getProjectState={getProjectState}
-          />
-        </>
+        <TemplatesView
+          templates={state.templates}
+          setTemplate={setTemplate}
+          sampleProject={projects.find((p) => p.listStatus !== 'CO') ?? projects[0]}
+          getProjectState={getProjectState}
+        />
       )}
 
       {tab === 'projects' &&

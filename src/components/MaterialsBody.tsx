@@ -56,7 +56,7 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
       {missing.length > 0 && (
         <div className={permitIssued(ps) ? 'banner' : 'flag'}>
           🧩 Model {modelKey(p.model)} is missing takeoffs: {missing.map((t) => t.label).join(', ')}
-          {permitIssued(ps) && <b> — permit is ISSUED, this is now the priority</b>}. Manage in 🛠 Settings.
+          {permitIssued(ps) && <b> — permit is ISSUED, this is now the priority</b>}. Gather them on the 📐 Models tab.
         </div>
       )}
 

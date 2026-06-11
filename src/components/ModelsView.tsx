@@ -16,19 +16,35 @@ import { useState } from 'react'
 import type { ModelState, Project, WorkbenchState } from '../types'
 import { MODELS_DEFAULT, modelKey } from '../data/models'
 import { missingTakeoffs } from '../lib/takeoffs'
+import { TAKEOFF_TYPES } from '../data/takeoffs'
+import { ORDER_CATEGORIES } from '../data/orders'
 import DocumentsBox from './DocumentsBox'
 
 interface Props {
   roster: Project[]
   models: WorkbenchState['models']
   modelTakeoffs?: WorkbenchState['modelTakeoffs']
+  modelOrderLists?: WorkbenchState['modelOrderLists']
   addModelFiles: (modelK: string, files: File[]) => Promise<{ ok: number; failed: string[] }>
   removeModelFile: (modelK: string, index: number) => void
   setModelInfo: (modelK: string, patch: Partial<ModelState>) => void
+  setModelTakeoff: (modelK: string, takeoffId: string, done: boolean) => void
+  setModelOrderList: (modelK: string, category: string, text: string) => void
 }
 
-function ModelsView({ roster, models, modelTakeoffs, addModelFiles, removeModelFile, setModelInfo }: Props) {
+function ModelsView({
+  roster,
+  models,
+  modelTakeoffs,
+  modelOrderLists,
+  addModelFiles,
+  removeModelFile,
+  setModelInfo,
+  setModelTakeoff,
+  setModelOrderList,
+}: Props) {
   const [selected, setSelected] = useState<string | null>(null)
+  const [addCat, setAddCat] = useState('')
 
   // Every model we know: the spec roster + anything that already has library
   // state (so a future model added by data edit shows up automatically).
@@ -75,6 +91,8 @@ function ModelsView({ roster, models, modelTakeoffs, addModelFiles, removeModelF
   const m = models?.[mk] ?? {}
   const using = projectsUsing(mk)
   const missing = missingTakeoffs(modelTakeoffs, mk)
+  const got = modelTakeoffs?.[mk] ?? {}
+  const lists = modelOrderLists?.[mk] ?? {}
 
   return (
     <section className="detail">
@@ -95,9 +113,10 @@ function ModelsView({ roster, models, modelTakeoffs, addModelFiles, removeModelF
         {using.length > 0 && <> · building now: {using.map((p) => p.address).join(', ')}</>}
       </p>
 
-      {/* Takeoffs still missing = can't order materials for this model yet. */}
+      {/* Takeoffs still missing = can't order materials for this model yet.
+          (Managed right below now — no bouncing to Settings.) */}
       {missing.length > 0 && (
-        <div className="flag">🧩 Missing takeoffs: {missing.map((t) => t.label).join(', ')} — manage in 🛠 Settings.</div>
+        <div className="flag">🧩 Missing takeoffs: {missing.map((t) => t.label).join(', ')} — gather them below.</div>
       )}
 
       {/* Editable library facts. */}
@@ -126,6 +145,63 @@ function ModelsView({ roster, models, modelTakeoffs, addModelFiles, removeModelF
           placeholder="Revisions, engineer, quirks, what's special about this model…"
         />
       </label>
+
+      {/* TAKEOFFS — which ones are gathered, plus the material order lists that
+          flow into vendor order emails for every house of this model. Moved
+          here from 🛠 Settings (audit, June 2026): a model's data lives on the
+          model's own page, not a separate screen. */}
+      <div className="model-takeoffs">
+        <div className="tpl-preview-h">Takeoffs gathered</div>
+        <div className="tko-checks">
+          {TAKEOFF_TYPES.map((t) => {
+            const st = got[t.id]
+            return (
+              <label key={t.id} className="check tko-check">
+                <input
+                  type="checkbox"
+                  checked={!!st?.done}
+                  onChange={(e) => setModelTakeoff(mk, t.id, e.target.checked)}
+                />
+                {t.icon} {t.label}
+                {st?.done && st.date && <span className="muted"> · {st.date}</span>}
+              </label>
+            )
+          })}
+        </div>
+
+        <div className="tko-lists">
+          <div className="tpl-preview-h">Material order lists (flow into vendor emails)</div>
+          {Object.entries(lists).map(([cat, text]) => (
+            <label key={cat} className="tpl-label">
+              {cat}
+              <textarea
+                rows={4}
+                value={text}
+                onChange={(e) => setModelOrderList(mk, cat, e.target.value)}
+                placeholder={`Model ${mk}'s ${cat.toLowerCase()} list…`}
+              />
+            </label>
+          ))}
+          <div className="tko-add">
+            <select value={addCat} onChange={(e) => setAddCat(e.target.value)}>
+              <option value="">Add a list for…</option>
+              {ORDER_CATEGORIES.filter((c) => !lists[c]).map((c) => (
+                <option key={c}>{c}</option>
+              ))}
+            </select>
+            <button
+              className="mini"
+              disabled={!addCat}
+              onClick={() => {
+                setModelOrderList(mk, addCat, `(${mk} ${addCat} list — paste it here)`)
+                setAddCat('')
+              }}
+            >
+              ＋ Add
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* The plans locker — identical mechanics to a project's Files box:
           upload, ⬇ open, 📤 share, 📋 copy a pretty link for email. */}
