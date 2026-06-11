@@ -47,8 +47,18 @@ export const VENDORS: Vendor[] = [
     name: 'Marion Masonry',
     email: 'dispatch@marionmasonry.com', // from Adam's sent lintel/slab orders
     icon: '🧱',
-    supplies: 'Slab package · block · lintels · sand',
-    categories: ['Slab package', 'Block', 'Lintels', 'Sand'],
+    supplies: 'Slab package · lintels · sand',
+    categories: ['Slab package', 'Lintels', 'Sand'],
+  },
+  {
+    // Block comes from DZ Block, NOT Marion Masonry (Adam's correction,
+    // June 11 2026). Mason Caruthers is the takeoffs contact there.
+    id: 'dz-block',
+    name: 'DZ Block',
+    email: 'dispatch@dzblock.com',
+    icon: '🧊',
+    supplies: 'Block',
+    categories: ['Block'],
   },
   {
     id: 'fgt',
