@@ -126,6 +126,19 @@ on the Mac, so plan it for a Mac session).
       stages, and materials to order across all projects — one prioritization
       feeding both the view and the header badge.
 
+- [ ] **SharePoint → project Files sync** (Adam, June 11): pull each project's
+      files from SharePoint (`Active Projects/Iron Shield Construction LLC/
+      <parcel>/`) into the matching Workbench project's Files box — SITE PLANS
+      especially, so permit handoffs and load-form replies never hunt for
+      them. One-time backfill + (later) keep-in-sync. The OneDrive folder is
+      synced locally on the Mac (`~/Library/CloudStorage/...`), so the
+      backfill can be a local script: upload to the `project-files` bucket +
+      append doc pointers via the app.
+- [ ] **Vendor emails to fill in** — the per-order ✉️ button lights up once a
+      vendor has an email in `data/vendors.ts`: Marion Masonry, FGT
+      (cabinets), dumpster service, porta-potty service. (Tibbetts done:
+      Tina + CC Mark.)
+
 ## Ideas parking lot
 
 (things noticed but not committed to — promote them up when ready)

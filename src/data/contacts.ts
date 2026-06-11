@@ -51,6 +51,17 @@ export const JENNIFER = {
   email: 'jenniferpermitting@yahoo.com',
 }
 
+/** William Stiles — CC'd on permit handoffs (Adam added him on the first
+ *  real send, June 2026). */
+export const WILLIAM = { name: 'William Stiles', email: 'wfstiles@gmail.com' }
+
+/** Preferred soil technician — Jennifer routes soil tests through him. */
+export const SOIL_TECH = {
+  name: 'Craig Davis',
+  company: 'Rapid Septic Consulting',
+  email: 'RapidSepticConsulting@gmail.com',
+}
+
 /**
  * The standard subcontractor lineup that goes on every permit application.
  * This is the list Jennifer files with the county — when a sub changes,

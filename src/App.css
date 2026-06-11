@@ -660,6 +660,23 @@ button.mini {
   cursor: pointer;
 }
 
+/* The per-order one-click email draft (an <a> dressed like a mini button,
+   green-tinted so the "ready to order" action pops on to-order rows). */
+a.order-send {
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+  text-decoration: none;
+  white-space: nowrap;
+}
+a.order-send:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .detail .back {
   margin-bottom: 10px;
 }

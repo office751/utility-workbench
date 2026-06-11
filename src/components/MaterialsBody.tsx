@@ -9,7 +9,7 @@
 import { useState } from 'react'
 import type { OrderItem, OrderStatus, Project, ProjectState, TemplateOverride, WorkbenchState } from '../types'
 import { ORDER_CATEGORIES, ORDER_STATUSES } from '../data/orders'
-import { VENDORS, vendorMailto } from '../data/vendors'
+import { VENDORS, orderMailto, vendorMailto } from '../data/vendors'
 import { modelKey } from '../data/models'
 import { ordersOf } from '../lib/orders'
 import { missingTakeoffs, permitIssued } from '../lib/takeoffs'
@@ -71,6 +71,25 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
           {sorted.map((o) => (
             <div key={o.id} className={'order' + (o.status === 'toOrder' ? ' to-order' : '')}>
               <span className="order-cat">{o.category}</span>
+
+              {/* One-click order: a fully drafted, fully addressed email for
+                  THIS material (TO + CC + body w/ the model's order list) —
+                  the only thing left is Send. Shows only while it still needs
+                  ordering and a vendor in VENDORS covers the category. */}
+              {o.status === 'toOrder' && (() => {
+                const draft = orderMailto(o.category, p, ps, templates, lists)
+                if (!draft) return null
+                const who = draft.vendor.contact || draft.vendor.name
+                return (
+                  <a
+                    className="mini order-send"
+                    href={draft.href}
+                    title={`Draft the ${o.category} order to ${who}${draft.vendor.cc ? ` (CC ${draft.vendor.cc.split('@')[0].replace('.', ' ')})` : ''} — just press Send`}
+                  >
+                    ✉️ Order from {draft.vendor.name}
+                  </a>
+                )
+              })()}
 
               <select
                 className={`order-status s-${o.status}`}

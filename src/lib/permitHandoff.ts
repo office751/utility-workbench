@@ -21,7 +21,7 @@
  * for plain-text composers.)
  */
 import type { Project, ProjectDoc, ProjectState, TemplateOverride } from '../types'
-import { JENNIFER, PERMIT_SUBS } from '../data/contacts'
+import { JENNIFER, PERMIT_SUBS, SOIL_TECH, WILLIAM } from '../data/contacts'
 import { septicSourceOf, septicSystemOf } from './nextAction'
 import { escapeHtml } from './richCopy'
 import {
@@ -113,13 +113,15 @@ export function permitHandoffVars(
   ).join('\n')
 
   // Asserted, not hedged: the app knows septic vs sewer (utility settings),
-  // so the email tells Jennifer exactly what to apply for.
+  // so the email tells Jennifer exactly what to apply for. Septic projects
+  // also carry the soil-test routing (Adam's addition on the first real send).
   const src = septicSourceOf(ps)
   const sys = septicSystemOf(ps)
   const septicLine =
     src === 'Sewer'
       ? 'sewer connection — no septic permit needed'
-      : `septic required${sys ? ` (${sys})` : ''} — please apply for the septic permit as well`
+      : `septic required${sys ? ` (${sys})` : ''} — please apply for the septic permit as well. ` +
+        `For the soil test, please go through ${SOIL_TECH.name} (${SOIL_TECH.company}): ${SOIL_TECH.email}`
 
   return {
     address: p.address,
@@ -151,7 +153,8 @@ function buildMailto(
   if (docsOverride !== undefined) vars.docs = docsOverride
   const subject = renderTemplate(t.subject, vars)
   const body = renderTemplate(t.body, vars)
-  return `mailto:${JENNIFER.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+  // CC William on every handoff (Adam's edit on the first real send).
+  return `mailto:${JENNIFER.email}?cc=${encodeURIComponent(WILLIAM.email)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
 }
 
 /** Names-only draft — instant, works offline. The fallback path. */

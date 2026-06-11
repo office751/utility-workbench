@@ -16,17 +16,22 @@ export function renderTemplate(text: string, vars: Record<string, string>): stri
   return text.replace(/\{\{\s*([\w-]+)\s*\}\}/g, (_m, key: string) => vars[key] ?? '')
 }
 
-/** Default wording for a vendor order email (same for every vendor until edited). */
+/** Default wording for a vendor order email (same for every vendor until
+ *  edited). {{contact}} greets the PERSON when the vendor has one configured
+ *  ("Hi Tina,"), the company name otherwise. */
 export const DEFAULT_VENDOR_SUBJECT = '{{vendor}} — {{address}}'
 export const DEFAULT_VENDOR_BODY = [
-  'Hi {{vendor}},',
+  'Hi {{contact}},',
   '',
-  'Request for our job site:',
+  'We would like to place the following order for our job site:',
   'Site: {{site}}',
   'Parcel: {{parcel}}',
+  'Model: {{model}}',
   '',
   'Item(s):',
   '{{items}}',
+  '',
+  'Please confirm pricing and the earliest delivery date.',
 ].join('\n')
 // ^ No sign-off — the mail client appends Adam's real signature.
 
@@ -69,7 +74,7 @@ export const DEFAULT_APPLY_DUKE_BODY = [
  *  reality: a [PASTE HERE] marker when clickable links are on the clipboard,
  *  a plain name list when links couldn't be minted, a loud warning when no
  *  files are uploaded. Don't add a second header above it. */
-export const DEFAULT_PERMIT_HANDOFF_SUBJECT = 'Iron Shield: {{address}} — New Permit Package (Parcel {{parcel}})'
+export const DEFAULT_PERMIT_HANDOFF_SUBJECT = '{{address}} — New Permit Package (Parcel {{parcel}})'
 export const DEFAULT_PERMIT_HANDOFF_BODY = [
   'Hi Jennifer,',
   '',
@@ -80,6 +85,7 @@ export const DEFAULT_PERMIT_HANDOFF_BODY = [
   '• Subcontractors:',
   '{{subs}}',
   '• Energy calcs: attached — this is a master-filed model',
+  '• Authorization form: attached (signed)',
   '• Septic: {{septic_line}}',
   '• Financing: [FILL IN — cash, or lender name & address] — please prepare and record the Notice of Commencement',
   '',
@@ -87,6 +93,10 @@ export const DEFAULT_PERMIT_HANDOFF_BODY = [
   '',
   'Let me know if you need anything else to get this submitted.',
 ].join('\n')
+// ^ Wording matched to Adam's first real send (June 10 2026): no company
+//   prefix in the subject, the authorization-form bullet (it got forgotten
+//   once — never again), and the soil-test instruction rides inside
+//   {{septic_line}} for septic projects.
 // ^ No sign-off here on purpose: the mail client appends the real signature.
 //   Adding one in the template means deleting a duplicate from every draft.
 

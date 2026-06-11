@@ -41,6 +41,8 @@ export interface TemplateSpec {
 
 const VENDOR_VARS: TemplateVar[] = [
   { token: '{{vendor}}', desc: 'the company name' },
+  { token: '{{contact}}', desc: 'the contact person\'s first name (falls back to the company name)' },
+  { token: '{{category}}', desc: 'the single material being ordered (only on the per-order ✉️ button)' },
   { token: '{{address}}', desc: 'street address' },
   { token: '{{site}}', desc: 'full site line — address, city, FL zip' },
   { token: '{{parcel}}', desc: 'parcel number' },
