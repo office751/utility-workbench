@@ -29,13 +29,14 @@ import Detail from './components/Detail'
 import Today from './components/Today'
 import TasksView from './components/TasksView'
 import ModelsView from './components/ModelsView'
+import InspectionsView from './components/InspectionsView'
 import TemplatesView from './components/TemplatesView'
 import ExportImport from './components/ExportImport'
 import AddProject from './components/AddProject'
 import QuickAdd from './components/QuickAdd'
 
 /** A top-level view. 'settings' is reached via the 🛠 header button, not a tab. */
-type View = 'today' | 'tasks' | 'projects' | 'models' | 'settings'
+type View = 'today' | 'tasks' | 'projects' | 'models' | 'inspections' | 'settings'
 
 // The three top tabs. Pure config.
 const TABS: { key: View; label: string }[] = [
@@ -43,6 +44,7 @@ const TABS: { key: View; label: string }[] = [
   { key: 'tasks', label: '✓ Tasks' },
   { key: 'projects', label: '🏗️ Projects' },
   { key: 'models', label: '📐 Models' },
+  { key: 'inspections', label: '🔍 Inspections' },
 ]
 
 function App() {
@@ -225,6 +227,14 @@ function App() {
           setModelInfo={setModelInfo}
           setModelTakeoff={setModelTakeoff}
           setModelOrderList={setModelOrderList}
+        />
+      )}
+
+      {tab === 'inspections' && (
+        <InspectionsView
+          roster={projects}
+          getProjectState={getProjectState}
+          onOpen={(id) => openProject(id, 'permit')}
         />
       )}
 

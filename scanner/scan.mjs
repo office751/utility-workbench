@@ -177,7 +177,10 @@ const trimDesc = (d) => (d || '').replace(/\s*-\s*1\s*&\s*2\s*Residential Family
 // comments — e.g. two "Final Hold" entries) don't collide on one sourceKey.
 const slug = (s) => (s || '').replace(/[^a-z0-9]+/gi, '').slice(0, 40).toLowerCase()
 
-/** From scan results + the roster, build the tasks + per-project FYIs we WANT to exist. */
+/** From scan results + the roster, build what we WANT to exist in the
+ *  Workbench: HOLD tasks (actionable to-dos), per-project INSPECTION results
+ *  (reference info for the 🔍 Inspections tab — NOT tasks; they were flooding
+ *  Adam's task list, June 2026), and per-project FYI notifications. */
 function buildDesired(results, roster) {
   const idByPermit = new Map()
   const addrById = new Map()
@@ -186,15 +189,23 @@ function buildDesired(results, roster) {
     addrById.set(p.id, p.address)
   }
   const tasks = []
+  const inspectionsByProject = new Map()
   const notesByProject = new Map()
   for (const r of results) {
     const pid = idByPermit.get(r.permit)
     if (pid == null) continue // permit not in roster → skip
     const addr = addrById.get(pid) || r.permit
-    // Rejections only count when the Inspections tab rendered…
+    // Inspection results only count when the Inspections tab rendered…
     if (r.inspOk)
-      for (const rej of r.rejections)
-        tasks.push({ sourceKey: `portal:${r.permit}:rej:${rej.desc}`, projectId: pid, text: `${addr}: ${trimDesc(rej.desc)} — ${rej.status}` })
+      for (const rej of r.rejections) {
+        if (!inspectionsByProject.has(pid)) inspectionsByProject.set(pid, [])
+        inspectionsByProject.get(pid).push({
+          sourceKey: `portal:${r.permit}:rej:${rej.desc}`,
+          desc: trimDesc(rej.desc),
+          status: rej.status,
+          date: rej.date || '',
+        })
+      }
     // …holds + FYIs only when the Holds tab rendered.
     if (r.holdsOk) {
       for (const h of r.holds)
@@ -205,7 +216,7 @@ function buildDesired(results, roster) {
       }
     }
   }
-  return { tasks, notesByProject }
+  return { tasks, inspectionsByProject, notesByProject }
 }
 
 async function syncToWorkbench(results) {
@@ -225,7 +236,7 @@ async function syncToWorkbench(results) {
   // Which categories rendered, per permit — we only clear a category whose tab loaded.
   const holdsOkPermits = new Set(results.filter((r) => r.holdsOk).map((r) => r.permit))
   const inspOkPermits = new Set(results.filter((r) => r.inspOk).map((r) => r.permit))
-  const { tasks: desired, notesByProject } = buildDesired(results, blob.roster)
+  const { tasks: desired, inspectionsByProject, notesByProject } = buildDesired(results, blob.roster)
   const desiredKeys = new Set(desired.map((t) => t.sourceKey))
   const existingByKey = new Map(blob.tasks.filter((t) => t.sourceKey).map((t) => [t.sourceKey, t]))
 
@@ -279,8 +290,43 @@ async function syncToWorkbench(results) {
     ps.notifications = kept
   }
 
+  // --- INSPECTION RESULTS: per-project reference list (the 🔍 Inspections
+  //     tab), reconciled only for permits whose INSPECTIONS tab rendered.
+  //     Same safety as everything else: add/update freely, clear only with
+  //     --prune, and never touch a permit whose tab didn't load. ---
+  let iAdded = 0, iUpdated = 0, iCleared = 0
+  const inspOkPids = new Set()
+  for (const r of results) if (r.inspOk) { const p = blob.roster.find((x) => x.permit === r.permit); if (p) inspOkPids.add(p.id) }
+  for (const pid of inspOkPids) {
+    const ps = blob.projects[pid]
+    if (!ps) continue
+    const desiredInsp = inspectionsByProject.get(pid) || []
+    const desiredIKeys = new Set(desiredInsp.map((i) => i.sourceKey))
+    const byKey = new Map((ps.inspections || []).filter((i) => i.sourceKey).map((i) => [i.sourceKey, i]))
+    const kept = (ps.inspections || []).filter((i) => {
+      if (doPrune && (i.sourceKey || '').startsWith('portal:') && !desiredIKeys.has(i.sourceKey)) { iCleared++; return false }
+      return true
+    })
+    const seenI = new Set()
+    for (const d of desiredInsp) {
+      if (seenI.has(d.sourceKey)) continue
+      seenI.add(d.sourceKey)
+      const ex = byKey.get(d.sourceKey)
+      if (ex) {
+        // Re-inspections keep the same key (de-duped by description upstream,
+        // latest attempt wins) — refresh the status/date, keep noticedAt.
+        if (ex.status !== d.status || ex.date !== d.date || ex.desc !== d.desc) { ex.desc = d.desc; ex.status = d.status; ex.date = d.date; iUpdated++ }
+      } else {
+        kept.push({ ...d, noticedAt: new Date().toISOString() })
+        iAdded++
+      }
+    }
+    ps.inspections = kept
+  }
+
   console.log('\nWorkbench sync:')
   console.log(`   tasks:         +${added} new, ${updated} updated, ${cleared} cleared`)
+  console.log(`   inspections:   +${iAdded} new, ${iUpdated} updated, ${iCleared} cleared`)
   console.log(`   notifications: +${nAdded} new, ${nCleared} cleared`)
   if (!doWrite) return console.log('\n(PREVIEW — nothing written. Re-run with  --write  to apply.)\n')
 

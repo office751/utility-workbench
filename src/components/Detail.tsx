@@ -560,6 +560,24 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, u
         onDismiss={(sk) => dismissNotification(p.id, sk)}
       />
 
+      {/* 🔍 This project's flagged inspection results (reference info from
+          the nightly scan — the cross-project feed lives on the 🔍 tab). */}
+      {(ps.inspections ?? []).length > 0 && (
+        <div className="insp-list insp-inline">
+          {(ps.inspections ?? []).map((i) => (
+            <div key={i.sourceKey} className="insp-row static">
+              <span className={'insp-status ' + (/disapprov|fail|reject|denied/i.test(i.status) ? 'fail' : 'partial')}>
+                {i.status}
+              </span>
+              <span className="insp-main">
+                <span className="insp-desc">{i.desc}</span>
+              </span>
+              <span className="insp-date muted">{i.date || ''}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Read-only summary — edit responsible / links / dates in ⚙️ Settings. */}
       <p className="summary">
         📋 Responsible: {permitResponsibleOf(ps)}

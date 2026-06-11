@@ -138,6 +138,7 @@ function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
     projects,
     tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
     extrasSeeded: parsed.extrasSeeded === true,
+    inspectionsMigrated: parsed.inspectionsMigrated === true,
     templates: parsed.templates ?? {},
     modelTakeoffs,
     modelOrderLists: parsed.modelOrderLists ?? {},
@@ -145,6 +146,37 @@ function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
     // that the saved object is the source of truth, edits included.
     models: parsed.models ?? { E2: { masterFiled: true } },
   }
+
+  // ONE-TIME (June 2026): the scanner used to turn inspection RESULTS into
+  // tasks, flooding the task list. Move every such task ("portal:…:rej:…")
+  // into its project's `inspections` list — reference info, not to-dos. The
+  // scanner itself writes to `inspections` now; this cleans up what's left.
+  if (!result.inspectionsMigrated) {
+    const stays: Task[] = []
+    for (const t of result.tasks) {
+      const m = /^portal:[^:]+:rej:(.*)$/.exec(t.sourceKey ?? '')
+      if (!m || t.projectId == null) {
+        stays.push(t)
+        continue
+      }
+      const ps = result.projects[t.projectId] ?? (result.projects[t.projectId] = emptyProjectState())
+      const insp = (ps.inspections ??= [])
+      if (!insp.some((i) => i.sourceKey === t.sourceKey)) {
+        // Task text was "<address>: <desc> — <status>" — the part after the
+        // LAST " — " is the status; desc comes from the sourceKey (raw).
+        const cut = t.text.lastIndexOf(' — ')
+        insp.push({
+          sourceKey: t.sourceKey!,
+          desc: m[1],
+          status: cut >= 0 ? t.text.slice(cut + 3) : '(see portal)',
+          noticedAt: t.createdAt,
+        })
+      }
+    }
+    result.tasks = stays
+    result.inspectionsMigrated = true
+  }
+
   // One-time: fold in the C.O./Hold homes if this save predates them.
   return result.extrasSeeded ? result : mergeExtraProjects(result)
 }
@@ -225,9 +257,10 @@ export function useProjects() {
           const cloudData = data.data as Partial<WorkbenchState>
           lastPushed.current = JSON.stringify(cloudData)
           // Normally a cloud load shouldn't echo back as a write. EXCEPTION:
-          // if the cloud copy predates the C.O./Hold homes, migrate() merges
-          // them in now and we WANT that written back — so don't skip the save.
-          if (cloudData.extrasSeeded) skipNextSave.current = true
+          // when migrate() is about to CHANGE the data (merging the C.O./Hold
+          // homes, or moving inspection-result tasks into `inspections`), we
+          // WANT that written back — so only skip when NO migration applies.
+          if (cloudData.extrasSeeded && cloudData.inspectionsMigrated) skipNextSave.current = true
           // Mark ready BEFORE setState so, when a merge IS needed, the save
           // effect that setState triggers actually fires (it gates on this).
           cloudReady.current = true
@@ -269,6 +302,7 @@ export function useProjects() {
         .upsert({ id: 'main', data: state, updated_at: new Date().toISOString() })
         .then(({ error }) => {
           if (error) console.warn('[workbench] cloud save failed', error)
+          else console.log('[workbench] cloud save ok', new Date().toISOString())
         })
     }, 600)
     return () => clearTimeout(timer)

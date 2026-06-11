@@ -2,7 +2,11 @@
 
 Reads each Marion County permit's portal record for **active holds** and
 **inspection / review rejections**, and (Stage 2) turns them into permit-linked
-tasks in the Workbench. Runs on your Mac; nothing here ships to the web app.
+items in the Workbench. Runs on your Mac; nothing here ships to the web app.
+Holds/warnings become TASKS (actionable); inspection results go to each
+project's `inspections` list (the app's 🔍 Inspections tab — reference info,
+deliberately NOT tasks); "Information…" rows become dismissible FYI
+notifications on the Permit tab.
 
 It logs in the same way you do (Tyler ID) **once**, saves that browser session
 locally, and reuses it. No password is stored or typed by the script.
@@ -53,7 +57,7 @@ You'll see lines like:
 
 Once the dry run looks right:
 1. Fill in `SUPABASE_SERVICE_KEY`.
-2. The scan will upsert each finding as a permit-linked task (de-duped by
+2. The scan will upsert each finding into its home above (de-duped by
    `sourceKey`, cleared automatically when the hold/rejection goes away).
 3. Schedule it nightly with the included launchd job.
 

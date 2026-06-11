@@ -100,5 +100,8 @@ vendors.ts), user overrides in `WorkbenchState.templates`, edited in
 - Models (A…G, E2, Independence, Republic, Concord, Fire-House) carry
   sqft/tonnage in `data/models.ts`; per-model takeoff tracking in
   ⚙️ Settings (Republic + Concord started incomplete — that's real).
-- Permits: Marion County EnerGov portal (see scanner). `listStatus`
+- Permits: Marion County EnerGov portal (see scanner). Scanner output split
+  (June 2026): holds/warnings → tasks; inspection results → per-project
+  `inspections` (🔍 Inspections tab, NOT tasks); FYIs → permit notifications.
+  `listStatus`
   CO/Hold = finished/paused houses.

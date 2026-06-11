@@ -121,6 +121,20 @@ export interface PermitNote {
 }
 
 /**
+ * One inspection/review RESULT pulled off the county portal by the nightly
+ * scanner. These are reference info — something you go LOOK at (🔍
+ * Inspections tab + the project's Permit tab), deliberately NOT tasks:
+ * inspection results were flooding the task list (June 2026).
+ */
+export interface InspectionItem {
+  sourceKey: string // stable id from the scanner; "portal:<permit>:rej:<desc>"
+  desc: string // e.g. "Foundation Pre-Pour"
+  status: string // e.g. "Disapproved - no fees", "Partial Approval - Repeat Inspection"
+  date?: string // the portal's inspection date (M/D/YYYY)
+  noticedAt?: string // when the scanner first saw it
+}
+
+/**
  * Everything that CHANGES for one project — this is what localStorage holds.
  * Fields marked `?` are optional overrides: e.g. if `electricCo` is set here,
  * it wins over the roster value (you verified/changed the utility).
@@ -155,6 +169,9 @@ export interface ProjectState {
    * under the 🔔 on the permit; dismissible but kept in history.
    */
   notifications?: PermitNote[]
+
+  /** Inspection/review results from the county portal (see InspectionItem). */
+  inspections?: InspectionItem[]
 
   /** Material orders for this project (trusses, slab, cabinets, …). */
   orders?: OrderItem[]
@@ -225,6 +242,11 @@ export interface WorkbenchState {
    * way if you delete one, it stays deleted.
    */
   extrasSeeded?: boolean
+  /**
+   * One-time marker: scanner-made inspection-result TASKS have been moved
+   * into per-project `inspections` (they were flooding the task list).
+   */
+  inspectionsMigrated?: boolean
   /**
    * Custom wording for workflow templates (vendor order emails, and future
    * ones like the load form), keyed by template id — editable in ⚙️ Settings.
