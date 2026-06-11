@@ -350,25 +350,7 @@ textarea {
   font-style: italic;
 }
 /* shared pill-button look for Share / Open / Copy / Email / Text / Remove */
-.doc-btn {
-  font: inherit;
-  font-size: 12px;
-  line-height: 1;
-  padding: 5px 9px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  cursor: pointer;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  white-space: nowrap;
-}
-.doc-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
+/* .doc-btn shares the small-button shell above; only its ✕ variant differs. */
 .doc-btn.x {
   color: var(--muted);
   margin-left: auto;
@@ -402,21 +384,8 @@ textarea {
   color: var(--muted);
   margin-right: 2px;
 }
-.vendor-btn {
-  font-size: 12px;
-  line-height: 1;
-  padding: 6px 10px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--panel);
-  color: var(--text);
-  text-decoration: none;
-  white-space: nowrap;
-}
-.vendor-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
+/* .vendor-btn shares the small-button shell above (it used to be a round
+   999px pill — now matches the rectangular order buttons it sits near). */
 
 /* ---------- permit "Portal items" (reviews / holds) ---------- */
 .reviews {
@@ -649,37 +618,37 @@ textarea:focus {
 }
 
 /* small utility button (back link, clear filters) */
-button.mini {
+/* ── ONE small-button recipe for the whole app ──────────────────────────
+   The app had six hand-tuned clones of "small bordered pill button" with
+   drifting paddings/radii (audit, June 2026). They share this shell now;
+   each keeps only its unique bits below. Class-qualified (NOT button.mini)
+   so <a> buttons match too — that's what makes the 🗺️ Map link and the
+   ✉️ order links render as real buttons instead of bare hyperlinks. */
+.mini,
+.doc-btn,
+.vendor-btn,
+.task-x {
   font: inherit;
   font-size: 12px;
+  line-height: 1;
   padding: 4px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--panel);
   color: var(--text);
   cursor: pointer;
-}
-/* Every neighboring button lights up on hover — .mini was the one that
-   didn't (audit finding, June 2026). */
-button.mini:hover,
-.filter-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-/* The per-order one-click email draft (an <a> dressed like a mini button,
-   green-tinted so the "ready to order" action pops on to-order rows). */
-a.order-send {
-  font-size: 12px;
-  padding: 4px 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
   text-decoration: none;
+  display: inline-flex;
+  align-items: center;
   white-space: nowrap;
 }
-a.order-send:hover {
+/* Every small button lights up accent on hover (the ✕ buttons go red — see
+   their own rules). .mini used to be the only one with no hover at all. */
+.mini:hover,
+.doc-btn:hover,
+.vendor-btn:hover,
+.order-send:hover,
+.filter-btn:hover {
   border-color: var(--accent);
   color: var(--accent);
 }
@@ -798,63 +767,9 @@ button.gear.on {
   cursor: pointer;
 }
 
-/* ---------- Milestone 4: dashboard cards + tiles ---------- */
-
-.dashboard .card {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px 16px;
-  margin-bottom: 14px;
-}
-
-.dashboard .card h3 {
-  margin: 0 0 10px;
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  border-left: 3px solid var(--accent);
-  padding-left: 8px;
-}
-
-.tiles {
-  display: grid;
-  /* as many 215px-wide tiles as fit per row */
-  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
-  gap: 10px;
-}
-
-.tile {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px 12px;
-  cursor: pointer;
-}
-
-.tile:hover {
-  border-color: var(--accent);
-}
-
-.tile-addr {
-  font-weight: 700;
-  font-size: 13px;
-}
-
-.tile-meta {
-  font-size: 11.5px;
-  color: var(--muted);
-  margin-top: 3px;
-}
-
-.tile-badges {
-  margin-top: 7px;
-  font-size: 12px;
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  flex-wrap: wrap;
-}
+/* (The Milestone-4 dashboard cards/tiles CSS lived here; the Dashboard +
+   Badges components it styled were replaced by Today + the project list and
+   removed June 2026, so their rules went with them.) */
 
 /* urgency colors (shut-off tiles, verify badge) */
 .due  { color: #c0492f; font-weight: 700; }
@@ -1153,6 +1068,16 @@ button.primary:disabled {
 /* status-tinted dropdowns */
 .s-toOrder { color: #b06b00; font-weight: 700; }
 .s-installed { color: #2f6b2f; }
+/* …their dark twins — the light greens/ambers were near-invisible on the
+   dark background (audit finding). Same palette as .qa-done's dark version,
+   and the same lift for the red error / amber warning texts that also lacked
+   dark versions (.docs-error, .qa-error, .ba-warn, .sr-hint). */
+[data-theme='dark'] .s-toOrder,
+[data-theme='dark'] .ba-warn,
+[data-theme='dark'] .sr-hint { color: #e6c860; }
+[data-theme='dark'] .s-installed { color: #86dba6; }
+[data-theme='dark'] .docs-error,
+[data-theme='dark'] .qa-error { color: #f0a892; }
 
 /* ---------- Materials: dashboard order lines ---------- */
 .orderlines {
@@ -1209,23 +1134,23 @@ button.danger:hover {
   font-size: 11px;
 }
 
-/* dashboard cards + tiles — smaller tiles means more per row */
-[data-density='compact'] .dashboard .card {
-  padding: 10px 12px;
-  margin-bottom: 10px;
+/* The project WORKSPACE (the screens Adam lives in), plus Tasks + Models —
+   these used to ignore the density toggle entirely (audit finding). Same
+   ~30% tightening ratio as the list rows above. */
+[data-density='compact'] .ss-chip {
+  padding: 5px 8px;
 }
-[data-density='compact'] .tiles {
-  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
-  gap: 7px;
+[data-density='compact'] .ov-card {
+  padding: 8px 10px;
 }
-[data-density='compact'] .tile {
-  padding: 7px 9px;
+[data-density='compact'] .step {
+  padding: 4px 8px;
 }
-[data-density='compact'] .tile-addr {
-  font-size: 12px;
+[data-density='compact'] .task-row {
+  padding: 5px 4px;
 }
-[data-density='compact'] .tile-meta {
-  font-size: 10.5px;
+[data-density='compact'] .model-card {
+  padding: 10px;
 }
 
 /* ---------- dark-mode adjustments ----------
@@ -1578,11 +1503,9 @@ button.danger:hover {
 .task-row.done .task-text { color: var(--muted); text-decoration: line-through; }
 .task-due { font-size: 12px; color: var(--muted); white-space: nowrap; }
 .task-due.due { color: #c0492f; font-weight: 700; }
-.task-x {
-  font: inherit; font-size: 12px; line-height: 1; flex: none;
-  padding: 3px 7px; border: 1px solid var(--border); border-radius: 6px;
-  background: var(--panel); color: var(--muted); cursor: pointer;
-}
+/* .task-x shares the small-button shell above; it stays muted and goes red
+   on hover (it's a delete). Used by task rows AND order rows now. */
+.task-x { flex: none; color: var(--muted); }
 .task-x:hover { color: #c0492f; border-color: #c0492f55; }
 
 .done-block { margin-top: 6px; }
@@ -1657,16 +1580,17 @@ button.danger:hover {
 /* ---------- M3: project stream-strip (all 5 streams at a glance) ---------- */
 .stream-strip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(142px, 1fr));
+  /* Now that chips are pure tabs (no status sub-label), they're narrow. */
+  grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
   gap: 8px;
   margin: 2px 0 16px;
 }
 .ss-chip {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 3px;
-  text-align: left;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  justify-content: center;
   font: inherit;
   cursor: pointer;
   padding: 8px 11px;
@@ -1694,14 +1618,8 @@ button.danger:hover {
 [data-theme='dark'] .ss-chip.done .ss-name {
   color: #86dba6;
 }
-.ss-label {
-  font-size: 11.5px;
-  color: var(--muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
+/* (.ss-label removed — the chips are pure tabs now; status text lives in the
+   Overview cards and each tab's "Next:" line, not duplicated in the strip.) */
 
 /* ---------- project-first Landing (full-width list of all houses) ---------- */
 .projects-landing {

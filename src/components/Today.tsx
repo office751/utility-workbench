@@ -167,9 +167,9 @@ function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks }: Props) {
     ac.stats.allClear && attnTasks.length === 0 && waiting.length === 0 && focus.length === 0
 
   const today = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
-  const summary = everythingClear
-    ? 'All clear — nice.'
-    : `${attentionCount} need attention · ${waiting.length} waiting on you · ${ac.stats.moves} to move`
+  // Just the date here — the stat tiles to the right carry the numbers, so we
+  // don't say the same counts twice (audit finding, June 2026).
+  const summary = everythingClear ? `${today} · all clear — nice.` : today
 
   // Group "your move" by action so it reads as intel, not a 150-row wall.
   const groups = new Map<string, { icon: string; items: ActionItem[] }>()
@@ -188,9 +188,7 @@ function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks }: Props) {
       <header className="today-hero">
         <div className="today-greet">
           <h2>{greeting()}, Adam</h2>
-          <p>
-            {today} · {summary}
-          </p>
+          <p>{summary}</p>
         </div>
         <div className="today-stats">
           <Stat n={focus.length} l="focus" />

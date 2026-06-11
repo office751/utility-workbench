@@ -37,7 +37,7 @@ import {
   waterSourceOf,
 } from '../lib/nextAction'
 import { shutoffFor } from '../lib/shutoff'
-import { permitExpiresOf, permitExpiryFor } from '../lib/permitExpiry'
+import { permitExpiryFor } from '../lib/permitExpiry'
 import { permitHandoffDraft, permitHandoffDraftWithLinks, type HandoffDraft } from '../lib/permitHandoff'
 import { DUKE_PORTAL_URL, dukeWebPayloadText, dukeWebPayloadTextWithDirections } from '../lib/dukeWebApply'
 import { getShareUrl } from '../lib/files'
@@ -193,7 +193,6 @@ function Detail(props: Props) {
                 {icon} {name}
                 {st.done ? ' ✓' : ''}
               </span>
-              <span className="ss-label">{st.label}</span>
             </button>
           )
         })}
@@ -550,7 +549,8 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, u
   const expiry = permitExpiryFor(p, ps)
   const countyStatus = permitCountyStatusOf(p)
   const issued = permitIssuedOf(p, ps)
-  const expires = permitExpiresOf(p, ps)
+  // (expiry date is shown by the ⏰ reminder line below, with days-left +
+  // urgency color — so it's NOT repeated in the summary line. Audit, 2026.)
 
   return (
     <>
@@ -565,7 +565,6 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, u
         📋 Responsible: {permitResponsibleOf(ps)}
         {countyStatus && <> · County: {countyStatus}</>}
         {issued && <> · Issued {issued}</>}
-        {expires && <> · Expires {expires}</>}
       </p>
 
       {/* Quick-open links — the URL itself stays hidden; you just click to open.

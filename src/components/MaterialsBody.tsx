@@ -37,6 +37,18 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
   const statusRank: Record<OrderStatus, number> = { toOrder: 0, ordered: 1, delivered: 2, installed: 3 }
   const sorted = [...orders].sort((a, b) => statusRank[a.status] - statusRank[b.status])
 
+  // Each to-order row already shows a one-click ✉️ button to its matching
+  // vendor (below). So the bottom "other vendors" row only offers the vendors
+  // NOT already covered by a row — for ad-hoc emails — instead of repeating
+  // the same buttons twice in two styles (audit finding, June 2026).
+  const coveredVendorIds = new Set(
+    orders
+      .filter((o) => o.status === 'toOrder')
+      .map((o) => VENDORS.find((v) => v.categories?.includes(o.category))?.id)
+      .filter(Boolean),
+  )
+  const otherVendors = VENDORS.filter((v) => !coveredVendorIds.has(v.id))
+
   return (
     <>
       {/* New-model alert: this model still has takeoffs to chase down. Red-hot
@@ -48,24 +60,8 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
         </div>
       )}
 
-      {/* Quick "draft an order email" buttons — open a pre-filled email to the
-          vendor about THIS job site (recipient + items already filled in). */}
-      <div className="vendor-row">
-        <span className="vendor-label">✉️ Order from:</span>
-        {VENDORS.map((v) => (
-          <a
-            key={v.id}
-            className="vendor-btn"
-            href={vendorMailto(v, p, ps, templates, lists)}
-            title={`Draft an email to ${v.name} — ${v.supplies}`}
-          >
-            {v.icon} {v.name}
-          </a>
-        ))}
-      </div>
-
       {orders.length === 0 ? (
-        <p className="summary">🛒 No orders yet — capture one above, or add below.</p>
+        <p className="summary">🛒 No orders yet — add one below, or use the 🛒 Quick-Add bar on the Projects page.</p>
       ) : (
         <div className="orders">
           {sorted.map((o) => (
@@ -111,7 +107,7 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
               />
 
               <button
-                className="doc-x"
+                className="task-x"
                 title="Remove order"
                 onClick={() => removeOrder(p.id, o.id)}
               >
@@ -133,6 +129,24 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
           ＋ Add order
         </button>
       </div>
+
+      {/* Ad-hoc email to any vendor NOT already on a to-order row above (those
+          have their own one-click ✉️ button). For one-offs / questions. */}
+      {otherVendors.length > 0 && (
+        <div className="vendor-row">
+          <span className="vendor-label">✉️ Other vendors:</span>
+          {otherVendors.map((v) => (
+            <a
+              key={v.id}
+              className="vendor-btn"
+              href={vendorMailto(v, p, ps, templates, lists)}
+              title={`Draft an email to ${v.name} — ${v.supplies}`}
+            >
+              {v.icon} {v.name}
+            </a>
+          ))}
+        </div>
+      )}
     </>
   )
 }
