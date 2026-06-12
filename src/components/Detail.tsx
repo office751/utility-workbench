@@ -311,14 +311,21 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField }: Pro
   const shutoff = shutoffFor(ps)
   const u = utilityOf(p, ps)
   const eng = engineerOf(p, ps)
-  // ⚡ Duke web application: building → computing directions from the map
-  // services; copied → fill data is on the clipboard.
-  const [dukeState, setDukeState] = useState<'idle' | 'building' | 'copied'>('idle')
+  // ⚡ Duke web application:
+  //   building → computing directions from the map services
+  //   opened   → portal launched + fill-data copied; now waiting on Claude
+  //              to drive the form (a button can't type into Duke's portal)
+  //   noclip   → same, but the browser blocked the clipboard write
+  const [dukeState, setDukeState] = useState<'idle' | 'building' | 'opened' | 'noclip'>('idle')
 
   /** Copy this project's portal fill-data (JSON) — including computed
    *  turn-by-turn directions from the nearest main road — and open the
    *  Builder Portal. The clipboard payload is what fills the form: Claude
-   *  driving the browser reads it from there. */
+   *  driving the browser reads it from there. The button itself can ONLY
+   *  open the portal + stage the data — it cannot fill the form, because
+   *  the portal is a separate, logged-in site the app can't reach into.
+   *  So we open it, then show a hint telling Adam how to kick off the
+   *  Claude-driven fill (and the state stays put instead of flashing away). */
   async function openDukePortal() {
     setDukeState('building')
     let text: string
@@ -328,14 +335,15 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField }: Pro
     } catch {
       text = dukeWebPayloadText(p, ps) // offline → no directions, still fills
     }
+    let copied = false
     try {
       await navigator.clipboard.writeText(text)
-      setDukeState('copied')
-      setTimeout(() => setDukeState('idle'), 2500)
+      copied = true
     } catch {
-      setDukeState('idle') // clipboard refused — portal still opens
+      copied = false // clipboard refused — portal still opens
     }
     window.open(DUKE_PORTAL_URL, '_blank', 'noopener')
+    setDukeState(copied ? 'opened' : 'noclip')
   }
 
   return (
@@ -353,16 +361,40 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField }: Pro
       </p>
 
       {/* Duke applies through a multi-page WEB form, not email — this opens
-          the portal with the project's fill data on the clipboard. */}
+          the portal and stages the fill data. The actual form-filling is
+          done by Claude driving the browser; see the hint shown after. */}
       {u === 'DUKE' && (
         <div className="contact-row">
           <button className="contact" onClick={openDukePortal} disabled={dukeState === 'building'}>
             {dukeState === 'building'
               ? '⏳ Computing directions + fill data…'
-              : dukeState === 'copied'
-                ? '✓ Fill data copied — portal opening…'
+              : dukeState === 'opened' || dukeState === 'noclip'
+                ? '✓ Portal opened — see next step ↓'
                 : '⚡ Duke portal — new service application'}
           </button>
+        </div>
+      )}
+
+      {/* The crucial bit the old button hid: opening the portal is only
+          step one. The form gets filled by ASKING CLAUDE — spell that out
+          so it never again looks like "nothing happened". */}
+      {(dukeState === 'opened' || dukeState === 'noclip') && (
+        <div className="banner duke-next">
+          ✅ Builder Portal opened in a new tab
+          {dukeState === 'opened' ? ' · fill data copied to your clipboard' : ''}.
+          <br />
+          <b>To auto-fill the application:</b> sign in on that tab, then tell Claude:{' '}
+          <span className="duke-say">“apply for Duke on {p.address}”</span>. Claude fills every
+          field and stops at the summary for you to press <b>Submit</b>.
+          {dukeState === 'noclip' && (
+            <>
+              <br />
+              <span className="muted">
+                (Your browser blocked the clipboard this time — that's fine, Claude recomputes the
+                fill data itself.)
+              </span>
+            </>
+          )}
         </div>
       )}
 

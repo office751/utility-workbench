@@ -181,6 +181,22 @@
   margin-bottom: 14px;
 }
 
+/* The Duke "what to do next" hint — green (a success/next-step note, not a
+   warning), with the exact phrase to say to Claude highlighted. */
+.banner.duke-next {
+  background: #dcefdc;
+  color: #245c2b;
+  line-height: 1.5;
+}
+.duke-say {
+  background: #fff;
+  border: 1px solid #b6d9b8;
+  border-radius: 6px;
+  padding: 1px 6px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 /* settings row: utility / OH-UG / engineer */
 .settings {
   display: flex;
