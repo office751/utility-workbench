@@ -101,10 +101,11 @@ function ProjectList({ projects, onSelect, onAdd, onBatchApply, onStatusReport, 
     }
   })
 
-  const visible = rows.filter(({ p, allDone, anyFire }) => {
-    // Search across the strings you'd actually have in hand (8 fields).
+  const visible = rows.filter(({ p, ps, allDone, anyFire }) => {
+    // Search across the strings you'd actually have in hand (+ owner/investor).
     if (q) {
-      const hay = [p.address, p.subdivision, p.model, p.permit, p.parcel, p.workOrder, p.city, p.zip]
+      const hay = [p.address, p.subdivision, p.model, p.permit, p.parcel, p.workOrder, p.city, p.zip,
+        ps.ownerName, ps.investorName]
         .join(' ')
         .toLowerCase()
       if (!hay.includes(q)) return false
@@ -163,12 +164,17 @@ function ProjectList({ projects, onSelect, onAdd, onBatchApply, onStatusReport, 
       </div>
 
       <div className="list">
-        {visible.map(({ p, cells, next }) => (
+        {visible.map(({ p, ps, cells, next }) => (
           <div key={p.id} className="item" onClick={() => onSelect(p.id)}>
             <div className="item-top">
               <span className="item-addr">{p.address}</span>
               {p.listStatus === 'CO' && <span className="status-pill co">C.O.</span>}
               {p.listStatus === 'Hold' && <span className="status-pill hold">HOLD</span>}
+              {ps.isInvestorProject && (
+                <span className="item-investor" title={`Investor project — ${ps.investorName || 'investor not named'}`}>
+                  👤 {ps.investorName || 'Investor'}
+                </span>
+              )}
             </div>
             <div className="item-sub">
               {p.model} · {p.subdivision} · {p.city} {p.zip}
