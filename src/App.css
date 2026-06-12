@@ -267,6 +267,20 @@ textarea {
   width: auto;
 }
 
+/* ---- People & access (admin) ---- */
+.people-list { display: flex; flex-direction: column; gap: 12px; margin: 12px 0; }
+.person { padding: 14px; }
+.person-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.person-name { font-weight: 700; font-size: 15px; }
+.person-role { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.person-role select { font: inherit; font-size: 14px; padding: 5px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+.person-desc { margin: 6px 0 0; font-size: 13px; }
+.person-projects { margin-top: 10px; }
+.person-proj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; margin-top: 6px; }
+.person-proj { display: flex; align-items: center; gap: 7px; font-size: 13px; padding: 6px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); cursor: pointer; }
+.person-proj.on { border-color: var(--accent); background: var(--panel); }
+.people-add { padding: 14px; margin-top: 6px; }
+
 /* ---- header Save button / status indicator ---- */
 .save-btn {
   font-weight: 600;

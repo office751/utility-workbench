@@ -37,9 +37,10 @@ import QuickAdd from './components/QuickAdd'
 import InvestorInbox from './components/InvestorInbox'
 import { publishInvestorSnapshots } from './lib/investorPublish'
 import { ROLES, type AppRole } from './data/roles'
+import PeopleView from './components/PeopleView'
 
-/** A top-level view. 'settings' is reached via the 🛠 header button, not a tab. */
-type View = 'today' | 'tasks' | 'projects' | 'models' | 'inspections' | 'settings'
+/** A top-level view. 'settings' (🛠) and 'people' (👥) are header buttons, not tabs. */
+type View = 'today' | 'tasks' | 'projects' | 'models' | 'inspections' | 'settings' | 'people'
 
 // The three top tabs. Pure config.
 const TABS: { key: View; label: string }[] = [
@@ -212,6 +213,19 @@ function App({ role = 'admin' }: { role?: AppRole }) {
                   ? '⚠ Retry save'
                   : '✓ Saved'}
           </button>
+          {/* 👥 People & access — admin only (manage logins, roles, projects) */}
+          {roleCfg.canManageUsers && (
+            <button
+              className={tab === 'people' ? 'act' : ''}
+              onClick={() => {
+                setTab('people')
+                setSelectedId(null)
+              }}
+              title="People & access"
+            >
+              👥
+            </button>
+          )}
           {/* 🛠 templates & settings — only roles allowed to manage settings */}
           {roleCfg.canManageSettings && (
             <button
@@ -281,6 +295,8 @@ function App({ role = 'admin' }: { role?: AppRole }) {
           onOpen={(id) => openProject(id, 'permit')}
         />
       )}
+
+      {tab === 'people' && roleCfg.canManageUsers && <PeopleView roster={projects} />}
 
       {tab === 'settings' && (
         <TemplatesView
