@@ -245,6 +245,31 @@ export function useProjects() {
   const stateRef = useRef(state)
   stateRef.current = state
 
+  // Save status, surfaced in the header so you can SEE that a save worked
+  // (and force one with the Save button). 'saved' = cloud has your latest;
+  // 'dirty' = a change is waiting for the debounced write; 'saving' = writing
+  // now; 'error' = the last write failed (click to retry). No backend → stays
+  // 'saved' (localStorage is synchronous and never fails for our purposes).
+  const [saveState, setSaveState] = useState<'saved' | 'dirty' | 'saving' | 'error'>('saved')
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  /** Write the latest state to the cloud now, updating the status indicator. */
+  async function doSave() {
+    if (!supabase || !cloudReady.current) return
+    setSaveState('saving')
+    const { error } = await supabase
+      .from('workbench')
+      .upsert({ id: 'main', data: { ...stateRef.current, __origin: clientId.current }, updated_at: new Date().toISOString() })
+    setSaveState(error ? 'error' : 'saved')
+    if (error) console.warn('[workbench] cloud save failed', error)
+  }
+
+  /** The header Save button: flush any pending debounced write immediately. */
+  function saveNow() {
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    void doSave()
+  }
+
   // 1) On first mount, reconcile with the cloud. If the cloud has data, it
   //    WINS (it's the shared source of truth across your devices). If it's
   //    empty, seed it from this browser. No cloud (no keys / offline) → we
@@ -300,20 +325,17 @@ export function useProjects() {
     if (!supabase || !cloudReady.current) return
     if (skipNextSave.current) {
       skipNextSave.current = false
+      setSaveState('saved') // we just applied the cloud's own data — already saved
       return
     }
-    const sb = supabase // capture the non-null client for the deferred callback
+    setSaveState('dirty') // a change is waiting to go up
     const timer = setTimeout(() => {
-      // Stamp the write with our tab id so its realtime echo is ignored (3).
-      sb
-        .from('workbench')
-        .upsert({ id: 'main', data: { ...state, __origin: clientId.current }, updated_at: new Date().toISOString() })
-        .then(({ error }) => {
-          if (error) console.warn('[workbench] cloud save failed', error)
-          else console.log('[workbench] cloud save ok', new Date().toISOString())
-        })
+      void doSave()
     }, 600)
+    saveTimer.current = timer
     return () => clearTimeout(timer)
+    // doSave reads the latest state via stateRef, so it's safe to omit here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state])
 
   // 3) Live-sync: when ANOTHER device writes, apply that change here in real
@@ -740,5 +762,7 @@ export function useProjects() {
     updateTask,
     removeTask,
     replaceState,
+    saveState,
+    saveNow,
   }
 }

@@ -267,6 +267,27 @@ textarea {
   width: auto;
 }
 
+/* ---- header Save button / status indicator ---- */
+.save-btn {
+  font-weight: 600;
+  border-radius: 8px;
+  transition: background 0.15s, color 0.15s;
+}
+.save-btn.save-saved {
+  color: #2e7d4f;
+}
+.save-btn.save-dirty {
+  background: var(--accent);
+  color: #fff;
+}
+.save-btn.save-saving {
+  color: var(--muted);
+}
+.save-btn.save-error {
+  background: #c0392b;
+  color: #fff;
+}
+
 /* ---- ownership badge under the project title ---- */
 .owner-line {
   margin: 2px 0 12px;

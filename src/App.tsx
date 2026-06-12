@@ -77,6 +77,8 @@ function App() {
     removeTask,
     setTemplate,
     replaceState,
+    saveState,
+    saveNow,
   } = useProjects()
 
   // Dark mode (persists per device — see hooks/useTheme.ts).
@@ -184,6 +186,28 @@ function App() {
               )}
             </button>
           ))}
+          {/* Save indicator + button — click any time to force a save; shows
+              ✓ Saved when the cloud has your latest. Auto-save still runs. */}
+          <button
+            className={'save-btn save-' + saveState}
+            onClick={saveNow}
+            disabled={saveState === 'saving'}
+            title={
+              saveState === 'error'
+                ? 'Last save failed — click to retry'
+                : saveState === 'dirty'
+                  ? 'Unsaved changes — click to save now'
+                  : 'All changes saved to the cloud'
+            }
+          >
+            {saveState === 'saving'
+              ? '⏳ Saving…'
+              : saveState === 'dirty'
+                ? '● Save now'
+                : saveState === 'error'
+                  ? '⚠ Retry save'
+                  : '✓ Saved'}
+          </button>
           {/* 🛠 templates & settings */}
           <button
             className={tab === 'settings' ? 'act' : ''}
