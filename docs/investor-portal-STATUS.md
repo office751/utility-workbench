@@ -14,6 +14,17 @@ Goal: scoped external investor logins. First pairing: GTA Holdings ↔
 - App code is feature-gated: until the migrations exist, all investor
   queries fail soft and the UI hides itself — safe to deploy ahead of schema.
 
+## ✅ STAGING REHEARSAL PASSED (June 12 2026, project rcchjqupvozyqkahhion)
+Ran 0000→0004 + grant + sample data via the SQL editor, then verified RLS
+by simulating each role's JWT (not a UI login):
+- Investor (adamdlstiles@gmail.com, granted #53):
+  · workbench blob → **0 rows** (cannot read the one-blob state) ✅
+  · shared_files → **only slab.jpg** (hidden invoice + #99's file invisible) ✅
+  · snapshots → **only #53** (#99's data invisible) ✅
+  · CAN comment on #53 ✅ · CANNOT comment on #99 → RLS rejects (42501) ✅
+- Owner (office@): is_owner()=true, reads blob + all 3 files + all 2 snaps ✅
+Conclusion: migrations are correct. Safe to run on production (skip 0000).
+
 ## Checkpoints
 - [x] 0. This status doc
 - [x] 1. `src/lib/investor.ts` — typed helpers for the new tables (role,
