@@ -10,10 +10,16 @@ export interface FilterState {
   hideCO: boolean // hide finished (Certificate of Occupancy) homes — ON by default
   needsActionOnly: boolean
   hideDone: boolean // hide homes where every stream is done
+  investorOnly: boolean // show only houses flagged as an investor's project
 }
 
 /** Default: finished (C.O.) homes hidden so active work isn't cluttered. */
-export const NO_FILTERS: FilterState = { hideCO: true, needsActionOnly: false, hideDone: false }
+export const NO_FILTERS: FilterState = {
+  hideCO: true,
+  needsActionOnly: false,
+  hideDone: false,
+  investorOnly: false,
+}
 
 /** How many *extra* filters are active (shown on the ▾ button). hideCO is the
  *  default, so toggling it OFF counts as an active choice too. */
@@ -21,6 +27,7 @@ export function countActive(f: FilterState): number {
   let n = 0
   if (f.needsActionOnly) n++
   if (f.hideDone) n++
+  if (f.investorOnly) n++
   if (!f.hideCO) n++ // showing C.O. is a deliberate non-default choice
   return n
 }
@@ -49,6 +56,14 @@ function Filters({ filters, onChange }: Props) {
       <label className="check">
         <input type="checkbox" checked={filters.hideDone} onChange={(e) => set({ hideDone: e.target.checked })} />
         Hide completed
+      </label>
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={filters.investorOnly}
+          onChange={(e) => set({ investorOnly: e.target.checked })}
+        />
+        👤 Investor projects only
       </label>
       {countActive(filters) > 0 && (
         <button className="mini" onClick={() => onChange(NO_FILTERS)}>

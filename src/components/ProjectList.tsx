@@ -113,6 +113,7 @@ function ProjectList({ projects, onSelect, onAdd, onBatchApply, onStatusReport, 
     if (filters.hideCO && p.listStatus === 'CO') return false
     if (filters.needsActionOnly && !anyFire) return false
     if (filters.hideDone && allDone) return false
+    if (filters.investorOnly && !ps.isInvestorProject) return false
     return true
   })
 
