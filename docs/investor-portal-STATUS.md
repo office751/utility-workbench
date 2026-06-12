@@ -38,7 +38,19 @@ Goal: scoped external investor logins. First pairing: GTA Holdings ↔
 - `src/lib/investorPublish.ts` + App.tsx debounce — snapshot projection
 - `src/components/InvestorInbox.tsx` — unread comments atop 🏠 Today
 
-## Still needed from Adam
-- Staging choice (local Docker vs second Supabase project — recommended)
-- Confirm deleting test@ironshield.test
-- GTA investor email address
+## Checkpoint 6 — decisions made (June 11 2026)
+- Staging = a SECOND Supabase project (created: ref `rcchjqupvozyqkahhion`,
+  name `workbench-staging-temp`, micro/us-east-1; DELETE when done).
+- `test@ironshield.test` → DELETE (not carried through the lockdown). 0001
+  now seeds only office@ironshieldconstruction.com as owner.
+- 0002 reconciled to PRODUCTION policy names (read-only check June 11):
+  workbench policy `authed_all`; storage `pf read/insert/update/delete`.
+- Test investor login (GTA stand-in) = **adamdlstiles@gmail.com**, granted
+  project #53. Real GTA email comes after staging→prod is proven.
+- Run method: Supabase SQL Editor in Adam's signed-in Chrome (no scripted
+  token reuse).
+
+## Run order (do on STAGING first, then production)
+1. 0001_roles_and_access.sql   2. 0002_tighten_existing_rls.sql
+3. 0003_investor_content.sql   4. 0004_investor_storage.sql
+(0005 seed is a template — create the auth user + grant #53 by hand.)
