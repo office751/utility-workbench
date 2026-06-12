@@ -10,7 +10,7 @@
  * Future workflows (the load form, follow-up emails, …) register themselves in
  * data/templates.ts and appear here automatically.
  */
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Project, ProjectState, TemplateOverride } from '../types'
 import { templateSpecs, type TemplateSpec } from '../data/templates'
 import { effectiveTemplate, renderTemplate } from '../lib/templates'
@@ -84,6 +84,39 @@ function TemplateCard({
   const customized = !!override && (override.subject !== undefined || override.body !== undefined)
   const vars = previewVars(spec, sample, getPS)
 
+  // Buffer the text fields in LOCAL state so each keystroke is instant and
+  // never round-trips through the whole-app state (which made typing laggy and
+  // the caret jump). We commit to the real (cloud-synced) store on a short
+  // debounce after you stop typing, and immediately when you click away.
+  const [subject, setSubject] = useState(eff.subject)
+  const [body, setBody] = useState(eff.body)
+  const commitTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  // If the underlying template changes from OUTSIDE this card (a remote sync,
+  // or the Reset button), pull those values back into the local buffers — but
+  // not while we have a commit pending (that'd fight your typing).
+  useEffect(() => {
+    if (commitTimer.current) return
+    setSubject(eff.subject)
+    setBody(eff.body)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eff.subject, eff.body])
+
+  function schedule(patch: Partial<TemplateOverride>) {
+    if (commitTimer.current) clearTimeout(commitTimer.current)
+    commitTimer.current = setTimeout(() => {
+      commitTimer.current = undefined
+      setTemplate(spec.id, patch)
+    }, 400)
+  }
+  function commitNow(patch: Partial<TemplateOverride>) {
+    if (commitTimer.current) {
+      clearTimeout(commitTimer.current)
+      commitTimer.current = undefined
+    }
+    setTemplate(spec.id, patch)
+  }
+
   return (
     <div className={'tpl-card' + (open ? ' open' : '')}>
       <button className="tpl-head" onClick={() => setOpen((o) => !o)}>
@@ -101,8 +134,12 @@ function TemplateCard({
           <label className="tpl-label">
             Subject
             <input
-              value={eff.subject}
-              onChange={(e) => setTemplate(spec.id, { subject: e.target.value })}
+              value={subject}
+              onChange={(e) => {
+                setSubject(e.target.value)
+                schedule({ subject: e.target.value })
+              }}
+              onBlur={() => commitNow({ subject })}
             />
           </label>
 
@@ -110,8 +147,12 @@ function TemplateCard({
             Body
             <textarea
               rows={9}
-              value={eff.body}
-              onChange={(e) => setTemplate(spec.id, { body: e.target.value })}
+              value={body}
+              onChange={(e) => {
+                setBody(e.target.value)
+                schedule({ body: e.target.value })
+              }}
+              onBlur={() => commitNow({ body })}
             />
           </label>
 
@@ -128,15 +169,23 @@ function TemplateCard({
             <div className="tpl-preview-h">
               Preview{sample ? ` — using ${sample.address}` : ''}
             </div>
-            <div className="tpl-preview-subject">{renderTemplate(eff.subject, vars)}</div>
-            <pre className="tpl-preview-body">{renderTemplate(eff.body, vars)}</pre>
+            <div className="tpl-preview-subject">{renderTemplate(subject, vars)}</div>
+            <pre className="tpl-preview-body">{renderTemplate(body, vars)}</pre>
           </div>
 
           {customized && (
             <button
               className="mini"
               onClick={() => {
-                if (confirm(`Reset "${spec.name}" to the default wording?`)) setTemplate(spec.id, null)
+                if (!confirm(`Reset "${spec.name}" to the default wording?`)) return
+                if (commitTimer.current) {
+                  clearTimeout(commitTimer.current)
+                  commitTimer.current = undefined
+                }
+                setTemplate(spec.id, null)
+                const def = effectiveTemplate(undefined, spec.id, spec)
+                setSubject(def.subject)
+                setBody(def.body)
               }}
             >
               ↺ Reset to default

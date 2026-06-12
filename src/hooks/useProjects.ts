@@ -232,7 +232,18 @@ export function useProjects() {
   // never waits on the network. These two effects layer the cloud on top.
   const cloudReady = useRef(false) // have we reconciled with the cloud yet?
   const skipNextSave = useRef(false) // don't echo a fresh cloud-load back up
-  const lastPushed = useRef<string | null>(null) // JSON we last sent up (to ignore our own realtime echo)
+  // A unique id for THIS browser tab. We stamp every cloud write with it so
+  // that when Supabase Realtime echoes our own write back, we recognize and
+  // ignore it. (We used to compare JSON strings — but Postgres `jsonb`
+  // REORDERS object keys on store, so the echo never string-matched what we
+  // sent. The app then mistook its own save for a remote edit and REPLACED
+  // state mid-typing: that was the caret-jump / lag / "didn't save" bug.)
+  const clientId = useRef<string>('')
+  if (!clientId.current) clientId.current = crypto.randomUUID()
+  // Always-current copy of state, for the flush-on-close handler (its effect
+  // runs once on mount, so it can't close over the latest `state` directly).
+  const stateRef = useRef(state)
+  stateRef.current = state
 
   // 1) On first mount, reconcile with the cloud. If the cloud has data, it
   //    WINS (it's the shared source of truth across your devices). If it's
@@ -255,7 +266,6 @@ export function useProjects() {
         if (error) throw error
         if (data?.data) {
           const cloudData = data.data as Partial<WorkbenchState>
-          lastPushed.current = JSON.stringify(cloudData)
           // Normally a cloud load shouldn't echo back as a write. EXCEPTION:
           // when migrate() is about to CHANGE the data (merging the C.O./Hold
           // homes, or moving inspection-result tasks into `inspections`), we
@@ -267,10 +277,9 @@ export function useProjects() {
           setState(migrate(cloudData))
         } else {
           // Cloud is empty → seed it with whatever this browser currently has.
-          lastPushed.current = JSON.stringify(state)
           await supabase
             .from('workbench')
-            .upsert({ id: 'main', data: state, updated_at: new Date().toISOString() })
+            .upsert({ id: 'main', data: { ...state, __origin: clientId.current }, updated_at: new Date().toISOString() })
         }
       } catch (e) {
         console.warn('[workbench] cloud load failed — running on local data', e)
@@ -294,12 +303,11 @@ export function useProjects() {
       return
     }
     const sb = supabase // capture the non-null client for the deferred callback
-    const payload = JSON.stringify(state)
     const timer = setTimeout(() => {
-      lastPushed.current = payload // remember what we sent, so its realtime echo is ignored
+      // Stamp the write with our tab id so its realtime echo is ignored (3).
       sb
         .from('workbench')
-        .upsert({ id: 'main', data: state, updated_at: new Date().toISOString() })
+        .upsert({ id: 'main', data: { ...state, __origin: clientId.current }, updated_at: new Date().toISOString() })
         .then(({ error }) => {
           if (error) console.warn('[workbench] cloud save failed', error)
           else console.log('[workbench] cloud save ok', new Date().toISOString())
@@ -308,8 +316,10 @@ export function useProjects() {
     return () => clearTimeout(timer)
   }, [state])
 
-  // 3) Live-sync: when ANOTHER device writes, apply that change here in real time
-  //    (Supabase Realtime). We ignore the echo of our own writes via lastPushed.
+  // 3) Live-sync: when ANOTHER device writes, apply that change here in real
+  //    time (Supabase Realtime). We ignore the echo of our OWN writes by the
+  //    `__origin` tag — robust to jsonb key-reordering and to several of our
+  //    own saves being in flight at once (a plain string compare was neither).
   useEffect(() => {
     if (!supabase) return
     const sb = supabase
@@ -319,11 +329,9 @@ export function useProjects() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'workbench', filter: 'id=eq.main' },
         (payload) => {
-          const next = (payload.new as { data?: WorkbenchState } | null)?.data
+          const next = (payload.new as { data?: WorkbenchState & { __origin?: string } } | null)?.data
           if (!next) return
-          const incoming = JSON.stringify(next)
-          if (incoming === lastPushed.current) return // our own write echoed back — ignore it
-          lastPushed.current = incoming
+          if (next.__origin === clientId.current) return // our own write echoed back — ignore it
           skipNextSave.current = true // remote change — apply it, don't bounce it back up
           setState(migrate(next as Partial<WorkbenchState>))
         },
@@ -331,6 +339,30 @@ export function useProjects() {
       .subscribe()
     return () => {
       sb.removeChannel(channel)
+    }
+  }, [])
+
+  // 4) Save-on-exit: the cloud save in (2) is debounced 600ms, so a change made
+  //    right before you switch tabs or close the window could be lost. Flush
+  //    the latest state immediately when the page is hidden or unloading, so
+  //    "I clicked away and it didn't save" can't happen.
+  useEffect(() => {
+    if (!supabase) return
+    const sb = supabase
+    const flush = () => {
+      if (!cloudReady.current) return
+      sb.from('workbench')
+        .upsert({ id: 'main', data: { ...stateRef.current, __origin: clientId.current }, updated_at: new Date().toISOString() })
+        .then(() => {}) // fire-and-forget; best effort on the way out
+    }
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('pagehide', flush)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('pagehide', flush)
     }
   }, [])
 
