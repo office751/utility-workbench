@@ -11,7 +11,7 @@
  * ProjectSettings.tsx — so the everyday view stays clean and the raw links
  * stay hidden until you open settings.
  */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { OrderItem, OrderStatus, Project, ProjectState, Stream, Task } from '../types'
 import { ELECTRIC_STEPS, PERMIT_STEPS, septicStepsFor, waterStepsFor } from '../data/lifecycles'
 import {
@@ -41,6 +41,7 @@ import { permitExpiryFor } from '../lib/permitExpiry'
 import { permitHandoffDraft, permitHandoffDraftWithLinks, type HandoffDraft } from '../lib/permitHandoff'
 import { DUKE_PORTAL_URL, dukeWebPayloadText, dukeWebPayloadTextWithDirections } from '../lib/dukeWebApply'
 import { getShareUrl } from '../lib/files'
+import { grantedProjectIds, shareFileToInvestor } from '../lib/investor'
 import { writeRichClipboard } from '../lib/richCopy'
 import { isMaterialsDone, ordersSummary } from '../lib/orders'
 import { GEORGES } from '../data/contacts'
@@ -49,6 +50,7 @@ import ContactLinks from './ContactLinks'
 import DocumentsBox from './DocumentsBox'
 import PermitReviewItems from './PermitReviewItems'
 import PermitNotifications from './PermitNotifications'
+import InvestorCuration from './InvestorCuration'
 import ProjectSettings from './ProjectSettings'
 import MaterialsBody from './MaterialsBody'
 
@@ -130,6 +132,13 @@ function Detail(props: Props) {
   // deep-linked stream (from Today/Tasks) or Overview.
   const [activeTab, setActiveTab] = useState<DetailTab>(props.initialStream ?? 'overview')
   const [showSettings, setShowSettings] = useState(false)
+  // Investor portal: does THIS project have an investor grant? (Empty set
+  // until the portal schema exists — the curation UI then never appears.)
+  const [granted, setGranted] = useState<Set<number>>(new Set())
+  const [shareBump, setShareBump] = useState(0) // refresh curation after a share
+  useEffect(() => {
+    grantedProjectIds().then(setGranted)
+  }, [])
 
   return (
     <section className="detail">
@@ -230,7 +239,19 @@ function Detail(props: Props) {
             docs={ps.docs ?? []}
             onAddFiles={(files) => props.addProjectFiles(p.id, files)}
             onRemove={(i) => props.removeProjectFile(p.id, i)}
+            onShareInvestor={
+              granted.has(p.id)
+                ? async (doc, caption) => {
+                    const row = await shareFileToInvestor(p.id, doc, caption)
+                    if (row) setShareBump((b) => b + 1)
+                    return !!row
+                  }
+                : undefined
+            }
           />
+
+          {/* What the investor sees + their questions (granted projects only). */}
+          {granted.has(p.id) && <InvestorCuration projectId={p.id} refreshKey={shareBump} />}
 
           {/* Danger zone — confirm() forces a deliberate yes before deleting. */}
           <button

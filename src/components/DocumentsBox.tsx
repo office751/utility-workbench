@@ -29,6 +29,9 @@ interface Props {
   docs: ProjectDoc[]
   onAddFiles: (files: File[]) => Promise<{ ok: number; failed: string[] }>
   onRemove: (index: number) => void
+  /** When set (projects with an investor grant), each file row gets a
+   *  🤝 Share button: caption prompt → copy to the investor bucket. */
+  onShareInvestor?: (doc: ProjectDoc, caption: string) => Promise<boolean>
 }
 
 /** "1.2 MB" / "640 KB" / "512 B" from a byte count. */
@@ -39,7 +42,7 @@ function humanSize(bytes?: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-function DocumentsBox({ docs, onAddFiles, onRemove }: Props) {
+function DocumentsBox({ docs, onAddFiles, onRemove, onShareInvestor }: Props) {
   const fileInput = useRef<HTMLInputElement>(null)
   const [dragOver, setDragOver] = useState(false)
   const [busy, setBusy] = useState(false) // uploading right now?
@@ -214,6 +217,20 @@ function DocumentsBox({ docs, onAddFiles, onRemove }: Props) {
                     <button className="doc-btn" onClick={() => open(d)} title="Open / download">
                       ⬇︎ Open
                     </button>
+                    {onShareInvestor && (
+                      <button
+                        className="doc-btn"
+                        title="Share this file with the project's investor (you'll caption it)"
+                        onClick={async () => {
+                          const caption = prompt('Caption the investor sees (e.g. "Slab poured"):', '')
+                          if (caption === null) return
+                          const ok = await onShareInvestor(d, caption)
+                          setError(ok ? null : 'Could not share — is the investor portal schema in place?')
+                        }}
+                      >
+                        🤝 Investor
+                      </button>
+                    )}
                   </>
                 ) : (
                   <span className="muted doc-legacy">name only (no file)</span>

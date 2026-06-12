@@ -21,7 +21,7 @@ Goal: scoped external investor logins. First pairing: GTA Holdings ↔
 - [x] 2. Root.tsx role gate: investor logins render InvestorView ONLY
 - [x] 3. InvestorView: Current Progress card + captioned gallery (visible
         photos via investor-files download) + comments (project + per-photo)
-- [ ] 4. Owner curation: per-file "👁 Share with investor" (caption → copy
+- [x] 4. Owner curation: per-file "👁 Share with investor" (caption → copy
         bytes to investor-files → shared_files row), only on granted projects
 - [ ] 5. Snapshot publisher (owner session upserts statuses for granted
         projects on save) + Today "💬 Investor comments" unread section
