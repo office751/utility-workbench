@@ -34,6 +34,8 @@ import TemplatesView from './components/TemplatesView'
 import ExportImport from './components/ExportImport'
 import AddProject from './components/AddProject'
 import QuickAdd from './components/QuickAdd'
+import InvestorInbox from './components/InvestorInbox'
+import { publishInvestorSnapshots } from './lib/investorPublish'
 
 /** A top-level view. 'settings' is reached via the 🛠 header button, not a tab. */
 type View = 'today' | 'tasks' | 'projects' | 'models' | 'inspections' | 'settings'
@@ -128,6 +130,15 @@ function App() {
     }
   }, [])
 
+  // Investor portal: after edits settle, refresh the status snapshots the
+  // investors' "Current Progress" cards read (they can't see the blob, so we
+  // project it for them). 3s debounce so checking five boxes = one publish.
+  // No-op until a project actually has an investor grant.
+  useEffect(() => {
+    const t = setTimeout(() => publishInvestorSnapshots(projects, getProjectState), 3000)
+    return () => clearTimeout(t)
+  }, [state]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // The whole command-center picture — computed ONCE per (state, day) change
   // and shared by the 🏠 tab badge and the Today view, so the number on the
   // badge can never disagree with the rows you see after clicking it ("one
@@ -203,13 +214,17 @@ function App() {
       </header>
 
       {tab === 'today' && (
-        <Today
+        <>
+          {/* Unread investor messages float to the top of the day. */}
+          <InvestorInbox roster={projects} />
+          <Today
           ac={ac}
           tasks={state.tasks}
           onOpen={openProject}
           onCompleteTask={(id) => updateTask(id, { done: true, doneAt: new Date().toISOString() })}
           onGoTasks={() => setTab('tasks')}
-        />
+          />
+        </>
       )}
 
       {tab === 'tasks' && (

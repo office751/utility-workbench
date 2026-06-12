@@ -2010,6 +2010,8 @@ a.map-btn {
 .inv-box { display: flex; gap: 6px; align-items: flex-end; margin-top: 4px; }
 .inv-box textarea { flex: 1; }
 .inv-comment.unread { border-color: var(--accent); }
+.inv-inbox { margin-bottom: 14px; }
+.inv-inbox .inv-comment { overflow: hidden; }
 
 /* ---------- 📋 Status report ---------- */
 .status-report {

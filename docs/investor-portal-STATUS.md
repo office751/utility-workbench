@@ -23,7 +23,7 @@ Goal: scoped external investor logins. First pairing: GTA Holdings ↔
         photos via investor-files download) + comments (project + per-photo)
 - [x] 4. Owner curation: per-file "👁 Share with investor" (caption → copy
         bytes to investor-files → shared_files row), only on granted projects
-- [ ] 5. Snapshot publisher (owner session upserts statuses for granted
+- [x] 5. Snapshot publisher (owner session upserts statuses for granted
         projects on save) + Today "💬 Investor comments" unread section
 - [ ] 6. Staging run of migrations (NEEDS Adam: staging choice + dashboard
         policy-name reconciliation for 0002 + GTA email) → then production
