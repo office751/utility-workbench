@@ -1469,6 +1469,13 @@ button.danger:hover {
 /* ---------- Tasks tab + Today's Focus ---------- */
 
 /* the capture bar */
+.task-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 4px 0 14px;
+}
+
 .task-add {
   background: var(--bg);
   border: 1px solid var(--border);

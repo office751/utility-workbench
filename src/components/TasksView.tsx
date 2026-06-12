@@ -68,6 +68,7 @@ function TasksView({ tasks, addTask, updateTask, removeTask }: Props) {
   const [waitingOn, setWaitingOn] = useState('')
   const [focus, setFocus] = useState(false)
   const [showDone, setShowDone] = useState(false)
+  const [showAdd, setShowAdd] = useState(false) // capture bar hidden until you click ＋
   const [showPaste, setShowPaste] = useState(false)
   const [pasteText, setPasteText] = useState('')
   const [pasteResult, setPasteResult] = useState('')
@@ -126,7 +127,18 @@ function TasksView({ tasks, addTask, updateTask, removeTask }: Props) {
         as ⭐ and they become your Today's Focus.
       </p>
 
-      {/* capture bar */}
+      {/* Two simple buttons keep this page clean; each reveals its panel. */}
+      <div className="task-actions">
+        <button className={'primary' + (showAdd ? ' on' : '')} onClick={() => setShowAdd((s) => !s)}>
+          ＋ Add a task
+        </button>
+        <button className="mini" onClick={() => setShowPaste((s) => !s)}>
+          📥 Paste from a text scan
+        </button>
+      </div>
+
+      {/* capture bar — hidden until "＋ Add a task" is clicked */}
+      {showAdd && (
       <div className="task-add">
         <input
           className="ta-text"
@@ -168,12 +180,10 @@ function TasksView({ tasks, addTask, updateTask, removeTask }: Props) {
           </button>
         </div>
       </div>
+      )}
 
-      {/* paste-import from the text-scan script */}
+      {/* paste-import from the text-scan script (toggled from the actions row) */}
       <div className="task-paste">
-        <button className="mini" onClick={() => setShowPaste((s) => !s)}>
-          {showPaste ? '▾' : '▸'} 📥 Paste from a text scan
-        </button>
         {showPaste && (
           <div className="tp-body">
             <p className="meta">
