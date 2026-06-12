@@ -61,6 +61,22 @@ Conclusion: migrations are correct. Safe to run on production (skip 0000).
 - Run method: Supabase SQL Editor in Adam's signed-in Chrome (no scripted
   token reuse).
 
+## ✅ PRODUCTION MIGRATED (June 12 2026, vldxennmrjnfhrvrlzuh)
+Ran 0001→0004 via the SQL editor (skipped 0000 — prod already had the
+table+bucket). Verified: authed_all dropped, 2 owner policies on workbench,
+3 investor tables, investor-files bucket present, office@ seeded as owner.
+The blob is now owner-only; the deployed frontend activates investor
+features once an investor login + grant exists.
+REMAINING (needs Adam, no password typing by Claude):
+  1. Create auth user adamdlstiles@gmail.com (Auth → Add user; Adam sets pw).
+  2. Claude runs the grant (investor + project #53) — by email, no UUID needed.
+  3. As office@: share a photo on #53 (🤝 button) + reload to publish snapshot.
+  4. Log in as adamdlstiles@gmail.com → investor view. Iterate/polish.
+  5. test@ironshield.test is defanged by 0002 (no owner row, no grant);
+     delete it in the dashboard at leisure — not a security blocker.
+Real GTA login deferred until after Adam polishes (he may have several
+investors later; each = dashboard user + the 2-line grant).
+
 ## STAGING run order (faithful rehearsal on the blank second project)
 0. **0000_staging_prep.sql** — STAGING ONLY. Recreates prod's starting
    shape (workbench table + `authed_all` policy + project-files bucket), so
