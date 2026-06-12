@@ -28,6 +28,16 @@ Goal: scoped external investor logins. First pairing: GTA Holdings ↔
 - [ ] 6. Staging run of migrations (NEEDS Adam: staging choice + dashboard
         policy-name reconciliation for 0002 + GTA email) → then production
 
+## Where the frontend pieces live (all deployed, all dormant pre-schema)
+- `src/lib/investor.ts` — every query/mutation for the new tables
+- `src/Root.tsx` — role gate (investor → InvestorView, else full app)
+- `src/components/InvestorView.tsx` — the investor's whole world
+- `src/components/InvestorCuration.tsx` — owner panel on a granted
+  project's Overview (visibility/captions + conversation + replies)
+- `src/components/DocumentsBox.tsx` — 🤝 Investor share button (granted only)
+- `src/lib/investorPublish.ts` + App.tsx debounce — snapshot projection
+- `src/components/InvestorInbox.tsx` — unread comments atop 🏠 Today
+
 ## Still needed from Adam
 - Staging choice (local Docker vs second Supabase project — recommended)
 - Confirm deleting test@ironshield.test
