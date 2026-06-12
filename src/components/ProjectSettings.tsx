@@ -34,6 +34,8 @@ import {
   waterSourceOf,
 } from '../lib/nextAction'
 import { permitExpiresOf } from '../lib/permitExpiry'
+import { useEffect, useState } from 'react'
+import { investorNames } from '../lib/investor'
 
 interface Props {
   project: Project
@@ -45,6 +47,15 @@ interface Props {
 
 function ProjectSettings({ project: p, ps, setField, onClose }: Props) {
   const septicIsSeptic = septicSourceOf(ps) === 'Septic'
+  const isInvestor = ps.isInvestorProject ?? false
+
+  // Names of existing portal investors → the "pick an investor" datalist.
+  // (Owners can read these; empty before the portal schema exists. Adam can
+  //  always just TYPE a name that isn't on the list.)
+  const [knownInvestors, setKnownInvestors] = useState<string[]>([])
+  useEffect(() => {
+    investorNames().then(setKnownInvestors)
+  }, [])
 
   return (
     <div className="proj-settings card">
@@ -54,6 +65,43 @@ function ProjectSettings({ project: p, ps, setField, onClose }: Props) {
         <button className="mini" onClick={onClose}>
           ✓ Done
         </button>
+      </div>
+
+      {/* ---- Ownership ---- */}
+      <h4>👤 Ownership</h4>
+      <div className="settings">
+        <label className="grow">
+          Owner
+          <input
+            value={ps.ownerName ?? ''}
+            onChange={(e) => setField(p.id, 'ownerName', e.target.value)}
+            placeholder="Iron Shield Construction (our spec build)"
+          />
+        </label>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={isInvestor}
+            onChange={(e) => setField(p.id, 'isInvestorProject', e.target.checked)}
+          />
+          This is an investor's project
+        </label>
+        {isInvestor && (
+          <label className="grow">
+            Investor name
+            <input
+              list="investor-name-options"
+              value={ps.investorName ?? ''}
+              onChange={(e) => setField(p.id, 'investorName', e.target.value)}
+              placeholder="pick an investor or type a new name"
+            />
+            <datalist id="investor-name-options">
+              {knownInvestors.map((n) => (
+                <option key={n} value={n} />
+              ))}
+            </datalist>
+          </label>
+        )}
       </div>
 
       {/* ---- Electric ---- */}

@@ -243,6 +243,37 @@ textarea {
   width: 100%;
 }
 
+/* a yes/no settings field: checkbox + label side by side (not stacked) */
+.settings label.check {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.settings label.check input {
+  width: auto;
+}
+
+/* ---- ownership badge under the project title ---- */
+.owner-line {
+  margin: 2px 0 12px;
+}
+.owner-chip {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.owner-chip.investor {
+  background: #e8e2f6;
+  border-color: #c9bce8;
+  color: #5b3fa0;
+}
+
 /* ---------- project files box (upload + share) ---------- */
 .docs {
   margin: 4px 0 18px;

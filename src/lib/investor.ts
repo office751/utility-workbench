@@ -88,6 +88,17 @@ export async function grantedProjectIds(): Promise<Set<number>> {
   return new Set(rows.map((r) => r.project_id))
 }
 
+/** The display names of everyone who has an investor login (for the
+ *  "pick an investor" datalist in Project settings). Owners can read all
+ *  app_users rows via RLS; fails soft to [] before the schema exists. */
+export async function investorNames(): Promise<string[]> {
+  const rows = await soft<{ display_name: string }[]>([], () =>
+    supabase!.from('app_users').select('display_name').eq('role', 'investor'),
+  )
+  // de-dupe + drop blanks, keep a stable alphabetical order
+  return [...new Set(rows.map((r) => r.display_name).filter(Boolean))].sort()
+}
+
 /** Curated files for one project. RLS scopes: owners see all rows; investors
  *  see only investor_visible rows of granted projects. */
 export async function sharedFilesFor(projectId: number): Promise<SharedFile[]> {

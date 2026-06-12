@@ -181,6 +181,16 @@ function Detail(props: Props) {
         {p.workOrder && <> · WO# {p.workOrder}</>}
       </p>
 
+      {/* Who owns this house — at a glance. Investor projects get a chip with
+          the investor's name; everything else reads as our own spec build. */}
+      <p className="owner-line">
+        {ps.isInvestorProject ? (
+          <span className="owner-chip investor">👤 Investor: {ps.investorName || 'name not set'}</span>
+        ) : (
+          <span className="owner-chip">🏢 {ps.ownerName || 'Iron Shield Construction'} · spec build</span>
+        )}
+      </p>
+
       {/* The workspace tab bar: Overview + the five streams (each shows its status). */}
       <div className="stream-strip">
         <button

@@ -149,6 +149,16 @@ export interface ProjectState {
   closingDate?: string // YYYY-MM-DD; drives the shut-off reminder
   transferred?: boolean // electric account transferred after sale
 
+  // --- ownership (who this house belongs to) ---
+  /** Who owns the home. Blank = our own spec build (implied Iron Shield). */
+  ownerName?: string
+  /** True when this is an investor's project (not our own spec home). */
+  isInvestorProject?: boolean
+  /** The investor's name/company — pick an existing investor or type a new
+   *  one. Just a label here; the actual portal LOGIN + access is the grant in
+   *  investor_project_access (see lib/investor.ts). */
+  investorName?: string
+
   // --- permit tab ---
   permitResponsible?: PermitResponsible // who's handling it (Us / Owner / GC)
   permitIssuedDate?: string // YYYY-MM-DD the permit was issued
