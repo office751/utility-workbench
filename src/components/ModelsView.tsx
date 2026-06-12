@@ -13,15 +13,14 @@
  * pointers + editable facts live in WorkbenchState.models (cloud-synced).
  */
 import { useState } from 'react'
-import type { ModelState, Project, WorkbenchState } from '../types'
-import { MODELS_DEFAULT, modelKey } from '../data/models'
+import type { ModelState, WorkbenchState } from '../types'
+import { MODELS_DEFAULT } from '../data/models'
 import { missingTakeoffs } from '../lib/takeoffs'
 import { TAKEOFF_TYPES } from '../data/takeoffs'
 import { ORDER_CATEGORIES } from '../data/orders'
 import DocumentsBox from './DocumentsBox'
 
 interface Props {
-  roster: Project[]
   models: WorkbenchState['models']
   modelTakeoffs?: WorkbenchState['modelTakeoffs']
   modelOrderLists?: WorkbenchState['modelOrderLists']
@@ -33,7 +32,6 @@ interface Props {
 }
 
 function ModelsView({
-  roster,
   models,
   modelTakeoffs,
   modelOrderLists,
@@ -50,10 +48,6 @@ function ModelsView({
   // state (so a future model added by data edit shows up automatically).
   const keys = [...new Set([...Object.keys(MODELS_DEFAULT), ...Object.keys(models ?? {})])]
 
-  /** Active (not C.O./Hold) projects building this model. */
-  const projectsUsing = (mk: string) =>
-    roster.filter((p) => modelKey(p.model) === mk && p.listStatus !== 'CO' && p.listStatus !== 'Hold')
-
   if (!selected) {
     return (
       <section className="detail">
@@ -64,7 +58,6 @@ function ModelsView({
             const spec = MODELS_DEFAULT[mk]
             const m = models?.[mk]
             const docs = m?.docs ?? []
-            const using = projectsUsing(mk)
             return (
               <button key={mk} className="model-card" onClick={() => setSelected(mk)}>
                 <span className="model-name">{mk}</span>
@@ -76,7 +69,6 @@ function ModelsView({
                 <span className="model-meta">
                   {m?.masterFiled && <span className="badge done">MASTER-FILED</span>}
                   <span className="badge">{docs.length} file{docs.length === 1 ? '' : 's'}</span>
-                  {using.length > 0 && <span className="badge u-DUKE">{using.length} active</span>}
                 </span>
               </button>
             )
@@ -89,7 +81,6 @@ function ModelsView({
   const mk = selected
   const spec = MODELS_DEFAULT[mk]
   const m = models?.[mk] ?? {}
-  const using = projectsUsing(mk)
   const missing = missingTakeoffs(modelTakeoffs, mk)
   const got = modelTakeoffs?.[mk] ?? {}
   const lists = modelOrderLists?.[mk] ?? {}
@@ -110,7 +101,6 @@ function ModelsView({
         {spec?.sqft ? `${spec.sqft} sqft` : 'sqft unknown'}
         {spec?.tons ? ` · ${spec.tons} ton A/C` : ''}
         {spec?.beds ? ` · ${spec.beds} bed` : ''}
-        {using.length > 0 && <> · building now: {using.map((p) => p.address).join(', ')}</>}
       </p>
 
       {/* Takeoffs still missing = can't order materials for this model yet.

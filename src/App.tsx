@@ -257,7 +257,6 @@ function App() {
 
       {tab === 'models' && (
         <ModelsView
-          roster={projects}
           models={state.models}
           modelTakeoffs={state.modelTakeoffs}
           modelOrderLists={state.modelOrderLists}
