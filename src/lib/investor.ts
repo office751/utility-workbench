@@ -213,3 +213,27 @@ export async function investorFileUrl(path: string): Promise<string | null> {
     return null
   }
 }
+
+/**
+ * SIGNED URLs for many investor photos at once (one API call, no byte
+ * download). Used by the gallery so the browser can lazy-load each image only
+ * when it scrolls into view — instead of pulling every full-size file up front
+ * (slow + heavy on phone data). RLS still gates which paths can be signed.
+ * Returns a path→url map; missing/again-failed paths are simply absent.
+ */
+export async function investorFileUrls(paths: string[]): Promise<Record<string, string>> {
+  if (!supabase || paths.length === 0) return {}
+  try {
+    const { data, error } = await supabase.storage
+      .from('investor-files')
+      .createSignedUrls(paths, 60 * 60) // 1 hour is plenty for a viewing session
+    if (error || !data) return {}
+    const map: Record<string, string> = {}
+    for (const row of data) {
+      if (row.signedUrl && row.path) map[row.path] = row.signedUrl
+    }
+    return map
+  } catch {
+    return {}
+  }
+}
