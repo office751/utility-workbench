@@ -9,18 +9,14 @@
 -- inspection, note — via one REST call with their own JWT. Frontend
 -- filtering cannot prevent that; only these policies can.
 --
--- ⚠️ The existing policies were created by hand in the Supabase dashboard
--- and their exact names are NOT in this repo. Before running, open
--- Dashboard → Authentication → Policies (tables `workbench`,
--- `storage.objects`) and replace the names below with the real ones.
+-- Policy names below were reconciled against PRODUCTION pg_policies on
+-- June 11 2026 (read-only query): public.workbench has `authed_all` (ALL,
+-- authenticated); storage.objects has `pf read/insert/update/delete`.
 -- Verify after running:  select * from pg_policies
 --                         where tablename in ('workbench','objects');
 
 -- ---- the workbench blob: owners only ----
-drop policy if exists "authenticated can read" on public.workbench;
-drop policy if exists "authenticated can write" on public.workbench;
-drop policy if exists "Enable read access for authenticated users" on public.workbench;
-drop policy if exists "Enable all for authenticated users" on public.workbench;
+drop policy if exists "authed_all" on public.workbench;
 
 create policy "owners read workbench" on public.workbench
   for select using (public.is_owner());
@@ -30,8 +26,10 @@ create policy "owners write workbench" on public.workbench
 -- ---- the owner file locker (project-files bucket): owners only ----
 -- (Investors get their OWN bucket in 0004 — they never touch this one.
 --  The scanner/scripts use the service key, which bypasses RLS, unaffected.)
-drop policy if exists "authenticated can read project-files" on storage.objects;
-drop policy if exists "authenticated can write project-files" on storage.objects;
+drop policy if exists "pf read" on storage.objects;
+drop policy if exists "pf insert" on storage.objects;
+drop policy if exists "pf update" on storage.objects;
+drop policy if exists "pf delete" on storage.objects;
 
 create policy "owners read project-files" on storage.objects
   for select using (bucket_id = 'project-files' and public.is_owner());

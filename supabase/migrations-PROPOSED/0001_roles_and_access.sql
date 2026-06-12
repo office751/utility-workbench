@@ -52,9 +52,9 @@ create policy "owners manage access map" on public.investor_project_access
 create policy "investors read own grants" on public.investor_project_access
   for select using (user_id = auth.uid());
 
--- Seed the two existing logins as owners. (Consider DELETING the
--- test@ironshield.test account instead — flagged in the report.)
+-- Seed the real login as owner. (Adam decided June 11 2026: the old
+-- test@ironshield.test account gets DELETED, not seeded.)
 insert into public.app_users (user_id, role, display_name)
 select id, 'owner', 'Iron Shield' from auth.users
- where email in ('office@ironshieldconstruction.com', 'test@ironshield.test')
+ where email = 'office@ironshieldconstruction.com'
 on conflict (user_id) do nothing;
