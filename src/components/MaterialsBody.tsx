@@ -8,7 +8,7 @@
  */
 import { useState } from 'react'
 import type { OrderItem, OrderStatus, Project, ProjectState, TemplateOverride, WorkbenchState } from '../types'
-import { ORDER_CATEGORIES, ORDER_STATUSES } from '../data/orders'
+import { MATERIAL_CATEGORIES, ORDER_STATUSES, SITE_SERVICES } from '../data/orders'
 import { VENDORS, orderMailto, vendorMailto } from '../data/vendors'
 import { modelKey } from '../data/models'
 import { ordersOf } from '../lib/orders'
@@ -22,14 +22,21 @@ interface Props {
   /** Per-model takeoff status + order lists (⚙️ Settings → Takeoffs). */
   modelTakeoffs?: WorkbenchState['modelTakeoffs']
   modelOrderLists?: WorkbenchState['modelOrderLists']
-  addOrder: (id: number, order: { category: string; status: OrderStatus }) => void
+  addOrder: (id: number, order: { category: string; status: OrderStatus; orderedOn?: string }) => void
   updateOrder: (id: number, orderId: string, patch: Partial<OrderItem>) => void
   removeOrder: (id: number, orderId: string) => void
 }
 
+/** Today as YYYY-MM-DD, for the order-date field's default. */
+function today(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLists, addOrder, updateOrder, removeOrder }: Props) {
   const orders = ordersOf(ps)
-  const [newCategory, setNewCategory] = useState(ORDER_CATEGORIES[0])
+  const [newCategory, setNewCategory] = useState(MATERIAL_CATEGORIES[0])
+  const [newDate, setNewDate] = useState(today())
   const missing = missingTakeoffs(modelTakeoffs, p.model)
   const lists = modelOrderLists?.[modelKey(p.model)]
 
@@ -100,6 +107,14 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
               </select>
 
               <input
+                className="order-date"
+                type="date"
+                value={o.orderedOn ?? ''}
+                onChange={(e) => updateOrder(p.id, o.id, { orderedOn: e.target.value || undefined })}
+                title="Date ordered"
+              />
+
+              <input
                 className="order-vendor"
                 value={o.vendor ?? ''}
                 onChange={(e) => updateOrder(p.id, o.id, { vendor: e.target.value })}
@@ -118,14 +133,29 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
         </div>
       )}
 
-      {/* Add an order manually (pick a category → it starts as "To order"). */}
+      {/* Add an order manually: pick a material OR a Florida Express site
+          service (deliver / swap / remove), set the date you ordered it. */}
       <div className="order-add">
         <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)}>
-          {ORDER_CATEGORIES.map((c) => (
-            <option key={c}>{c}</option>
-          ))}
+          <optgroup label="Materials">
+            {MATERIAL_CATEGORIES.map((c) => (
+              <option key={c}>{c}</option>
+            ))}
+          </optgroup>
+          <optgroup label="Site services (Florida Express)">
+            {SITE_SERVICES.map((c) => (
+              <option key={c}>{c}</option>
+            ))}
+          </optgroup>
         </select>
-        <button className="mini" onClick={() => addOrder(p.id, { category: newCategory, status: 'toOrder' })}>
+        <label className="order-add-date">
+          Ordered
+          <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} />
+        </label>
+        <button
+          className="mini"
+          onClick={() => addOrder(p.id, { category: newCategory, status: 'toOrder', orderedOn: newDate || undefined })}
+        >
           ＋ Add order
         </button>
       </div>

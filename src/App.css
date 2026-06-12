@@ -1091,7 +1091,9 @@ button.primary:disabled {
 }
 .order-status,
 .order-vendor,
-.order-add select {
+.order-date,
+.order-add select,
+.order-add-date input {
   font: inherit;
   font-size: 13px;
   color: var(--text);
@@ -1100,11 +1102,24 @@ button.primary:disabled {
   border-radius: 6px;
   padding: 5px 8px;
 }
+.order-date {
+  max-width: 140px;
+}
 .order-add {
   display: flex;
   gap: 8px;
   align-items: center;
   margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+/* the "Ordered <date>" labelled field in the add-order row */
+.order-add-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
 }
 
 /* status-tinted dropdowns */

@@ -163,8 +163,8 @@ export function templateSpecs(): TemplateSpec[] {
       name: v.name,
       description: `Drafted by the "${v.icon} ${v.name}" button on a project's Materials tab (${v.supplies}).`,
       vars: VENDOR_VARS,
-      subject: DEFAULT_VENDOR_SUBJECT,
-      body: DEFAULT_VENDOR_BODY,
+      subject: v.subjectDefault ?? DEFAULT_VENDOR_SUBJECT,
+      body: v.bodyDefault ?? DEFAULT_VENDOR_BODY,
     })),
   ]
 }

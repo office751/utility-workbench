@@ -12,6 +12,7 @@
  */
 import type { Project, ProjectState, TemplateOverride } from '../types'
 import { DEFAULT_VENDOR_BODY, DEFAULT_VENDOR_SUBJECT, effectiveTemplate, renderTemplate } from '../lib/templates'
+import { SITE_SERVICES } from './orders'
 
 export interface Vendor {
   id: string
@@ -29,6 +30,11 @@ export interface Vendor {
    *  project's matching "to order" items in the draft AND to pick the right
    *  vendor for an order row's one-click ✉️ Order button. */
   categories?: string[]
+  /** Optional vendor-specific default wording (overrides the generic vendor
+   *  template). Lets e.g. Florida Express say "schedule" instead of "deliver"
+   *  so removals/swaps read right. Still user-editable on the Templates page. */
+  subjectDefault?: string
+  bodyDefault?: string
 }
 
 export const VENDORS: Vendor[] = [
@@ -75,8 +81,25 @@ export const VENDORS: Vendor[] = [
     name: 'Florida Express',
     email: 'csr@floridaexpress.us', // from Adam's sent service requests
     icon: '🗑️',
-    supplies: 'Dumpster & porta-potty delivery / swap-outs',
-    categories: ['Dumpster', 'Porta-potty'],
+    supplies: 'Dumpster & porta-potty — deliver / swap / remove',
+    // Bare Dumpster/Porta-potty (from text-scans) PLUS the explicit
+    // deliver/swap/remove actions you pick when adding an order.
+    categories: ['Dumpster', 'Porta-potty', ...SITE_SERVICES],
+    // Action-neutral wording: the action lives in each {{items}} line
+    // ("Deliver dumpster" / "Remove porta-potty"), so this reads right for
+    // deliveries, swaps, AND removals — unlike the generic "place an order".
+    subjectDefault: 'Florida Express — {{address}}',
+    bodyDefault: [
+      'Hi {{contact}},',
+      '',
+      'Please schedule the following at our job site:',
+      'Site: {{site}}',
+      'Parcel: {{parcel}}',
+      '',
+      '{{items}}',
+      '',
+      'Please confirm the date. Thank you.',
+    ].join('\n'),
   },
 ]
 
@@ -137,8 +160,8 @@ export function vendorMailto(
   modelLists?: Record<string, string>,
 ): string {
   const t = effectiveTemplate(overrides, `vendor:${v.id}`, {
-    subject: DEFAULT_VENDOR_SUBJECT,
-    body: DEFAULT_VENDOR_BODY,
+    subject: v.subjectDefault ?? DEFAULT_VENDOR_SUBJECT,
+    body: v.bodyDefault ?? DEFAULT_VENDOR_BODY,
   })
   const vars = vendorTemplateVars(v, p, ps, modelLists)
   return vendorDraftUrl(v, renderTemplate(t.subject, vars), renderTemplate(t.body, vars))
@@ -163,8 +186,8 @@ export function orderMailto(
   const v = VENDORS.find((x) => x.categories?.includes(category))
   if (!v) return null
   const t = effectiveTemplate(overrides, `vendor:${v.id}`, {
-    subject: DEFAULT_VENDOR_SUBJECT,
-    body: DEFAULT_VENDOR_BODY,
+    subject: v.subjectDefault ?? DEFAULT_VENDOR_SUBJECT,
+    body: v.bodyDefault ?? DEFAULT_VENDOR_BODY,
   })
   const vars = vendorTemplateVars(v, p, ps, modelLists, category)
   // Material-specific subject (the template's subject serves the all-items

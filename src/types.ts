@@ -27,6 +27,7 @@ export interface OrderItem {
   category: string // 'Trusses', 'Slab package', … (from data/orders.ts, but free-form ok)
   status: OrderStatus
   vendor?: string
+  orderedOn?: string // YYYY-MM-DD — the date YOU placed the order
   neededBy?: string // YYYY-MM-DD — optional; powers lead-time hints later
   note?: string
   createdAt: string // display date it was captured

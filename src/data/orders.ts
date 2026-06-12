@@ -26,6 +26,27 @@ export const ORDER_CATEGORIES: string[] = [
   'Porta-potty',
 ]
 
+/** Just the materials — the manual "add an order" picker lists these in one
+ *  group and the site-service actions below in another. (ORDER_CATEGORIES
+ *  keeps the bare Dumpster/Porta-potty for the text-scan quick-add + model
+ *  order lists.) */
+export const MATERIAL_CATEGORIES: string[] = ORDER_CATEGORIES.filter(
+  (c) => c !== 'Dumpster' && c !== 'Porta-potty',
+)
+
+/** Florida Express site-service actions — what you can actually request:
+ *  deliver, swap, or remove a dumpster and/or porta-potty. The action IS the
+ *  order's category, so the order email reads correctly for each one. */
+export const SITE_SERVICES: string[] = [
+  'Deliver dumpster',
+  'Deliver porta-potty',
+  'Deliver dumpster + porta-potty',
+  'Swap out dumpster',
+  'Remove dumpster',
+  'Remove porta-potty',
+  'Remove dumpster + porta-potty',
+]
+
 /** The order lifecycle (in order). */
 export const ORDER_STATUSES: { key: OrderStatus; label: string }[] = [
   { key: 'toOrder', label: 'To order' },
