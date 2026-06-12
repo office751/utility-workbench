@@ -50,7 +50,23 @@ Goal: scoped external investor logins. First pairing: GTA Holdings ↔
 - Run method: Supabase SQL Editor in Adam's signed-in Chrome (no scripted
   token reuse).
 
-## Run order (do on STAGING first, then production)
-1. 0001_roles_and_access.sql   2. 0002_tighten_existing_rls.sql
-3. 0003_investor_content.sql   4. 0004_investor_storage.sql
-(0005 seed is a template — create the auth user + grant #53 by hand.)
+## STAGING run order (faithful rehearsal on the blank second project)
+0. **0000_staging_prep.sql** — STAGING ONLY. Recreates prod's starting
+   shape (workbench table + `authed_all` policy + project-files bucket), so
+   0002's DROP/CREATE has something real to act on. Skipping this makes
+   0002 fail (the table/bucket don't exist on a fresh project).
+1. Dashboard → Auth → create two users on STAGING:
+   office@ironshieldconstruction.com (owner) + adamdlstiles@gmail.com (investor).
+2. 0001_roles_and_access.sql  (seeds office@ as owner — must exist first)
+3. 0002_tighten_existing_rls.sql
+4. 0003_investor_content.sql
+5. 0004_investor_storage.sql
+6. Staging 0005: grant adamdlstiles@gmail.com → investor + project #53.
+7. TEST: sign in as each; investor sees only #53's curated data, owner
+   still sees the blob; investor REST call for workbench returns nothing.
+
+## PRODUCTION run order (after staging passes)
+- SKIP 0000 (prod already has the table/bucket).
+- Delete test@ironshield.test (Auth → Users).
+- 0001 → 0002 → 0003 → 0004, then create the real GTA login + grant #53.
+- 0002 is the lock; it MUST precede any investor account existing.
