@@ -60,13 +60,14 @@ async function soft<T>(fallback: T, run: () => PromiseLike<{ data: unknown; erro
   }
 }
 
-/** Who am I? null = portal schema absent OR no app_users row → the app
- *  treats that as "owner" for back-compat (today's two logins are owners). */
-export async function myRole(): Promise<{ role: 'owner' | 'investor'; name: string } | null> {
+/** Who am I? Returns the RAW role string from app_users (normalize it with
+ *  data/roles.ts → normalizeRole). null = schema absent OR no app_users row →
+ *  the app treats that as admin for back-compat (today's logins predate RBAC). */
+export async function myRole(): Promise<{ role: string; name: string } | null> {
   if (!supabase) return null
   const uid = (await supabase.auth.getUser()).data.user?.id
   if (!uid) return null
-  const row = await soft<{ role: 'owner' | 'investor'; display_name: string } | null>(null, () =>
+  const row = await soft<{ role: string; display_name: string } | null>(null, () =>
     supabase!.from('app_users').select('role, display_name').eq('user_id', uid).maybeSingle(),
   )
   return row ? { role: row.role, name: row.display_name } : null

@@ -15,32 +15,33 @@ import { useEffect, useState } from 'react'
 import { hasSupabase } from './lib/supabase'
 import { useAuth } from './hooks/useAuth'
 import { myRole } from './lib/investor'
+import { normalizeRole, ROLES, type AppRole } from './data/roles'
 import App from './App'
 import Login from './components/Login'
 import InvestorView from './components/InvestorView'
 
 function Root() {
   const { session, loading } = useAuth() // always called (Rules of Hooks)
-  // 'pending' = looking the role up; resolves to which shell to render.
-  const [role, setRole] = useState<'pending' | 'owner' | 'investor'>('pending')
+  // null = still looking up the role; otherwise the resolved AppRole.
+  const [role, setRole] = useState<AppRole | null>(null)
 
   useEffect(() => {
     if (!session) {
-      setRole('pending')
+      setRole(null)
       return
     }
     let alive = true
     myRole().then((me) => {
-      if (alive) setRole(me?.role === 'investor' ? 'investor' : 'owner')
+      if (alive) setRole(normalizeRole(me?.role)) // missing/legacy 'owner' → admin
     })
     return () => {
       alive = false
     }
   }, [session])
 
-  if (!hasSupabase) return <App /> // no backend → local-only mode
+  if (!hasSupabase) return <App /> // no backend → local-only mode (admin)
 
-  if (loading || (session && role === 'pending')) {
+  if (loading || (session && role === null)) {
     return (
       <div className="login-wrap">
         <p className="meta">Loading…</p>
@@ -48,7 +49,10 @@ function Root() {
     )
   }
   if (!session) return <Login />
-  return role === 'investor' ? <InvestorView /> : <App />
+  // Past the guards above, role is resolved. External investors get their own
+  // scoped portal; every internal role gets the workbench, gated by its config.
+  const r = role as AppRole
+  return ROLES[r].usesInvestorPortal ? <InvestorView /> : <App role={r} />
 }
 
 export default Root

@@ -36,6 +36,7 @@ import AddProject from './components/AddProject'
 import QuickAdd from './components/QuickAdd'
 import InvestorInbox from './components/InvestorInbox'
 import { publishInvestorSnapshots } from './lib/investorPublish'
+import { ROLES, type AppRole } from './data/roles'
 
 /** A top-level view. 'settings' is reached via the 🛠 header button, not a tab. */
 type View = 'today' | 'tasks' | 'projects' | 'models' | 'inspections' | 'settings'
@@ -49,7 +50,10 @@ const TABS: { key: View; label: string }[] = [
   { key: 'inspections', label: '🔍 Inspections' },
 ]
 
-function App() {
+function App({ role = 'admin' }: { role?: AppRole }) {
+  // What this signed-in role may see (data/roles.ts). Defaults to admin so the
+  // no-backend / local-dev path is unchanged.
+  const roleCfg = ROLES[role]
   // All storage logic lives in this one hook (see hooks/useProjects.ts).
   const {
     state,
@@ -168,7 +172,7 @@ function App() {
           <p className="tagline">Electric · Water · Septic — Marion County, FL</p>
         </div>
         <nav className="tabs">
-          {TABS.map((t) => (
+          {TABS.filter((t) => (roleCfg.tabs as string[]).includes(t.key)).map((t) => (
             <button
               key={t.key}
               className={tab === t.key ? 'act' : ''}
@@ -208,17 +212,19 @@ function App() {
                   ? '⚠ Retry save'
                   : '✓ Saved'}
           </button>
-          {/* 🛠 templates & settings */}
-          <button
-            className={tab === 'settings' ? 'act' : ''}
-            onClick={() => {
-              setTab('settings')
-              setSelectedId(null)
-            }}
-            title="Templates & settings"
-          >
-            🛠
-          </button>
+          {/* 🛠 templates & settings — only roles allowed to manage settings */}
+          {roleCfg.canManageSettings && (
+            <button
+              className={tab === 'settings' ? 'act' : ''}
+              onClick={() => {
+                setTab('settings')
+                setSelectedId(null)
+              }}
+              title="Templates & settings"
+            >
+              🛠
+            </button>
+          )}
           {/* density toggle — ⊟ collapses to compact, ⊞ expands back */}
           <button onClick={toggleDensity} title="Toggle compact / comfortable spacing">
             {density === 'comfortable' ? '⊟' : '⊞'}
