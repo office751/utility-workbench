@@ -47,8 +47,9 @@ export interface StatusSnapshot {
   updated_at?: string
 }
 
-/** Wrap a query so missing tables / missing policies fail SOFT. */
-async function soft<T>(fallback: T, run: () => Promise<{ data: unknown; error: unknown }>): Promise<T> {
+/** Wrap a query so missing tables / missing policies fail SOFT.
+ *  (PromiseLike, not Promise — Supabase's query builder is a thenable.) */
+async function soft<T>(fallback: T, run: () => PromiseLike<{ data: unknown; error: unknown }>): Promise<T> {
   if (!supabase) return fallback
   try {
     const { data, error } = await run()
