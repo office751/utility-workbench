@@ -18,8 +18,8 @@ Goal: scoped external investor logins. First pairing: GTA Holdings ↔
 - [x] 0. This status doc
 - [x] 1. `src/lib/investor.ts` — typed helpers for the new tables (role,
         grants, shared files, snapshot publish, comments), all failing soft
-- [ ] 2. App.tsx role gate: investor logins render InvestorView ONLY
-- [ ] 3. InvestorView: Current Progress card + captioned gallery (visible
+- [x] 2. Root.tsx role gate: investor logins render InvestorView ONLY
+- [x] 3. InvestorView: Current Progress card + captioned gallery (visible
         photos via investor-files download) + comments (project + per-photo)
 - [ ] 4. Owner curation: per-file "👁 Share with investor" (caption → copy
         bytes to investor-files → shared_files row), only on granted projects

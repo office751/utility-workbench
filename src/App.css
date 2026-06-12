@@ -1958,6 +1958,58 @@ a.map-btn {
 .insp-desc { font-size: 12.5px; color: var(--muted); }
 .insp-date { font-size: 12px; white-space: nowrap; }
 
+/* ---------- 🤝 Investor view ---------- */
+
+.inv section.detail { margin-bottom: 16px; }
+.inv-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+.inv-stats > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+.inv-k { font-size: 12px; font-weight: 700; color: var(--muted); }
+
+.inv-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+  margin-top: 12px;
+}
+.inv-photo {
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.inv-photo img { width: 100%; border-radius: 8px; display: block; }
+.inv-photo figcaption { font-size: 13px; }
+.inv-file { font-size: 13px; color: var(--accent); text-decoration: none; }
+
+.inv-thread { display: flex; flex-direction: column; gap: 6px; }
+.inv-comment {
+  margin: 0;
+  font-size: 13px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 9px;
+}
+.inv-box { display: flex; gap: 6px; align-items: flex-end; margin-top: 4px; }
+.inv-box textarea { flex: 1; }
+
 /* ---------- 📋 Status report ---------- */
 .status-report {
   max-width: 880px;
