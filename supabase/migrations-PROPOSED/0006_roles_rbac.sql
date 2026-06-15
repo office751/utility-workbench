@@ -10,11 +10,11 @@
 -- hides tabs + financial fields per role. Investors never touch the blob.
 
 -- ---- 1. widen the role set + migrate the existing admin row ----
--- office@ currently has role 'owner'; rename it to 'admin' BEFORE tightening
--- the check constraint (else the row would violate it).
-update public.app_users set role = 'admin' where role = 'owner';
-
+-- ORDER MATTERS: drop the OLD check (which only allows owner|investor) BEFORE
+-- renaming office@ 'owner'→'admin' — otherwise the UPDATE to 'admin' violates
+-- the still-active old constraint. Then add the new 5-role check last.
 alter table public.app_users drop constraint if exists app_users_role_check;
+update public.app_users set role = 'admin' where role = 'owner';
 alter table public.app_users
   add constraint app_users_role_check
   check (role in ('admin', 'business_owner', 'project_manager', 'coworker', 'investor'));
