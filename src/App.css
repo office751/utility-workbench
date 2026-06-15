@@ -40,7 +40,7 @@
   font: inherit;
   padding: 8px 16px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--panel);
   color: var(--text);
   cursor: pointer;
@@ -49,7 +49,7 @@
 .tabs button.act {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 /* ---------- project list (search + rows) ----------
@@ -67,7 +67,7 @@
   color: inherit;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   margin-bottom: 8px;
 }
 
@@ -78,7 +78,7 @@
 
 .item {
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius);
   cursor: pointer;
   border: 1px solid transparent;
 }
@@ -108,7 +108,7 @@
   font-size: 11px;
   font-weight: 600;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--accent-2-bg);
   border: 1px solid var(--accent-2-border);
   color: var(--accent-2);
@@ -130,7 +130,7 @@
   font-size: 11px;
   font-weight: 700;
   padding: 1px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   white-space: nowrap;
   background: var(--border);
   color: var(--muted);
@@ -164,7 +164,7 @@
 .detail {
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   padding: 20px 24px;
 }
 
@@ -188,7 +188,7 @@
 .banner {
   background: var(--danger-bg);
   color: #8c3b22;
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 10px 14px;
   font-size: 14px;
   margin-bottom: 14px;
@@ -204,7 +204,7 @@
 .duke-say {
   background: #fff;
   border: 1px solid #b6d9b8;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 1px 6px;
   font-weight: 600;
   white-space: nowrap;
@@ -238,7 +238,7 @@ textarea {
   color: var(--text);
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 6px 10px;
 }
 
@@ -273,18 +273,18 @@ textarea {
 .person-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .person-name { font-weight: 700; font-size: 15px; }
 .person-role { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
-.person-role select { font: inherit; font-size: 14px; padding: 5px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+.person-role select { font: inherit; font-size: 14px; padding: 5px 8px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg); color: var(--text); }
 .person-desc { margin: 6px 0 0; font-size: 13px; }
 .person-projects { margin-top: 10px; }
 .person-proj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; margin-top: 6px; }
-.person-proj { display: flex; align-items: center; gap: 7px; font-size: 13px; padding: 6px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); cursor: pointer; }
+.person-proj { display: flex; align-items: center; gap: 7px; font-size: 13px; padding: 6px 9px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); cursor: pointer; }
 .person-proj.on { border-color: var(--accent); background: var(--panel); }
 .people-add { padding: 14px; margin-top: 6px; }
 
 /* ---- header Save button / status indicator ---- */
 .save-btn {
   font-weight: 600;
-  border-radius: 8px;
+  border-radius: var(--radius);
   transition: background 0.15s, color 0.15s;
 }
 .save-btn.save-saved {
@@ -292,14 +292,14 @@ textarea {
 }
 .save-btn.save-dirty {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 .save-btn.save-saving {
   color: var(--muted);
 }
 .save-btn.save-error {
   background: #c0392b;
-  color: #fff;
+  color: var(--on-accent);
 }
 
 /* ---- ownership badge under the project title ---- */
@@ -311,7 +311,7 @@ textarea {
   font-size: 13px;
   font-weight: 600;
   padding: 3px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--bg);
   border: 1px solid var(--border);
   color: var(--muted);
@@ -342,7 +342,7 @@ textarea {
 }
 .dropzone {
   border: 1.5px dashed var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 14px;
   text-align: center;
   font-size: 13px;
@@ -364,7 +364,7 @@ textarea {
   color: var(--danger);
   background: #c0492f12;
   border: 1px solid #c0492f33;
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 7px 9px;
 }
 .doc-list {
@@ -422,7 +422,7 @@ textarea {
   align-items: center;
   padding: 8px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--bg);
 }
 
@@ -498,7 +498,7 @@ textarea {
   line-height: 1;
   padding: 4px 9px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--panel);
   cursor: pointer;
 }
@@ -512,9 +512,9 @@ textarea {
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--danger);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 10px;
   font-weight: 700;
   line-height: 16px;
@@ -530,7 +530,7 @@ textarea {
   overflow-y: auto;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
   padding: 8px;
 }
@@ -580,7 +580,7 @@ textarea {
   gap: 10px;
   align-items: center;
   padding: 7px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius);
 }
 
 .step:hover {
@@ -619,7 +619,7 @@ textarea {
   color: inherit;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 4px 8px;
 }
 
@@ -639,7 +639,7 @@ textarea:focus {
   flex-wrap: wrap;
   padding: 12px;
   border: 1px dashed var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   margin-bottom: 16px;
 }
 
@@ -689,7 +689,7 @@ textarea:focus {
   line-height: 1;
   padding: 4px 10px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--panel);
   color: var(--text);
   cursor: pointer;
@@ -740,7 +740,7 @@ button.gear.on {
 .proj-settings {
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   padding: 14px 16px;
   margin-bottom: 16px;
 }
@@ -783,7 +783,7 @@ button.gear.on {
   font-size: 13px;
   padding: 0 12px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--panel);
   color: var(--muted);
   cursor: pointer;
@@ -802,7 +802,7 @@ button.gear.on {
   padding: 10px;
   margin-bottom: 8px;
   border: 1px dashed var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
 }
 
 .filters select {
@@ -811,7 +811,7 @@ button.gear.on {
   color: var(--text);
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 4px 8px;
 }
 
@@ -837,7 +837,7 @@ button.gear.on {
   border: 1px solid #ffd9a8;
   color: #8a5a00;
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius);
   font-size: 13px;
   margin-bottom: 12px;
 }
@@ -866,7 +866,7 @@ button.gear.on {
   gap: 6px;
   padding: 14px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg);
   color: var(--text);
   cursor: pointer;
@@ -906,7 +906,7 @@ button.contact {
   font-family: inherit;
   padding: 7px 13px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--panel);
   color: var(--text);
   cursor: pointer;
@@ -939,7 +939,7 @@ button.contact:disabled {
   padding: 8px;
   margin-bottom: 8px;
   border: 1px dashed var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: transparent;
   color: var(--accent);
   cursor: pointer;
@@ -977,7 +977,7 @@ button.contact:disabled {
   color: var(--text);
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 7px 10px;
 }
 
@@ -999,9 +999,9 @@ button.primary {
   font-weight: 600;
   padding: 8px 18px;
   border: 1px solid var(--accent);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   cursor: pointer;
 }
 
@@ -1014,7 +1014,7 @@ button.primary:disabled {
 .quickadd {
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   padding: 12px 14px;
   margin-bottom: 14px;
 }
@@ -1029,7 +1029,7 @@ button.primary:disabled {
   color: var(--text);
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 9px 12px;
   resize: vertical; /* it's a textarea now — drag taller for big paste blocks */
   line-height: 1.4;
@@ -1092,7 +1092,7 @@ button.primary:disabled {
   gap: 8px;
   align-items: center;
   padding: 6px 8px;
-  border-radius: 8px;
+  border-radius: var(--radius);
   border: 1px solid var(--border);
 }
 .order.to-order {
@@ -1113,7 +1113,7 @@ button.primary:disabled {
   color: var(--text);
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 5px 8px;
 }
 .order-date {
@@ -1161,7 +1161,7 @@ button.primary:disabled {
   gap: 10px;
   align-items: baseline;
   padding: 6px 8px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 .orderline:hover {
@@ -1265,8 +1265,8 @@ button.danger:hover {
   gap: 18px;
   flex-wrap: wrap;
   padding: 22px 26px;
-  border-radius: 16px;
-  color: #fff;
+  border-radius: var(--radius-xl);
+  color: var(--on-accent);
   background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 60%, #000));
   box-shadow: 0 10px 30px -14px color-mix(in srgb, var(--accent) 75%, transparent);
 }
@@ -1291,7 +1291,7 @@ button.danger:hover {
   align-items: center;
   min-width: 68px;
   padding: 8px 12px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.16);
 }
 .stat-n {
@@ -1324,7 +1324,7 @@ button.danger:hover {
   font-size: 12px;
   font-weight: 700;
   padding: 1px 9px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--border);
   color: var(--muted);
 }
@@ -1346,7 +1346,7 @@ button.danger:hover {
   color: var(--text);
   cursor: pointer;
   padding: 11px 14px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: var(--panel);
   border: 1px solid var(--border);
   border-left: 4px solid var(--border);
@@ -1390,7 +1390,7 @@ button.danger:hover {
   font-weight: 700;
   white-space: nowrap;
   padding: 3px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--bg);
   color: var(--muted);
 }
@@ -1431,7 +1431,7 @@ button.danger:hover {
 }
 .move-group {
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: var(--panel);
   overflow: hidden;
 }
@@ -1508,7 +1508,7 @@ button.danger:hover {
 .task-add {
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   padding: 12px 14px;
   margin-bottom: 16px;
 }
@@ -1519,7 +1519,7 @@ button.danger:hover {
   color: var(--text);
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 9px 12px;
   margin-bottom: 10px;
 }
@@ -1611,7 +1611,7 @@ button.danger:hover {
   padding: 12px 14px;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
 }
 .tp-text {
   width: 100%;
@@ -1621,7 +1621,7 @@ button.danger:hover {
   color: var(--text);
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 9px 11px;
   resize: vertical;
   line-height: 1.4;
@@ -1637,18 +1637,18 @@ button.danger:hover {
   font-weight: 700;
   line-height: 1;
   padding: 2px 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--bg);
   color: var(--muted);
   vertical-align: middle;
 }
 .tabs button.act .tab-badge {
   background: rgba(255, 255, 255, 0.28);
-  color: #fff;
+  color: var(--on-accent);
 }
 .tab-badge.fire {
   background: var(--danger);
-  color: #fff;
+  color: var(--on-accent);
 }
 .tabs button.act .tab-badge.fire {
   background: #fff;
@@ -1672,7 +1672,7 @@ button.danger:hover {
   font: inherit;
   cursor: pointer;
   padding: 8px 11px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg);
   border: 1px solid var(--border);
   color: var(--text);
@@ -1708,7 +1708,7 @@ button.danger:hover {
 .project-list {
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   padding: 12px;
 }
 .search-wrap {
@@ -1759,7 +1759,7 @@ button.danger:hover {
   min-width: 280px;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
   padding: 6px;
   display: flex;
@@ -1818,7 +1818,7 @@ button.danger:hover {
 .mini.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 .mini.primary:disabled {
   opacity: 0.5;
@@ -1836,7 +1836,7 @@ button.danger:hover {
   font-size: 11px;
   line-height: 1;
   padding: 3px 6px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--muted);
@@ -1870,17 +1870,17 @@ button.danger:hover {
   font-weight: 700;
   letter-spacing: 0.03em;
   padding: 2px 7px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   text-transform: uppercase;
   white-space: nowrap;
 }
 .status-pill.co {
   background: var(--success);
-  color: #fff;
+  color: var(--on-accent);
 }
 .status-pill.hold {
   background: var(--warn-strong);
-  color: #fff;
+  color: var(--on-accent);
 }
 .detail-title {
   display: flex;
@@ -1905,7 +1905,7 @@ button.danger:hover {
   font: inherit;
   cursor: pointer;
   padding: 12px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg);
   border: 1px solid var(--border);
   color: var(--text);
@@ -1958,7 +1958,7 @@ button.danger:hover {
 .ba-row {
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 12px;
   margin-bottom: 8px;
   display: flex;
@@ -2006,7 +2006,7 @@ button.danger:hover {
   white-space: pre-wrap;
   background: var(--bg);
   border: 1px dashed var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 12px;
   margin: 4px 0 0;
   color: var(--text);
@@ -2038,7 +2038,7 @@ a.map-btn {
   font: inherit;
   padding: 8px 10px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--bg);
   color: var(--text);
   cursor: pointer;
@@ -2052,7 +2052,7 @@ a.map-btn {
   font-size: 11px;
   font-weight: 700;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   white-space: nowrap;
   flex: none;
   max-width: 40%;
@@ -2090,7 +2090,7 @@ a.map-btn {
   gap: 3px;
   padding: 12px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg);
 }
 .inv-k { font-size: 12px; font-weight: 700; color: var(--muted); }
@@ -2104,14 +2104,14 @@ a.map-btn {
 .inv-photo {
   margin: 0;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg);
   padding: 10px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-.inv-photo img { width: 100%; border-radius: 8px; display: block; }
+.inv-photo img { width: 100%; border-radius: var(--radius); display: block; }
 .inv-photo figcaption { font-size: 13px; }
 .inv-file { font-size: 13px; color: var(--accent); text-decoration: none; }
 
@@ -2121,7 +2121,7 @@ a.map-btn {
   font-size: 13px;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 7px 9px;
 }
 .inv-box { display: flex; gap: 6px; align-items: flex-end; margin-top: 4px; }
@@ -2148,7 +2148,7 @@ a.map-btn {
   flex: none;
   font-size: 13px;
   padding: 7px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text);
@@ -2162,13 +2162,13 @@ a.map-btn {
 .inv-chip {
   font-size: 13px;
   padding: 6px 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text);
   cursor: pointer;
 }
-.inv-chip.act { background: var(--accent); color: #fff; border-color: var(--accent); }
+.inv-chip.act { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 
 /* comment composer: stack so the textarea is never squeezed by the button,
    and 16px font so iOS doesn't zoom in when an investor taps to type. */
@@ -2180,7 +2180,7 @@ a.map-btn {
 .inv-photo-skel {
   width: 100%;
   aspect-ratio: 4 / 3;
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--panel);
   border: 1px dashed var(--border);
 }
@@ -2201,7 +2201,7 @@ a.map-btn {
   gap: 10px;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 12px 14px;
   margin: 12px 0;
 }
@@ -2223,7 +2223,7 @@ a.map-btn {
 .seg {
   display: inline-flex;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   overflow: hidden;
 }
 .seg button {
@@ -2236,7 +2236,7 @@ a.map-btn {
 }
 .seg button.on {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 600;
 }
 .sr-co {
@@ -2247,14 +2247,14 @@ a.map-btn {
   min-width: 240px;
   padding: 7px 10px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--bg);
   color: var(--text);
   font-size: 13px;
 }
 .sr-pick {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 10px 12px;
   margin-bottom: 12px;
 }
@@ -2307,7 +2307,7 @@ a.map-btn {
   white-space: pre-wrap;
   background: var(--bg);
   border: 1px dashed var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 14px;
   margin: 0;
   color: var(--text);
@@ -2328,7 +2328,7 @@ a.map-btn {
   margin-bottom: 14px;
 }
 .tko-pill {
-  color: #fff; /* base pill style shared — see .status-pill */
+  color: var(--on-accent); /* base pill style shared — see .status-pill */
 }
 .tko-pill.miss {
   background: var(--danger);
@@ -2382,7 +2382,7 @@ a.map-btn {
 .tpl-card {
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   margin-bottom: 8px;
   overflow: hidden;
 }
@@ -2412,7 +2412,7 @@ a.map-btn {
 }
 .tpl-pill {
   background: var(--accent); /* base pill style shared — see .status-pill */
-  color: #fff;
+  color: var(--on-accent);
 }
 .tpl-toggle {
   color: var(--muted);
@@ -2443,7 +2443,7 @@ a.map-btn {
   color: var(--text);
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 8px 10px;
   resize: vertical;
 }
@@ -2457,7 +2457,7 @@ a.map-btn {
   color: var(--muted);
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 3px 7px;
 }
 .tpl-var code {
@@ -2466,7 +2466,7 @@ a.map-btn {
 }
 .tpl-preview {
   border: 1px dashed var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 10px 12px;
   background: var(--bg);
 }
@@ -2510,7 +2510,7 @@ a.map-btn {
   gap: 12px;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: var(--radius-xl);
   padding: 28px 26px;
   box-shadow: 0 14px 44px -18px rgba(0, 0, 0, 0.45);
 }
@@ -2535,7 +2535,7 @@ a.map-btn {
   color: var(--text);
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 10px 12px;
 }
 .login-card input:focus {
@@ -2552,7 +2552,7 @@ a.map-btn {
   font-size: 13px;
   color: var(--danger);
   background: var(--danger-bg);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 8px 10px;
 }
 [data-theme='dark'] .login-error {

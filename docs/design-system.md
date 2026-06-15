@@ -36,7 +36,9 @@ phase, P1 first, each a build-verified commit.
 
 ## Status
 - [x] P1a — full token set defined in index.css; fixed 2 dark-mode bugs (--accent-bg, investor purple → --accent-2).
-- [~] P1b — CORE semantic colors swept: danger/success/warn/info/star (solids, bg, border) now run through tokens (47 refs). **Light mode proven byte-identical** (tokens resolve back to the exact originals); dark overrides left in place. Remaining for a follow-up pass: context-sensitive `#fff` → `--on-accent` (2 of them are surfaces, handle per-line), the badge/chip hues + collapsing the dark `.badge` block, and the near-duplicate consolidations (#c0392b, the extra ambers).
-- [ ] P1c — size / spacing / radius literal sweep + make compact-density a token override.
+- [x] P1b — semantic colors + on-accent + radius swept onto tokens, ALL proven byte-identical (resolve-back diff):
+      · danger/success/warn/info/star solids+bg+border (47 refs); · `color:#fff` → `--on-accent` (15, identical in both themes); · `border-radius` 6/8/10/12/16/999 → radius tokens (78 refs). Dark overrides left in place (safe). Left untouched on purpose: `.duke-say` `background:#fff` (sits in a not-yet-dark-aware banner) + radius 7px×2/14px×1.
+- [~] P1c — TYPE & SPACING: flagged as a *visual decision*, not a blind sweep. The audit's type scale has no 12px step, but 12px is used **31×** (+15px 7×, +9.5/12.5/19/22 off-scale) — tokenizing fonts would resize ~38 elements. Same for off-scale spacings. Best decided with eyes on the running app / during the Claude Design identity pass, not swept blind into production. Density override waits on the spacing decision.
+- [ ] badge-hue tokens + collapse the dark `.badge` block; fold near-dup reds/ambers — optional polish, deferred.
 - [ ] P2 · P3 · P4 — as above.
 - [ ] Then: Claude Design visual identity (claude.ai/design) layered on this base.
