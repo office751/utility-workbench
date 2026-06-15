@@ -8,11 +8,9 @@
  */
 import { useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
-import { useBrand } from '../hooks/useBrand'
-import { BRAND_TOOLTIP } from '../lib/brand'
+import { APP_NAME, APP_ICON } from '../lib/brand'
 
 function Login() {
-  const brand = useBrand()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -31,9 +29,7 @@ function Login() {
   return (
     <div className="login-wrap">
       <form className="login-card" onSubmit={signIn}>
-        <h1 title={BRAND_TOOLTIP}>
-          {brand.icon} {brand.name}
-        </h1>
+        <h1>{APP_ICON} {APP_NAME}</h1>
         <p className="meta">Sign in to your command center.</p>
         <label>
           Email
