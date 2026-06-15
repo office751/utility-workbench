@@ -109,9 +109,9 @@
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 999px;
-  background: #e8e2f6;
-  border: 1px solid #c9bce8;
-  color: #5b3fa0;
+  background: var(--accent-2-bg);
+  border: 1px solid var(--accent-2-border);
+  color: var(--accent-2);
   white-space: nowrap;
 }
 
@@ -317,9 +317,9 @@ textarea {
   color: var(--muted);
 }
 .owner-chip.investor {
-  background: #e8e2f6;
-  border-color: #c9bce8;
-  color: #5b3fa0;
+  background: var(--accent-2-bg);
+  border-color: var(--accent-2-border);
+  color: var(--accent-2);
 }
 
 /* ---------- project files box (upload + share) ---------- */

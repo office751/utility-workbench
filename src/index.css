@@ -15,7 +15,52 @@
   --text: #2a2723;      /* main text — warm near-black */
   --muted: #8a8378;     /* secondary text */
   --border: #e3ded6;    /* hairline borders */
-  --accent: #b3541e;    /* Iron Shield rust-orange accent */
+  --accent: #b3541e;    /* Lodestar / Iron Shield rust-orange accent */
+
+  /* ── DESIGN TOKENS (added June 2026 — see docs/design-system.md) ──────────
+     One source of truth for color, type, spacing & geometry. Everything in
+     App.css is being routed through these so a future venture can re-skin in
+     one place, and so dark mode "just works" without per-element overrides. */
+
+  /* Text/glyphs that sit ON a filled accent/status colour (was 18 hard #fff). */
+  --on-accent: #ffffff;
+  /* Faint accent-tinted surface (e.g. a "to order" row). color-mix so it
+     tracks the accent in BOTH themes — fixes a value that was referenced in
+     App.css but never defined. */
+  --accent-bg: color-mix(in srgb, var(--accent) 8%, var(--panel));
+
+  /* Semantic status colours — foreground / soft background / hairline border. */
+  --danger: #c0492f;  --danger-bg: #f3d9d3;  --danger-border: #c0492f55;  /* errors, overdue, destructive */
+  --success: #2f6b2f; --success-bg: #d9ecd9; --success-border: #2f6b2f44; /* done, installed, C.O., saved */
+  --warn: #a06a00;    --warn-bg: #fff4e5;    --warn-strong: #d9920a;       /* to-order, holds, warnings */
+  --info: #2d5d8a;    --info-bg: #d8e6f2;                                  /* neutral "waiting / in progress" */
+
+  /* Second brand accent (the investor identity). A real Lodestar accent for
+     multi-venture use — not just a one-off chip colour. */
+  --accent-2: #5b3fa0; --accent-2-bg: #e8e2f6; --accent-2-border: #c9bce8;
+
+  --star: #e0a400;            /* starred/favorite — deliberately NOT --warn */
+  --shadow: rgba(0, 0, 0, 0.18);
+
+  /* Type scale (px). One title size, one body size, etc. */
+  --text-2xs: 10px; --text-xs: 11px; --text-sm: 13px; --text-base: 14px;
+  --text-md: 16px;  --text-lg: 18px; --text-xl: 20px; --text-2xl: 24px;
+  --weight-normal: 400; --weight-semibold: 600; --weight-bold: 700;
+  --lh-tight: 1; --lh-normal: 1.5; --ls-label: 0.04em;
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, Menlo, Consolas, monospace;
+
+  /* Spacing scale (px) + role aliases (compact density reassigns the roles). */
+  --space-1: 2px;  --space-2: 4px;  --space-3: 6px;  --space-4: 8px;
+  --space-5: 10px; --space-6: 12px; --space-7: 14px; --space-8: 16px;
+  --space-9: 18px; --space-10: 20px; --space-12: 24px;
+  --pad-card: var(--space-6); --pad-row: var(--space-3); --gap-list: var(--space-4); --stack: var(--space-8);
+
+  /* Radii + touch/responsive floors. */
+  --radius-sm: 6px; --radius: 8px; --radius-md: 10px; --radius-lg: 12px; --radius-xl: 16px; --radius-pill: 999px;
+  --tap-min: 44px;   /* min touch target on phones */
+  --fs-input: 16px;  /* min input font on touch — stops iOS focus-zoom */
+  --bp-sm: 640px;    /* phone breakpoint (documented; media queries use the px) */
 }
 
 /*
@@ -32,6 +77,17 @@
   --muted: #a6a39b;
   --border: #3d3d39;
   --accent: #e8741c;    /* a brighter rust pops better on dark */
+
+  /* Dark twins for the design tokens. (--on-accent and --accent-bg need none:
+     white stays white; --accent-bg is a color-mix that re-evaluates per theme.
+     Type/spacing/radius tokens are theme-independent, so they aren't repeated.) */
+  --danger: #f0876c;  --danger-bg: #4a2b24;  --danger-border: #f0876c55;
+  --success: #86dba6; --success-bg: #1f3a29; --success-border: #86dba644;
+  --warn: #e6c860;    --warn-bg: #443a1d;    --warn-strong: #f0c44a;
+  --info: #9cc0ff;    --info-bg: #22304d;
+  --accent-2: #c3aef0; --accent-2-bg: #312647; --accent-2-border: #4a3a6b;
+  --star: #f0c419;
+  --shadow: rgba(0, 0, 0, 0.4);
 }
 
 /* A tiny "reset" so all browsers start from the same baseline */
