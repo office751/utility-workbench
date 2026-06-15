@@ -7,7 +7,7 @@ applications, model takeoffs, and status reports.
 
 - **Live app:** https://utility-workbench.vercel.app (Vercel auto-deploys `main`)
 - **Owner:** Adam Stiles (office751). The original single-file
-  `Electric Applications Workbench.html` (one folder up, Mac only) is the
+  `Electric Applications Workbench.html` (in Projects/Utility Applications/, Mac only) is the
   historical data reference the app was rebuilt from.
 - **Backlog:** `ROADMAP.md` — read it when Adam says "next roadmap item".
 

@@ -20,7 +20,7 @@
     <string>--write</string>
   </array>
   <key>WorkingDirectory</key>
-  <string>/Users/Construction/Documents/Claude/Projects/Utility Applications/utility-workbench/scanner</string>
+  <string>/Users/Construction/Documents/Claude/Projects/Lodestar/construction-lodestar/scanner</string>
   <key>StartCalendarInterval</key>
   <dict>
     <key>Hour</key>
@@ -31,8 +31,8 @@
   <key>RunAtLoad</key>
   <false/>
   <key>StandardOutPath</key>
-  <string>/Users/Construction/Documents/Claude/Projects/Utility Applications/utility-workbench/scanner/logs/scan.log</string>
+  <string>/Users/Construction/Documents/Claude/Projects/Lodestar/construction-lodestar/scanner/logs/scan.log</string>
   <key>StandardErrorPath</key>
-  <string>/Users/Construction/Documents/Claude/Projects/Utility Applications/utility-workbench/scanner/logs/scan.err.log</string>
+  <string>/Users/Construction/Documents/Claude/Projects/Lodestar/construction-lodestar/scanner/logs/scan.err.log</string>
 </dict>
 </plist>

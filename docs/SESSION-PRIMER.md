@@ -13,7 +13,7 @@ you're doing, flag trade-offs, commit working checkpoints. My north-star is
 becoming a licensed GC, and my custom-built command center is the **Iron
 Shield Utility Workbench** — a Vite+React+TS app (live:
 utility-workbench.vercel.app, auto-deploys from `main`; repo on my Mac at
-`~/Documents/Claude/Projects/Utility Applications/utility-workbench` — **read
+`~/Documents/Claude/Projects/Lodestar/construction-lodestar` — **read
 its CLAUDE.md first**: architecture, conventions, and critical gotchas,
 including that the Supabase row is LIVE production data — never test by
 mutating it).
