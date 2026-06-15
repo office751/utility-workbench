@@ -35,7 +35,8 @@ phase, P1 first, each a build-verified commit.
 **Risk:** CSS + JSX-className refactor only — no state/schema/logic, no `migrate()` changes. Verify each step with `npm run build` (don't start a 2nd dev server; Adam's runs on 5173). Land in token-group-sized commits.
 
 ## Status
-- [ ] P1a — define the full token set in index.css (+ fix the two dark-mode bugs). ← in progress
-- [ ] P1b — sweep App.css literals onto the tokens.
+- [x] P1a — full token set defined in index.css; fixed 2 dark-mode bugs (--accent-bg, investor purple → --accent-2).
+- [~] P1b — CORE semantic colors swept: danger/success/warn/info/star (solids, bg, border) now run through tokens (47 refs). **Light mode proven byte-identical** (tokens resolve back to the exact originals); dark overrides left in place. Remaining for a follow-up pass: context-sensitive `#fff` → `--on-accent` (2 of them are surfaces, handle per-line), the badge/chip hues + collapsing the dark `.badge` block, and the near-duplicate consolidations (#c0392b, the extra ambers).
+- [ ] P1c — size / spacing / radius literal sweep + make compact-density a token override.
 - [ ] P2 · P3 · P4 — as above.
 - [ ] Then: Claude Design visual identity (claude.ai/design) layered on this base.

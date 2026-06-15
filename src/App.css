@@ -135,29 +135,29 @@
   background: var(--border);
   color: var(--muted);
 }
-.badge.u-SECO { background: #d9ecd9; color: #2f6b2f; }
-.badge.u-DUKE { background: #d8e6f2; color: #2d5d8a; }
+.badge.u-SECO { background: var(--success-bg); color: var(--success); }
+.badge.u-DUKE { background: var(--info-bg); color: var(--info); }
 .badge.u-CLAY { background: #eadff2; color: #6a4a8a; }
-.badge.u-NONE { background: #f3d9d3; color: #8c3b22; }
-.badge.warn   { background: #f3d9d3; color: #8c3b22; }
+.badge.u-NONE { background: var(--danger-bg); color: #8c3b22; }
+.badge.warn   { background: var(--danger-bg); color: #8c3b22; }
 
 /* water source badges */
-.badge.w-Well   { background: #d8e6f2; color: #2d5d8a; }
+.badge.w-Well   { background: var(--info-bg); color: var(--info); }
 .badge.w-City   { background: #d2ecec; color: #0b6e6e; }
 .badge.w-CityWM { background: #eadff2; color: #6a4a8a; }
-.badge.w-NONE   { background: #f3d9d3; color: #8c3b22; }
+.badge.w-NONE   { background: var(--danger-bg); color: #8c3b22; }
 
 /* septic / sewer badges */
 .badge.s-Septic { background: #eee6d8; color: #7a6a4f; }
-.badge.s-Sewer  { background: #d8e6f2; color: #4a6b8a; }
+.badge.s-Sewer  { background: var(--info-bg); color: #4a6b8a; }
 
 /* permit "responsible" badges */
 .badge.r-Us    { background: #e6e2f2; color: #5b3a9b; }
 .badge.r-Owner { background: #f6e7c6; color: #8a6414; }
-.badge.r-GC    { background: #d8e6f2; color: #2d5d8a; }
+.badge.r-GC    { background: var(--info-bg); color: var(--info); }
 
 /* the green "done" chip */
-.badge.done { background: #d9ecd9; color: #2f6b2f; }
+.badge.done { background: var(--success-bg); color: var(--success); }
 
 /* ---------- detail panel ---------- */
 
@@ -186,7 +186,7 @@
 }
 
 .banner {
-  background: #f3d9d3;
+  background: var(--danger-bg);
   color: #8c3b22;
   border-radius: 8px;
   padding: 10px 14px;
@@ -361,7 +361,7 @@ textarea {
 .docs-error {
   margin-top: 8px;
   font-size: 12px;
-  color: #c0492f;
+  color: var(--danger);
   background: #c0492f12;
   border: 1px solid #c0492f33;
   border-radius: 8px;
@@ -412,8 +412,8 @@ textarea {
   margin-left: auto;
 }
 .doc-btn.x:hover {
-  color: #c0492f;
-  border-color: #c0492f55;
+  color: var(--danger);
+  border-color: var(--danger-border);
 }
 .doc-share-menu {
   display: flex;
@@ -513,7 +513,7 @@ textarea {
   height: 16px;
   padding: 0 4px;
   border-radius: 999px;
-  background: #c0492f;
+  background: var(--danger);
   color: #fff;
   font-size: 10px;
   font-weight: 700;
@@ -828,12 +828,12 @@ button.gear.on {
    removed June 2026, so their rules went with them.) */
 
 /* urgency colors (shut-off tiles, verify badge) */
-.due  { color: #c0492f; font-weight: 700; }
-.warn { color: #a06a00; font-weight: 700; }
+.due  { color: var(--danger); font-weight: 700; }
+.warn { color: var(--warn); font-weight: 700; }
 
 /* yellow info flag (INRB notice, "set the source first", WM extension) */
 .flag {
-  background: #fff4e5;
+  background: var(--warn-bg);
   border: 1px solid #ffd9a8;
   color: #8a5a00;
   padding: 8px 12px;
@@ -1044,7 +1044,7 @@ button.primary:disabled {
 .qa-error {
   margin: 8px 0 0;
   font-size: 13px;
-  color: #c0492f;
+  color: var(--danger);
 }
 .qa-pick {
   margin-top: 10px;
@@ -1061,7 +1061,7 @@ button.primary:disabled {
 .qa-done {
   margin: 8px 0 0;
   font-size: 13px;
-  color: #2f6b2f;
+  color: var(--success);
 }
 [data-theme='dark'] .qa-done {
   color: #86dba6;
@@ -1073,7 +1073,7 @@ button.primary:disabled {
 .qa-dup {
   margin: 8px 0 0;
   font-size: 13px;
-  color: #a06a00;
+  color: var(--warn);
 }
 [data-theme='dark'] .qa-dup {
   color: #e6c860;
@@ -1138,7 +1138,7 @@ button.primary:disabled {
 
 /* status-tinted dropdowns */
 .s-toOrder { color: #b06b00; font-weight: 700; }
-.s-installed { color: #2f6b2f; }
+.s-installed { color: var(--success); }
 /* …their dark twins — the light greens/ambers were near-invisible on the
    dark background (audit finding). Same palette as .qa-done's dark version,
    and the same lift for the red error / amber warning texts that also lacked
@@ -1179,8 +1179,8 @@ button.primary:disabled {
 /* the quiet-but-red remove button at the bottom of the detail view */
 button.danger {
   margin-top: 16px;
-  color: #c0492f;
-  border-color: #c0492f55; /* translucent red border */
+  color: var(--danger);
+  border-color: var(--danger-border); /* translucent red border */
 }
 
 button.danger:hover {
@@ -1356,7 +1356,7 @@ button.danger:hover {
   border-color: var(--accent);
   transform: translateX(2px);
 }
-.action-row.sev-crit { border-left-color: #c0492f; }
+.action-row.sev-crit { border-left-color: var(--danger); }
 .action-row.sev-warn { border-left-color: #d99a00; }
 .action-row.sev-info { border-left-color: var(--accent); }
 
@@ -1394,7 +1394,7 @@ button.danger:hover {
   background: var(--bg);
   color: var(--muted);
 }
-.ar-chip.sev-crit { background: #f3d9d3; color: #b03020; }
+.ar-chip.sev-crit { background: var(--danger-bg); color: #b03020; }
 .ar-chip.sev-warn { background: #fbf0d5; color: #8a6414; }
 .ar-go {
   flex: none;
@@ -1408,7 +1408,7 @@ button.danger:hover {
   border-radius: 14px;
   font-size: 15px;
   background: #e6f3e6;
-  color: #2f6b2f;
+  color: var(--success);
   border: 1px solid #c6e2c6;
 }
 
@@ -1576,15 +1576,15 @@ button.danger:hover {
   background: none; border: none; cursor: pointer; flex: none;
   color: var(--muted); padding: 0 2px;
 }
-.task-star.on { color: #e0a400; }
+.task-star.on { color: var(--star); }
 .task-text { flex: 1; min-width: 0; }
 .task-row.done .task-text { color: var(--muted); text-decoration: line-through; }
 .task-due { font-size: 12px; color: var(--muted); white-space: nowrap; }
-.task-due.due { color: #c0492f; font-weight: 700; }
+.task-due.due { color: var(--danger); font-weight: 700; }
 /* .task-x shares the small-button shell above; it stays muted and goes red
    on hover (it's a delete). Used by task rows AND order rows now. */
 .task-x { flex: none; color: var(--muted); }
-.task-x:hover { color: #c0492f; border-color: #c0492f55; }
+.task-x:hover { color: var(--danger); border-color: var(--danger-border); }
 
 .done-block { margin-top: 6px; }
 .done-block .mini { margin-bottom: 6px; }
@@ -1647,12 +1647,12 @@ button.danger:hover {
   color: #fff;
 }
 .tab-badge.fire {
-  background: #c0492f;
+  background: var(--danger);
   color: #fff;
 }
 .tabs button.act .tab-badge.fire {
   background: #fff;
-  color: #c0492f;
+  color: var(--danger);
 }
 
 /* ---------- M3: project stream-strip (all 5 streams at a glance) ---------- */
@@ -1691,7 +1691,7 @@ button.danger:hover {
   font-size: 13px;
 }
 .ss-chip.done .ss-name {
-  color: #2f6b2f;
+  color: var(--success);
 }
 [data-theme='dark'] .ss-chip.done .ss-name {
   color: #86dba6;
@@ -1843,15 +1843,15 @@ button.danger:hover {
   white-space: nowrap;
 }
 .row-cell.done {
-  color: #2f6b2f;
-  border-color: #2f6b2f44;
+  color: var(--success);
+  border-color: var(--success-border);
 }
 [data-theme='dark'] .row-cell.done {
   color: #86dba6;
   border-color: #86dba644;
 }
 .row-cell.fire {
-  color: #c0492f;
+  color: var(--danger);
   border-color: #c0492f66;
   background: #c0492f11;
   font-weight: 700;
@@ -1875,11 +1875,11 @@ button.danger:hover {
   white-space: nowrap;
 }
 .status-pill.co {
-  background: #2f6b2f;
+  background: var(--success);
   color: #fff;
 }
 .status-pill.hold {
-  background: #d9920a;
+  background: var(--warn-strong);
   color: #fff;
 }
 .detail-title {
@@ -1922,7 +1922,7 @@ button.danger:hover {
   margin-bottom: 4px;
 }
 .ov-card.done .ov-card-h {
-  color: #2f6b2f;
+  color: var(--success);
 }
 [data-theme='dark'] .ov-card.done .ov-card-h {
   color: #86dba6;
@@ -1982,7 +1982,7 @@ button.danger:hover {
 }
 .ba-warn {
   font-size: 12px;
-  color: #d9920a;
+  color: var(--warn-strong);
   margin-top: 3px;
 }
 .ba-actions {
@@ -1992,13 +1992,13 @@ button.danger:hover {
 }
 .doc-btn.applied {
   border-color: #2f6b2f55;
-  color: #2f6b2f;
+  color: var(--success);
 }
 [data-theme='dark'] .doc-btn.applied {
   color: #86dba6;
 }
 .doc-btn.applied:hover {
-  border-color: #2f6b2f;
+  border-color: var(--success);
 }
 .ba-preview {
   width: 100%;
@@ -2059,7 +2059,7 @@ a.map-btn {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.insp-status.fail { background: #f3d9d3; color: #8c3b22; }
+.insp-status.fail { background: var(--danger-bg); color: #8c3b22; }
 .insp-status.partial { background: #f6e7c6; color: #8a6414; }
 [data-theme='dark'] .insp-status.fail { background: #4a2b24; color: #f0a892; }
 [data-theme='dark'] .insp-status.partial { background: #443a1d; color: #e6c860; }
@@ -2291,7 +2291,7 @@ a.map-btn {
 }
 .sr-hint {
   font-size: 12px;
-  color: #d9920a;
+  color: var(--warn-strong);
   margin: 0 0 8px;
 }
 .sr-preview-h {
@@ -2331,10 +2331,10 @@ a.map-btn {
   color: #fff; /* base pill style shared — see .status-pill */
 }
 .tko-pill.miss {
-  background: #c0492f;
+  background: var(--danger);
 }
 .tko-pill.ok {
-  background: #2f6b2f;
+  background: var(--success);
 }
 .tko-count {
   font-size: 11px;
@@ -2550,8 +2550,8 @@ a.map-btn {
 .login-error {
   margin: 0;
   font-size: 13px;
-  color: #c0492f;
-  background: #f3d9d3;
+  color: var(--danger);
+  background: var(--danger-bg);
   border-radius: 8px;
   padding: 8px 10px;
 }
