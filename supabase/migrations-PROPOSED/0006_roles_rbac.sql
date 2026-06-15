@@ -19,13 +19,11 @@ alter table public.app_users
   add constraint app_users_role_check
   check (role in ('admin', 'business_owner', 'project_manager', 'coworker', 'investor'));
 
--- ---- 2. generalize project assignments ----
--- investor_project_access was investor-only; project managers need the same
--- "which projects am I assigned" mapping. Rename to project_access and let
--- has_project() read it for BOTH. (Frontend: update the two queries that name
--- investor_project_access — see lib/investor.ts grantedProjectIds /
--- myGrantedProjects — to project_access in the same deploy.)
-alter table if exists public.investor_project_access rename to project_access;
+-- ---- 2. project assignments ----
+-- Adam (June 12): PMs and all other internal staff see EVERY project, so only
+-- investors are scoped. We KEEP investor_project_access as-is (no rename) — the
+-- name is accurate (investor assignments only) and it avoids a frontend/DB
+-- deploy-ordering hazard. has_project() reads it unchanged (below).
 
 -- ---- 3. role-aware helper functions ----
 -- is_admin: the one super-user (office@). is_internal: any staff role (NOT an
@@ -57,7 +55,7 @@ $$;
 
 create or replace function public.has_project(pid int)
 returns boolean language sql stable security definer set search_path = public as $$
-  select exists (select 1 from project_access where user_id = auth.uid() and project_id = pid);
+  select exists (select 1 from investor_project_access where user_id = auth.uid() and project_id = pid);
 $$;
 
 -- ---- 4. the workbench blob: any INTERNAL role (Decision A) ----

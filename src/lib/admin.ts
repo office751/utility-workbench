@@ -1,7 +1,7 @@
 /**
  * admin.ts — data layer for the admin "People" screen (manage logins' roles
  * + project assignments). Admin-only; RLS lets is_owner()/admin read & write
- * app_users and project_access. Everything fails SOFT so the screen is safe
+ * app_users and investor_project_access. Everything fails SOFT so the screen is safe
  * to ship before the RBAC migration (0006) runs — it just shows nothing yet.
  *
  * NOTE on creating logins: the browser client (anon key + the admin's JWT)
@@ -47,7 +47,7 @@ export async function setUserRole(userId: string, role: string): Promise<boolean
 export async function allProjectAccess(): Promise<Record<string, number[]>> {
   if (!supabase) return {}
   try {
-    const { data, error } = await supabase.from('project_access').select('user_id, project_id')
+    const { data, error } = await supabase.from('investor_project_access').select('user_id, project_id')
     if (error || !data) return {}
     const map: Record<string, number[]> = {}
     for (const r of data as { user_id: string; project_id: number }[]) {
@@ -63,11 +63,11 @@ export async function allProjectAccess(): Promise<Record<string, number[]>> {
 export async function setUserProjects(userId: string, projectIds: number[]): Promise<boolean> {
   if (!supabase) return false
   try {
-    const del = await supabase.from('project_access').delete().eq('user_id', userId)
+    const del = await supabase.from('investor_project_access').delete().eq('user_id', userId)
     if (del.error) return false
     if (projectIds.length === 0) return true
     const rows = projectIds.map((project_id) => ({ user_id: userId, project_id }))
-    const ins = await supabase.from('project_access').insert(rows)
+    const ins = await supabase.from('investor_project_access').insert(rows)
     return !ins.error
   } catch {
     return false

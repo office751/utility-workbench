@@ -74,10 +74,10 @@ export const ROLES: Record<AppRole, RoleConfig> = {
   },
   project_manager: {
     label: 'Project manager',
-    description: 'Full operational detail on the projects assigned to them — no financials, no settings.',
+    description: 'Full operational detail across all active projects — no financials, no settings.',
     usesInvestorPortal: false,
     tabs: ['today', 'tasks', 'projects', 'models', 'inspections'],
-    scopedToAssignedProjects: true,
+    scopedToAssignedProjects: false, // Adam (June 12): PMs see ALL active projects
     canSeeFinancials: false,
     canManageSettings: false,
     canManageUsers: false,

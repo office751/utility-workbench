@@ -38,21 +38,24 @@ and **investors stay fully on B** (already shipped — never weaken it).
 ## Build checkpoints
 
 - [x] 0. Role model + matrix (`src/data/roles.ts`) + this plan
-- [ ] 1. `0006_roles_rbac.sql` (PROPOSED): widen role check to the 5 roles;
-        rename office@ 'owner'→'admin'; generalize `investor_project_access`
-        into `project_access` (user→project) for PMs + investors; add
-        `is_internal()` / `is_admin()` helpers; keep is_owner() working.
-- [ ] 2. Frontend role gate: `useRole()` → AppRole; Root routes investor→portal,
-        everyone else→App; App reads `roleConfig` to gate tabs + a
-        `canSeeFinancials` check on job-cost fields; scoped roles see only
-        assigned projects.
-- [ ] 3. Admin "People" screen: create/assign logins + roles + project
-        assignments (admin only). Until then, assign via dashboard + SQL.
-- [ ] 4. Stage on `rcchjqupvozyqkahhion`, verify each role with JWT simulation
-        (as we did for investors), then run on prod with Adam's go-ahead.
+- [x] 1. `0006_roles_rbac.sql` (PROPOSED): widen role check to 5 roles; rename
+        office@ 'owner'→'admin'; add `is_admin()`/`is_internal()`; redefine
+        `is_owner()` = admin|business_owner; blob + project-files → is_internal().
+- [x] 2. Frontend role gate (Root routes investor→portal, all internal→App;
+        App gates tabs + People by roleConfig). Ships dormant (office@ = admin).
+- [x] 3. Admin "👥 People" screen (PeopleView + lib/admin.ts): set roles +
+        investor project assignments. Auth-user CREATION stays in the dashboard.
+- [x] R. Reconciled w/ Adam (June 12): PM sees ALL projects (scoped→false), so
+        only investors are scoped → KEEP `investor_project_access` (no rename;
+        dropped it from 0006, standardized admin.ts onto that name).
+- [ ] 4. Stage 0006 on `rcchjqupvozyqkahhion`, verify each role via JWT
+        simulation, then run on prod. ← CURRENT
 
-## Decisions still needed from Adam
-- Approve matrix defaults (esp. coworker = all projects vs assigned; business
-  owner sees financials yes).
-- Decision A vs B for internal financials.
-- Who the first real non-investor users are (emails) when we're ready.
+## Decisions locked (June 12 2026)
+- Trust model = A (internal roles read the blob; UI gates per role). Investors
+  stay strictly server-isolated.
+- PM = ALL active projects. Business owner = broad read incl financials.
+- Financials: no structured cost field in the blob today, so canSeeFinancials
+  is forward-looking (harden to B if one is added).
+- First real non-investor users: Adam supplies emails when ready; create in the
+  Supabase dashboard, then assign role in the 👥 People screen.
