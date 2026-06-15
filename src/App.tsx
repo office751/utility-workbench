@@ -38,6 +38,8 @@ import InvestorInbox from './components/InvestorInbox'
 import { publishInvestorSnapshots } from './lib/investorPublish'
 import { ROLES, type AppRole } from './data/roles'
 import PeopleView from './components/PeopleView'
+import { useBrand } from './hooks/useBrand'
+import { BRAND_TOOLTIP } from './lib/brand'
 
 /** A top-level view. 'settings' (🛠) and 'people' (👥) are header buttons, not tabs. */
 type View = 'today' | 'tasks' | 'projects' | 'models' | 'inspections' | 'settings' | 'people'
@@ -52,6 +54,8 @@ const TABS: { key: View; label: string }[] = [
 ]
 
 function App({ role = 'admin' }: { role?: AppRole }) {
+  // The app's name shifts with the sky: ☀️ Daystar by day, ⭐ Lodestar by night.
+  const brand = useBrand()
   // What this signed-in role may see (data/roles.ts). Defaults to admin so the
   // no-backend / local-dev path is unchanged.
   const roleCfg = ROLES[role]
@@ -169,7 +173,9 @@ function App({ role = 'admin' }: { role?: AppRole }) {
     <div className="app">
       <header className="app-header">
         <div>
-          <h1>⚡ Iron Shield Utility Workbench</h1>
+          <h1 title={BRAND_TOOLTIP}>
+            {brand.icon} {brand.name}
+          </h1>
           <p className="tagline">Electric · Water · Septic — Marion County, FL</p>
         </div>
         <nav className="tabs">
