@@ -48,8 +48,18 @@ and **investors stay fully on B** (already shipped — never weaken it).
 - [x] R. Reconciled w/ Adam (June 12): PM sees ALL projects (scoped→false), so
         only investors are scoped → KEEP `investor_project_access` (no rename;
         dropped it from 0006, standardized admin.ts onto that name).
-- [ ] 4. Stage 0006 on `rcchjqupvozyqkahhion`, verify each role via JWT
-        simulation, then run on prod. ← CURRENT
+- [x] 4. Staged 0006 on `rcchjqupvozyqkahhion` (caught + fixed a statement-order
+        bug), verified all 5 roles via JWT simulation, then ran on PRODUCTION
+        (June 12 2026). Verified: office@=admin reads blob; investor locked out
+        (0 blob rows) but still sees curated data. **RBAC is LIVE.**
+
+## How to add a real person (admin)
+1. Supabase dashboard → Authentication → Add user (set their email + password;
+   tick Auto Confirm). Auth-user creation can't happen in the SPA (needs the
+   service key) — this stays a dashboard step.
+2. In the app, open **👥 People** (admin only) → set their role. For investors,
+   also assign their project(s).
+3. They sign in at utility-workbench.vercel.app and land in the right view.
 
 ## Decisions locked (June 12 2026)
 - Trust model = A (internal roles read the blob; UI gates per role). Investors
