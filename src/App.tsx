@@ -13,7 +13,7 @@
  * "LIFTING STATE UP": which project is selected matters across the UI, so it
  * lives here and flows down.
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import './App.css'
 import type { Stream } from './types'
 import { useProjects } from './hooks/useProjects'
@@ -38,19 +38,45 @@ import InvestorInbox from './components/InvestorInbox'
 import { publishInvestorSnapshots } from './lib/investorPublish'
 import { ROLES, type AppRole } from './data/roles'
 import PeopleView from './components/PeopleView'
-import { APP_NAME, APP_ICON } from './lib/brand'
 
 /** A top-level view. 'settings' (🛠) and 'people' (👥) are header buttons, not tabs. */
 type View = 'today' | 'tasks' | 'projects' | 'models' | 'inspections' | 'settings' | 'people'
 
-// The three top tabs. Pure config.
+// The top nav tabs. Pure config. `label` is the pill text (no emoji — the
+// Calm Canvas header keeps the nav clean); `icon` is kept for reference.
 const TABS: { key: View; label: string }[] = [
-  { key: 'today', label: '🏠 Today' },
-  { key: 'tasks', label: '✓ Tasks' },
-  { key: 'projects', label: '🏗️ Projects' },
-  { key: 'models', label: '📐 Models' },
-  { key: 'inspections', label: '🔍 Inspections' },
+  { key: 'today', label: 'Today' },
+  { key: 'tasks', label: 'Tasks' },
+  { key: 'projects', label: 'Projects' },
+  { key: 'models', label: 'Models' },
+  { key: 'inspections', label: 'Inspections' },
 ]
+
+/**
+ * MoreMenu — the header "More ▾" overflow. Keeps the top bar clean (matching
+ * the Calm Canvas design) by tucking secondary actions behind one button. A
+ * backdrop closes it on any outside click; clicking an item closes it too.
+ * `dirty` shows a small dot so the unsaved-changes signal isn't lost.
+ */
+function MoreMenu({ dirty, children }: { dirty?: boolean; children: ReactNode }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="hdr-menu">
+      <button className="icon-btn more-btn" onClick={() => setOpen((o) => !o)} title="More actions">
+        More <span className="more-caret">▾</span>
+        {dirty && <span className="more-dot" title="Unsaved changes" />}
+      </button>
+      {open && (
+        <>
+          <div className="hdr-menu-backdrop" onClick={() => setOpen(false)} />
+          <div className="hdr-menu-panel" onClick={() => setOpen(false)}>
+            {children}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
 
 function App({ role = 'admin' }: { role?: AppRole }) {
   // What this signed-in role may see (data/roles.ts). Defaults to admin so the
@@ -169,15 +195,18 @@ function App({ role = 'admin' }: { role?: AppRole }) {
   return (
     <div className="app">
       <header className="app-header">
-        <div>
-          <h1>{APP_ICON} {APP_NAME}</h1>
-          <p className="tagline">Electric · Water · Septic — Marion County, FL</p>
+        {/* ★ Lodestar brand lockup (Calm Canvas) */}
+        <div className="brand-lockup" title="Lodestar — your command center">
+          <span className="brand-star">★</span>
+          <span className="brand-word">Lodestar</span>
         </div>
-        <nav className="tabs">
+
+        {/* Pill nav — the role's visible tabs, active = rust-tint */}
+        <nav className="nav-pills">
           {TABS.filter((t) => (roleCfg.tabs as string[]).includes(t.key)).map((t) => (
             <button
               key={t.key}
-              className={tab === t.key ? 'act' : ''}
+              className={'nav-pill' + (tab === t.key ? ' act' : '')}
               onClick={() => {
                 setTab(t.key)
                 setSelectedId(null)
@@ -185,77 +214,66 @@ function App({ role = 'admin' }: { role?: AppRole }) {
             >
               {t.label}
               {t.key === 'today' && todayBadge.count > 0 && (
-                <span className={'tab-badge' + (todayBadge.fire ? ' fire' : '')}>{todayBadge.count}</span>
+                <span className={'pill-badge' + (todayBadge.fire ? ' fire' : '')}>{todayBadge.count}</span>
               )}
               {t.key === 'tasks' && taskBadge.count > 0 && (
-                <span className={'tab-badge' + (taskBadge.fire ? ' fire' : '')}>{taskBadge.count}</span>
+                <span className={'pill-badge' + (taskBadge.fire ? ' fire' : '')}>{taskBadge.count}</span>
               )}
             </button>
           ))}
-          {/* Save indicator + button — click any time to force a save; shows
-              ✓ Saved when the cloud has your latest. Auto-save still runs. */}
-          <button
-            className={'save-btn save-' + saveState}
-            onClick={saveNow}
-            disabled={saveState === 'saving'}
-            title={
-              saveState === 'error'
-                ? 'Last save failed — click to retry'
-                : saveState === 'dirty'
-                  ? 'Unsaved changes — click to save now'
-                  : 'All changes saved to the cloud'
-            }
-          >
-            {saveState === 'saving'
-              ? '⏳ Saving…'
-              : saveState === 'dirty'
-                ? '● Save now'
-                : saveState === 'error'
-                  ? '⚠ Retry save'
-                  : '✓ Saved'}
-          </button>
-          {/* 👥 People & access — admin only (manage logins, roles, projects) */}
-          {roleCfg.canManageUsers && (
-            <button
-              className={tab === 'people' ? 'act' : ''}
-              onClick={() => {
-                setTab('people')
-                setSelectedId(null)
-              }}
-              title="People & access"
-            >
-              👥
-            </button>
-          )}
-          {/* 🛠 templates & settings — only roles allowed to manage settings */}
-          {roleCfg.canManageSettings && (
-            <button
-              className={tab === 'settings' ? 'act' : ''}
-              onClick={() => {
-                setTab('settings')
-                setSelectedId(null)
-              }}
-              title="Templates & settings"
-            >
-              🛠
-            </button>
-          )}
-          {/* density toggle — ⊟ collapses to compact, ⊞ expands back */}
-          <button onClick={toggleDensity} title="Toggle compact / comfortable spacing">
-            {density === 'comfortable' ? '⊟' : '⊞'}
-          </button>
-          {/* dark mode toggle — show the thing you'd switch TO */}
-          <button onClick={toggleTheme} title="Toggle dark mode">
+        </nav>
+
+        {/* Right cluster: theme toggle · More overflow · avatar */}
+        <div className="hdr-actions">
+          <button className="icon-btn" onClick={toggleTheme} title="Toggle dark mode">
             {theme === 'light' ? '🌙' : '☀️'}
           </button>
-          {/* move data between browsers as a .json file */}
-          <ExportImport state={state} onImport={replaceState} />
-          {hasSupabase && (
-            <button className="mini signout" onClick={() => supabase?.auth.signOut()} title="Sign out">
-              ⎋ Sign out
+          <MoreMenu dirty={saveState === 'dirty'}>
+            <button className="menu-item" onClick={saveNow} disabled={saveState === 'saving'}>
+              {saveState === 'saving'
+                ? '⏳ Saving…'
+                : saveState === 'dirty'
+                  ? '● Save now'
+                  : saveState === 'error'
+                    ? '⚠ Retry save'
+                    : '✓ Saved'}
             </button>
-          )}
-        </nav>
+            {roleCfg.canManageUsers && (
+              <button
+                className="menu-item"
+                onClick={() => {
+                  setTab('people')
+                  setSelectedId(null)
+                }}
+              >
+                👥 People &amp; access
+              </button>
+            )}
+            {roleCfg.canManageSettings && (
+              <button
+                className="menu-item"
+                onClick={() => {
+                  setTab('settings')
+                  setSelectedId(null)
+                }}
+              >
+                🛠 Templates &amp; settings
+              </button>
+            )}
+            <button className="menu-item" onClick={toggleDensity}>
+              {density === 'comfortable' ? '⊟ Compact spacing' : '⊞ Comfortable spacing'}
+            </button>
+            <div className="menu-item menu-item--wrap" onClick={(e) => e.stopPropagation()}>
+              <ExportImport state={state} onImport={replaceState} />
+            </div>
+            {hasSupabase && (
+              <button className="menu-item" onClick={() => supabase?.auth.signOut()}>
+                ⎋ Sign out
+              </button>
+            )}
+          </MoreMenu>
+          <span className="avatar" title="Signed in">A</span>
+        </div>
       </header>
 
       {tab === 'today' && (
