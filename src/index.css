@@ -42,12 +42,27 @@
   --star: #e0a400;            /* starred/favorite — deliberately NOT --warn */
   --shadow: rgba(0, 0, 0, 0.18);
 
+  /* "Calm Canvas" tokens (from the Claude Design system). Extra warm-neutral
+     surfaces, a tertiary ink, rust tints, and elevation. */
+  --surface-2: #faf8f4;       /* subtle raised */
+  --surface-3: #efe9e0;       /* neutral chip / count pill / track */
+  --ink-3: #a59c8f;           /* tertiary text — meta, hints */
+  --divider: #efe9e0;         /* hairline list dividers */
+  --rust-strong: #9a4518;     /* accent hover / pressed */
+  --rust-tint: #f3e3d6;       /* soft accent fill (accent badges, active pill) */
+  --rust-tint-ink: #b3541e;   /* text on --rust-tint */
+  --ready-icon: #a86a3a;      /* warm icon tone in dense "ready" lists */
+  --shadow-sm: 0 1px 2px rgba(40, 30, 20, 0.06);
+  --shadow-md: 0 6px 20px rgba(40, 30, 20, 0.10);
+  --shadow-lg: 0 14px 44px rgba(40, 30, 20, 0.13);
+
   /* Type scale (px). One title size, one body size, etc. */
   --text-2xs: 10px; --text-xs: 11px; --text-sm: 13px; --text-base: 14px;
   --text-md: 16px;  --text-lg: 18px; --text-xl: 20px; --text-2xl: 24px;
   --weight-normal: 400; --weight-semibold: 600; --weight-bold: 700;
   --lh-tight: 1; --lh-normal: 1.5; --ls-label: 0.04em;
-  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Schibsted Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Bodoni Moda', Georgia, 'Times New Roman', serif; /* greeting/brand */
   --font-mono: ui-monospace, Menlo, Consolas, monospace;
 
   /* Spacing scale (px) + role aliases (compact density reassigns the roles). */
@@ -86,6 +101,13 @@
   --warn: #e6c860;    --warn-bg: #443a1d;    --warn-strong: #f0c44a;
   --info: #9cc0ff;    --info-bg: #22304d;
   --accent-2: #c3aef0; --accent-2-bg: #312647; --accent-2-border: #4a3a6b;
+  --surface-2: #2b2b29; --surface-3: #3a3a36;
+  --ink-3: #7f796f; --divider: #3a3a37;
+  --rust-strong: #c95e1f; --rust-tint: #3a2a1e; --rust-tint-ink: #f0a463;
+  --ready-icon: #d68a4f;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.40);
+  --shadow-md: 0 8px 26px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 14px 44px rgba(0, 0, 0, 0.50);
   --star: #f0c419;
   --shadow: rgba(0, 0, 0, 0.4);
 }
@@ -97,7 +119,7 @@
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-sans);
   font-size: 16px;
   line-height: 1.5;
   color: var(--text);

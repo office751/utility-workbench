@@ -42,5 +42,18 @@ phase, P1 first, each a build-verified commit.
 - [ ] badge-hue tokens + collapse the dark `.badge` block; fold near-dup reds/ambers — optional polish, deferred.
 - [~] P2 — SAFE wins done: fixed the invisible Tasks "＋ Add a task" toggle (`button.primary.on` now shows a pressed state) and matched the two primary `:disabled` opacities to 0.45. NOT done blind: the full 9→1 `.btn` family merge needs className changes across ~10 components where buttons genuinely differ (some `.on`/`.act` fill with accent, others like `.person-proj.on` are outlines; `.contact:disabled` is a `cursor:wait` LOADING state, not plain disabled). Best done with eyes on :5173 / Claude Design.
 - [ ] P3 (cards/fields/alert/brand) · P4 (mobile header/taps) — structural+visual; do with visual verification.
+
+## Claude Design handoff (June 2026)
+Fetched the `construction-lodestar-design-system` handoff bundle (tokens + core
+components + 4 ui_kits: today / projects / project-detail / tasks), all in the
+approved **"Calm Canvas"** direction. Its tokens match ours ~1:1.
+- [x] **Today** implemented (`Today.tsx` + App.css `.t-*`): rust gradient greeting
+      banner with glass stat chips, consistent section headers (icon + uppercase
+      label + count), grouped inset cards with badged rows. Real data wired in.
+      Added brand fonts (Schibsted Grotesk UI + Bodoni Moda display) app-wide and
+      the design's extra tokens (--surface-2/3, --ink-3, --divider, --rust-tint,
+      --ready-icon, shadows). Old `.today-hero/.stat/.action-row/.move-group/
+      .today-section` CSS is now dead — clean up later.
+- [ ] Projects, Project detail, Tasks ui_kits — same approach, per screen.
 - [ ] P2 · P3 · P4 — as above.
 - [ ] Then: Claude Design visual identity (claude.ai/design) layered on this base.

@@ -1,6 +1,10 @@
 /**
  * Today.tsx — the command center: "okay, what's the goal today?"
  *
+ * Visual direction: "Calm Canvas" (from the Claude Design system) — a rust
+ * greeting banner with glass stat chips, then consistent section headers
+ * (icon + uppercase label + count) over grouped inset cards of rows.
+ *
  * Top to bottom:
  *   - ⭐ Today's Focus     — the few tasks you starred; your chosen priorities.
  *   - 🔥 Needs attention   — time fires: overdue/due-soon TASKS + construction
@@ -41,66 +45,83 @@ function greeting(): string {
   return 'Good evening'
 }
 
-/** A hero stat tile. */
-function Stat({ n, l }: { n: number; l: string }) {
+type BadgeTone = 'danger' | 'warn' | 'neutral' | 'accent'
+
+/** A glass metric chip on the rust greeting banner. */
+function StatChip({ n, l }: { n: number; l: string }) {
   return (
-    <div className="stat">
-      <span className="stat-n">{n}</span>
-      <span className="stat-l">{l}</span>
+    <div className="t-stat">
+      <span className="t-stat-n">{n}</span>
+      <span className="t-stat-l">{l}</span>
     </div>
   )
 }
 
-/** One urgent CONSTRUCTION line — click to open the project. */
-function AttentionRow({ item, onOpen }: { item: ActionItem; onOpen: (id: number, s: Stream) => void }) {
+/** The consistent header above every section: emoji + uppercase label + count. */
+function SecHead({ icon, label, count, hint }: { icon: string; label: string; count: number; hint?: string }) {
   return (
-    <button className={`action-row sev-${item.severity}`} onClick={() => onOpen(item.projectId, item.stream)}>
-      <span className="ar-icon">{item.icon}</span>
-      <span className="ar-body">
-        <span className="ar-text">{item.text}</span>
-        <span className="ar-addr">
-          {item.address} <span className="muted">· {item.meta}</span>
-        </span>
-      </span>
-      {item.detail && <span className={`ar-chip sev-${item.severity}`}>{item.detail}</span>}
-      <span className="ar-go">›</span>
-    </button>
+    <div className="t-sec-head">
+      <div className="t-sec-line">
+        <span className="t-sec-icon">{icon}</span>
+        <span className="t-sec-label">{label}</span>
+        <span className="t-sec-count">{count}</span>
+      </div>
+      {hint && <p className="t-sec-hint">{hint}</p>}
+    </div>
   )
 }
 
-/** One TASK line on Today — the checkbox completes it; stripe + chip show urgency. */
+/** One TASK row — the checkbox completes it; an optional trailing badge. */
 function TaskRow({
   t,
-  severity,
-  chip,
+  badge,
+  badgeTone,
   bodyWaiting,
   onCompleteTask,
 }: {
   t: Task
-  severity: 'crit' | 'warn' | 'info'
-  chip: string | null
-  bodyWaiting: boolean // show the ⏳ person in the body? (false when it's the chip)
+  badge: string | null
+  badgeTone: BadgeTone
+  bodyWaiting: boolean // show the ⏳ person in the body? (false when it's the badge)
   onCompleteTask: (id: string) => void
 }) {
   const hat = hatOf(t.category)
   return (
-    <div className={`action-row sev-${severity}`}>
-      <input type="checkbox" className="focus-check" title="Mark done" onChange={() => onCompleteTask(t.id)} />
-      <span className="ar-icon">{hat.icon}</span>
-      <span className="ar-body">
-        <span className="ar-text">{t.text}</span>
-        <span className="ar-addr">
+    <div className="t-row">
+      <input type="checkbox" className="t-check" title="Mark done" onChange={() => onCompleteTask(t.id)} />
+      <span className="t-row-icon">{hat.icon}</span>
+      <span className="t-row-body">
+        <span className="t-row-title">{t.text}</span>
+        <span className="t-row-meta">
           {hat.label}
-          {t.company ? <span className="muted"> · {t.company}</span> : null}
-          {bodyWaiting && t.waitingOn ? <span className="muted"> · ⏳ {t.waitingOn}</span> : null}
+          {t.company ? ` · ${t.company}` : ''}
+          {bodyWaiting && t.waitingOn ? ` · ⏳ ${t.waitingOn}` : ''}
         </span>
       </span>
-      {chip && <span className={`ar-chip sev-${severity}`}>{chip}</span>}
+      {badge && <span className={`t-badge t-badge--${badgeTone}`}>{badge}</span>}
     </div>
   )
 }
 
-/** A collapsible group of same-action construction to-dos. */
+/** One urgent CONSTRUCTION row — click to open the project. */
+function AttnRow({ item, onOpen }: { item: ActionItem; onOpen: (id: number, s: Stream) => void }) {
+  const tone: BadgeTone = item.severity === 'crit' ? 'danger' : item.severity === 'warn' ? 'warn' : 'neutral'
+  return (
+    <button className="t-row t-row--link" onClick={() => onOpen(item.projectId, item.stream)}>
+      <span className="t-row-icon">{item.icon}</span>
+      <span className="t-row-body">
+        <span className="t-row-title">{item.text}</span>
+        <span className="t-row-meta">
+          {item.address} · {item.meta}
+        </span>
+      </span>
+      {item.detail && <span className={`t-badge t-badge--${tone}`}>{item.detail}</span>}
+      <span className="t-chev">›</span>
+    </button>
+  )
+}
+
+/** A collapsible group of same-action construction to-dos (the "Ready" lane). */
 function MoveGroup({
   icon,
   label,
@@ -114,25 +135,28 @@ function MoveGroup({
 }) {
   const [open, setOpen] = useState(false)
   return (
-    <div className={'move-group' + (open ? ' open' : '')}>
-      <button className="mg-head" onClick={() => setOpen((o) => !o)}>
-        <span className="mg-caret">{open ? '▾' : '▸'}</span>
-        <span className="ar-icon">{icon}</span>
-        <span className="mg-label">{label}</span>
-        <span className="cnt">{items.length}</span>
+    <>
+      <button className="t-row t-row--link t-move-head" onClick={() => setOpen((o) => !o)}>
+        <span className="t-move-caret">{open ? '▾' : '▸'}</span>
+        <span className="t-row-icon ready">{icon}</span>
+        <span className="t-row-body">
+          <span className="t-row-title">{label}</span>
+        </span>
+        <b className="t-move-n">{items.length}</b>
+        <span className="t-chev">{open ? '' : '›'}</span>
       </button>
-      {open && (
-        <div className="mg-items">
-          {items.map((it, i) => (
-            <button key={i} className="mg-item" onClick={() => onOpen(it.projectId, it.stream)}>
-              <span className="mg-addr">{it.address}</span>
-              <span className="muted">· {it.meta}</span>
-              <span className="ar-go">›</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+      {open &&
+        items.map((it, i) => (
+          <button key={i} className="t-row t-row--link t-move-item" onClick={() => onOpen(it.projectId, it.stream)}>
+            <span className="t-row-body">
+              <span className="t-row-meta">
+                {it.address} · {it.meta}
+              </span>
+            </span>
+            <span className="t-chev">›</span>
+          </button>
+        ))}
+    </>
   )
 }
 
@@ -167,8 +191,8 @@ function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks }: Props) {
     ac.stats.allClear && attnTasks.length === 0 && waiting.length === 0 && focus.length === 0
 
   const today = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
-  // Just the date here — the stat tiles to the right carry the numbers, so we
-  // don't say the same counts twice (audit finding, June 2026).
+  // Just the date here — the stat chips carry the numbers, so we don't say the
+  // same counts twice (audit finding, June 2026).
   const summary = everythingClear ? `${today} · all clear — nice.` : today
 
   // Group "your move" by action so it reads as intel, not a 150-row wall.
@@ -180,146 +204,124 @@ function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks }: Props) {
   }
   const moveGroups = [...groups.entries()].sort((a, b) => b[1].items.length - a[1].items.length)
 
-  // A task fire is critical if it's already overdue, otherwise a warning.
-  const taskSev = (t: Task): 'crit' | 'warn' => ((daysUntilDue(t) ?? 0) < 0 ? 'crit' : 'warn')
+  // A task fire is critical (danger) if already overdue, otherwise a warning.
+  const taskTone = (t: Task): BadgeTone => ((daysUntilDue(t) ?? 0) < 0 ? 'danger' : 'warn')
 
   return (
     <section className="today">
-      <header className="today-hero">
-        <div className="today-greet">
+      {/* Rust greeting banner with the four command-center stats as glass chips. */}
+      <header className="t-banner">
+        <div className="t-banner-text">
           <h2>{greeting()}, Adam</h2>
           <p>{summary}</p>
         </div>
-        <div className="today-stats">
-          <Stat n={focus.length} l="focus" />
-          <Stat n={attentionCount} l="attention" />
-          <Stat n={waiting.length} l="waiting" />
-          <Stat n={ac.stats.moves} l="to move" />
+        <div className="t-stats">
+          <StatChip n={focus.length} l="Focus" />
+          <StatChip n={attentionCount} l="Attention" />
+          <StatChip n={waiting.length} l="Waiting" />
+          <StatChip n={ac.stats.moves} l="To move" />
         </div>
       </header>
 
       {everythingClear && (
-        <div className="today-clear">
+        <div className="t-clear">
           🎉 You're all caught up — nothing needs you across {ac.stats.projects} projects and your task list.
         </div>
       )}
 
-      {/* ⭐ Today's Focus — your chosen few */}
-      <div className="today-section">
-        <h3 className="today-h accent">
-          ⭐ Today's focus <span className="cnt">{focus.length}</span>
-        </h3>
+      {/* ⭐ Today's Focus — your chosen few (rust-accented card) */}
+      <section className="t-sec">
+        <SecHead icon="⭐" label="Today's focus" count={focus.length} />
         {focus.length === 0 ? (
-          <p className="meta">
+          <div className="t-card t-card--accent t-empty">
             Nothing starred yet.{' '}
             <button className="linklike" onClick={onGoTasks}>
               Open ✓ Tasks
             </button>{' '}
             and star a few must-dos — they’ll live right here.
-          </p>
+          </div>
         ) : (
-          <div className="action-list">
+          <div className="t-card t-card--accent">
             {focus.map((t) => (
-              <div key={t.id} className="action-row focus-row">
-                <input
-                  type="checkbox"
-                  className="focus-check"
-                  title="Mark done"
-                  onChange={() => onCompleteTask(t.id)}
-                />
-                <span className="ar-icon">{hatOf(t.category).icon}</span>
-                <span className="ar-body">
-                  <span className="ar-text">{t.text}</span>
-                  <span className="ar-addr">
-                    {hatOf(t.category).label}
-                    {t.company ? <span className="muted"> · {t.company}</span> : null}
-                    {t.waitingOn ? <span className="muted"> · ⏳ {t.waitingOn}</span> : null}
-                  </span>
-                </span>
-                {dueLabel(t) && <span className="ar-chip">{dueLabel(t)}</span>}
-              </div>
+              <TaskRow key={t.id} t={t} badge={dueLabel(t)} badgeTone="neutral" bodyWaiting onCompleteTask={onCompleteTask} />
             ))}
           </div>
         )}
-      </div>
+      </section>
 
       {/* 🔥 Needs attention — task fires first, then construction deadlines */}
       {(attnTasks.length > 0 || fires.length > 0) && (
-        <div className="today-section">
-          <h3 className="today-h">
-            🔥 Needs attention <span className="cnt">{attnTasks.length + fires.length}</span>
-          </h3>
-          <div className="action-list">
+        <section className="t-sec">
+          <SecHead icon="🔥" label="Needs attention" count={attnTasks.length + fires.length} />
+          <div className="t-card">
             {attnTasks.map((t) => (
               <TaskRow
                 key={t.id}
                 t={t}
-                severity={taskSev(t)}
-                chip={dueLabel(t)}
+                badge={dueLabel(t)}
+                badgeTone={taskTone(t)}
                 bodyWaiting
                 onCompleteTask={onCompleteTask}
               />
             ))}
             {fires.map((it, i) => (
-              <AttentionRow key={`a${i}`} item={it} onOpen={onOpen} />
+              <AttnRow key={`a${i}`} item={it} onOpen={onOpen} />
             ))}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* ⚠ Gone quiet — parked past the expected duration for their current step
-          (the stale-status flags; thresholds are tuned in data/thresholds.ts) */}
+      {/* ⚠ Gone quiet — parked past the expected duration for their current step */}
       {stalled.length > 0 && (
-        <div className="today-section">
-          <h3 className="today-h">
-            ⚠ Gone quiet — overdue at a stage <span className="cnt">{stalled.length}</span>
-          </h3>
-          <p className="meta">
-            These have sat at their current step longer than expected — time for a nudge.
-          </p>
-          <div className="action-list">
+        <section className="t-sec">
+          <SecHead
+            icon="⚠️"
+            label="Gone quiet — overdue at a stage"
+            count={stalled.length}
+            hint="These have sat at their current step longer than expected — time for a nudge."
+          />
+          <div className="t-card">
             {stalled.map((it, i) => (
-              <AttentionRow key={`s${i}`} item={it} onOpen={onOpen} />
+              <AttnRow key={`s${i}`} item={it} onOpen={onOpen} />
             ))}
           </div>
-        </div>
+        </section>
       )}
 
       {/* ⏳ Waiting on you — people you're holding up */}
       {waiting.length > 0 && (
-        <div className="today-section">
-          <h3 className="today-h">
-            ⏳ Waiting on you <span className="cnt">{waiting.length}</span>
-          </h3>
-          <p className="meta">Clear one of these and you unblock someone.</p>
-          <div className="action-list">
+        <section className="t-sec">
+          <SecHead icon="⏳" label="Waiting on you" count={waiting.length} hint="Clear one of these and you unblock someone." />
+          <div className="t-card">
             {waiting.map((t) => (
               <TaskRow
                 key={t.id}
                 t={t}
-                severity="info"
-                chip={t.waitingOn ? `⏳ ${t.waitingOn}` : null}
+                badge={t.waitingOn ? `⏳ ${t.waitingOn}` : null}
+                badgeTone="neutral"
                 bodyWaiting={false}
                 onCompleteTask={onCompleteTask}
               />
             ))}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* ✅ Ready for your move — construction backlog */}
+      {/* ✅ Ready for your move — construction backlog, grouped by action */}
       {moveGroups.length > 0 && (
-        <div className="today-section">
-          <h3 className="today-h accent">
-            ✅ Ready for your move <span className="cnt">{ac.stats.moves}</span>
-          </h3>
-          <p className="meta">Grouped by action — click a group to expand, then a project to open it.</p>
-          <div className="move-groups">
+        <section className="t-sec">
+          <SecHead
+            icon="✅"
+            label="Ready for your move"
+            count={ac.stats.moves}
+            hint="Grouped by action — open a group, then a project."
+          />
+          <div className="t-card">
             {moveGroups.map(([label, g]) => (
               <MoveGroup key={label} icon={g.icon} label={label} items={g.items} onOpen={onOpen} />
             ))}
           </div>
-        </div>
+        </section>
       )}
     </section>
   )

@@ -1259,9 +1259,225 @@ button.danger:hover {
 
 /* ---------- Today command center ---------- */
 .today {
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+/* ===== Today — "Calm Canvas" design (Claude Design handoff, June 2026) =====
+   Rust greeting banner + glass stat chips, consistent section headers, and
+   grouped inset cards of rows. (The older .today-hero/.stat/.action-row/
+   .move-group/.today-section rules below are superseded and now unused.) */
+.t-banner {
+  background: linear-gradient(135deg, var(--accent), #8f3f12);
+  border-radius: var(--radius-xl);
+  padding: 24px 26px;
   display: flex;
-  flex-direction: column;
-  gap: 18px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  color: #fff;
+}
+.t-banner-text h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+.t-banner-text p {
+  font-size: var(--text-sm);
+  opacity: 0.85;
+  margin: 5px 0 0;
+}
+.t-stats {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.t-stat {
+  text-align: center;
+  min-width: 66px;
+  padding: 8px 12px;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.15);
+}
+.t-stat-n {
+  display: block;
+  font-size: var(--text-xl);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  line-height: 1.1;
+}
+.t-stat-l {
+  display: block;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.85);
+  margin-top: 3px;
+}
+
+.t-clear {
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+  background: var(--success-bg);
+  color: var(--success);
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.today .t-sec {
+  margin-top: 34px;
+}
+.t-sec-head {
+  margin-bottom: 14px;
+}
+.t-sec-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.t-sec-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+.t-sec-label {
+  font-size: var(--text-sm);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.t-sec-count {
+  background: var(--surface-3);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+}
+.t-sec-hint {
+  font-size: var(--text-sm);
+  color: var(--ink-3);
+  margin: 4px 0 0;
+}
+
+/* grouped inset card */
+.t-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.t-card--accent {
+  border-left: 3px solid var(--accent);
+}
+.t-empty {
+  padding: 16px;
+  font-size: var(--text-sm);
+  color: var(--ink-3);
+}
+
+/* rows (used as both <div> task rows and <button> link rows) */
+.t-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  width: 100%;
+  background: none;
+  border: 0;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+.t-card > .t-row:not(:first-child) {
+  border-top: 1px solid var(--divider);
+}
+.t-row--link {
+  cursor: pointer;
+}
+.t-row--link:hover {
+  background: var(--surface-2);
+}
+.t-check {
+  margin-top: 2px;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.t-row-icon {
+  font-size: 18px;
+  line-height: 1.2;
+  flex: none;
+}
+.t-row-body {
+  flex: 1;
+  min-width: 0;
+}
+.t-row-title {
+  display: block;
+  font-size: var(--text-base);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text);
+}
+.t-row-meta {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--ink-3);
+  margin-top: 3px;
+}
+.t-chev {
+  align-self: center;
+  flex: none;
+  color: var(--ink-3);
+  font-size: 18px;
+}
+
+/* trailing badges */
+.t-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  align-self: center;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+.t-badge--danger { background: var(--danger-bg); color: var(--danger); }
+.t-badge--warn { background: var(--warn-bg); color: var(--warn); }
+.t-badge--accent { background: var(--rust-tint); color: var(--rust-tint-ink); }
+.t-badge--neutral { background: var(--surface-3); color: var(--muted); }
+
+/* "Ready for your move" collapsible group */
+.t-move-head {
+  align-items: center;
+}
+.t-move-caret {
+  flex: none;
+  width: 12px;
+  color: var(--ink-3);
+  font-size: 11px;
+}
+.t-move-n {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.t-move-item {
+  padding-left: 44px;
 }
 
 /* the hero banner — rust-orange gradient, white text, soft glow */
