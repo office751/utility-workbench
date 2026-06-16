@@ -145,6 +145,8 @@ function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
     // Model library: seed once with what we know (E2 is master-filed); after
     // that the saved object is the source of truth, edits included.
     models: parsed.models ?? { E2: { masterFiled: true } },
+    // Owner-edited checklist step lists (empty = use the code defaults).
+    stepOverrides: parsed.stepOverrides ?? {},
   }
 
   // ONE-TIME (June 2026): the scanner used to turn inspection RESULTS into
@@ -735,6 +737,21 @@ export function useProjects() {
     setState(migrate(next)) // migrate: older export files have no roster/permit
   }
 
+  /** Save the GLOBAL step list for one stream-variant key (from the step editor).
+   *  Applies to every house; `applyStepOverrides` in App re-syncs the resolver. */
+  function setStepList(key: string, steps: { id: string; label: string; wmOnly?: boolean }[]) {
+    setState((prev) => ({ ...prev, stepOverrides: { ...(prev.stepOverrides ?? {}), [key]: steps } }))
+  }
+
+  /** Drop a custom step list → fall back to the built-in default. */
+  function resetStepList(key: string) {
+    setState((prev) => {
+      const next = { ...(prev.stepOverrides ?? {}) }
+      delete next[key]
+      return { ...prev, stepOverrides: next }
+    })
+  }
+
   // Whatever we return here is what components receive from useProjects().
   return {
     state,
@@ -761,6 +778,8 @@ export function useProjects() {
     addTask,
     updateTask,
     removeTask,
+    setStepList,
+    resetStepList,
     replaceState,
     saveState,
     saveNow,

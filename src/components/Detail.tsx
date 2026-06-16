@@ -13,7 +13,17 @@
  */
 import { useEffect, useState } from 'react'
 import type { OrderItem, OrderStatus, Project, ProjectState, Stream, Task } from '../types'
-import { ELECTRIC_STEPS, PERMIT_STEPS, septicStepsFor, waterStepsFor } from '../data/lifecycles'
+import {
+  type StepDef,
+  electricSteps,
+  isStepListCustomized,
+  permitSteps,
+  septicStepsFor,
+  stepListKey,
+  stepsFor,
+  waterStepsFor,
+} from '../data/lifecycles'
+import StepEditor from './StepEditor'
 import {
   engineerOf,
   isElectricDone,
@@ -70,6 +80,9 @@ interface Updaters {
   updateTask: (id: string, patch: Partial<Task>) => void
   removeTask: (id: string) => void
   dismissNotification: (id: number, sourceKey: string) => void
+  /** Save / clear the GLOBAL step list for a stream-variant key (the step editor). */
+  setStepList: (key: string, steps: StepDef[]) => void
+  resetStepList: (key: string) => void
 }
 
 /** A tab in the project workspace: the Overview summary, or one stream. */
@@ -134,6 +147,7 @@ function Detail(props: Props) {
   // deep-linked stream (from Today/Tasks) or Overview.
   const [activeTab, setActiveTab] = useState<DetailTab>(props.initialStream ?? 'overview')
   const [showSettings, setShowSettings] = useState(false)
+  const [editingSteps, setEditingSteps] = useState(false) // step-editor open on the current stream tab
   // Investor portal: does THIS project have an investor grant? (Empty set
   // until the portal schema exists — the curation UI then never appears.)
   const [granted, setGranted] = useState<Set<number>>(new Set())
@@ -324,6 +338,31 @@ function Detail(props: Props) {
             />
           )}
 
+          {/* Edit the standard checklist for this stream (global, all houses). */}
+          {activeTab !== 'materials' &&
+            (editingSteps ? (
+              <StepEditor
+                key={stepListKey(activeTab, p, ps)}
+                streamLabel={(() => {
+                  const base = STREAM_TABS.find((s) => s.key === activeTab)?.name ?? activeTab
+                  // Append the variant (Well / City / Septic-INRB / Sewer) so it's
+                  // clear WHICH list you're editing (each variant is its own list).
+                  const variant = stepListKey(activeTab, p, ps).split(':')[1]
+                  return variant ? `${base} (${variant})` : base
+                })()}
+                current={stepsFor(activeTab, p, ps)}
+                isCustomized={isStepListCustomized(stepListKey(activeTab, p, ps))}
+                onSave={(steps) => props.setStepList(stepListKey(activeTab, p, ps), steps)}
+                onReset={() => props.resetStepList(stepListKey(activeTab, p, ps))}
+                onClose={() => setEditingSteps(false)}
+              />
+            ) : (
+              <button className="btn btn-ghost btn-sm edit-steps-btn" onClick={() => setEditingSteps(true)}>
+                <Icon name="edit" size={16} />
+                Edit {STREAM_TABS.find((s) => s.key === activeTab)?.name ?? activeTab} steps
+              </button>
+            ))}
+
           <label className="notes-label">
             {NOTE_LABEL[activeTab]}
             <textarea
@@ -442,7 +481,7 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField }: Pro
       <Checklist
         projectId={p.id}
         stream="electric"
-        steps={ELECTRIC_STEPS}
+        steps={electricSteps()}
         ps={ps}
         toggleStep={toggleStep}
         setStepNote={setStepNote}
@@ -728,7 +767,7 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, u
       <Checklist
         projectId={p.id}
         stream="permit"
-        steps={PERMIT_STEPS}
+        steps={permitSteps()}
         ps={ps}
         toggleStep={toggleStep}
         setStepNote={setStepNote}

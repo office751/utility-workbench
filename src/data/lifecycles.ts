@@ -9,7 +9,7 @@
  * The `id` strings are the same vocabulary the original HTML workbench used
  * (verify, deposit, meter, cavail, snrb, ...) — that's what seed.ts keys on.
  */
-import type { Project, ProjectState } from '../types'
+import type { Project, ProjectState, Stream } from '../types'
 
 /** One step in a checklist. */
 export interface StepDef {
@@ -79,25 +79,76 @@ export const PERMIT_STEPS: StepDef[] = [
   { id: 'issued', label: 'Permit issued / picked up' },
 ]
 
-/**
- * Which water steps apply to a project? Depends on its source:
- *   Well → the well steps; City → city steps minus the WM-extension ones;
- *   CityWM → all city steps; unknown → none (must pick a source first).
- */
-export function waterStepsFor(p: Project, ps: ProjectState): StepDef[] {
-  const source = ps.waterSource ?? p.waterSource
-  if (source === 'Well') return WATER_STEPS_WELL
-  if (source === 'City') return WATER_STEPS_CITY.filter((s) => !s.wmOnly)
-  if (source === 'CityWM') return WATER_STEPS_CITY
-  return []
+/* ===================================================================
+   OWNER STEP OVERRIDES
+   The lists above are the built-in DEFAULTS. The owner can edit any of them
+   in-app (add/remove/rename/reorder); those edits live in the saved blob
+   (WorkbenchState.stepOverrides) keyed by a stable "list key", and apply to
+   EVERY house. We keep a module-level copy here so the pure step getters —
+   called all over (Detail, nextAction, staleness, the investor snapshot) —
+   can see the overrides without threading state through every signature.
+   App.tsx calls applyStepOverrides() each render, before children compute.
+   =================================================================== */
+type StepOverrides = Record<string, StepDef[]>
+let OVERRIDES: StepOverrides = {}
+
+/** Sync the module copy from saved state. Call before anything reads steps. */
+export function applyStepOverrides(o: StepOverrides | undefined): void {
+  OVERRIDES = o ?? {}
 }
 
-/**
- * Which septic steps apply? Sewer lots get the sewer list; septic lots get
- * the septic list, minus the INRB-notice step unless the system is INRB.
- */
-export function septicStepsFor(ps: ProjectState): StepDef[] {
+/** Has the owner customized this list key (vs. using the built-in default)? */
+export function isStepListCustomized(key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(OVERRIDES, key)
+}
+
+/** The stable key for the step list a given stream/variant resolves to. The
+ *  editor edits exactly the list the open tab shows. */
+export function stepListKey(stream: Stream, p: Project, ps: ProjectState): string {
+  if (stream === 'water') return 'water:' + (ps.waterSource ?? p.waterSource ?? 'unset')
+  if (stream === 'septic') {
+    if (ps.septicSource === 'Sewer') return 'septic:Sewer'
+    return ps.septicSystem === 'INRB' ? 'septic:Septic-INRB' : 'septic:Septic'
+  }
+  return stream // 'electric' | 'permit'
+}
+
+/** The built-in default list for a stream/variant (ignores overrides). Used to
+ *  seed the editor and to power "Reset to default". */
+export function defaultStepsFor(stream: Stream, p: Project, ps: ProjectState): StepDef[] {
+  if (stream === 'electric') return ELECTRIC_STEPS
+  if (stream === 'permit') return PERMIT_STEPS
+  if (stream === 'water') {
+    const source = ps.waterSource ?? p.waterSource
+    if (source === 'Well') return WATER_STEPS_WELL
+    if (source === 'City') return WATER_STEPS_CITY.filter((s) => !s.wmOnly)
+    if (source === 'CityWM') return WATER_STEPS_CITY
+    return []
+  }
+  // septic
   if (ps.septicSource === 'Sewer') return SEWER_STEPS
   if (ps.septicSystem === 'INRB') return SEPTIC_STEPS
   return SEPTIC_STEPS.filter((s) => s.id !== 'snrb')
+}
+
+/** The EFFECTIVE step list for a stream/variant: the owner's override if any,
+ *  else the built-in default. This is the single source every consumer uses. */
+export function stepsFor(stream: Stream, p: Project, ps: ProjectState): StepDef[] {
+  return OVERRIDES[stepListKey(stream, p, ps)] ?? defaultStepsFor(stream, p, ps)
+}
+
+// Convenience wrappers (same names callers already use; now override-aware).
+export function waterStepsFor(p: Project, ps: ProjectState): StepDef[] {
+  return stepsFor('water', p, ps)
+}
+export function septicStepsFor(ps: ProjectState): StepDef[] {
+  // septic doesn't use Project fields; pass a stub for the shared resolver.
+  return stepsFor('septic', { } as Project, ps)
+}
+/** Electric/permit have no project-dependent variant. */
+export function electricSteps(): StepDef[] {
+  return OVERRIDES['electric'] ?? ELECTRIC_STEPS
+}
+export function permitSteps(): StepDef[] {
+  return OVERRIDES['permit'] ?? PERMIT_STEPS
 }

@@ -12,6 +12,7 @@
 import type { Project, ProjectState, Stream, WorkbenchState } from '../types'
 import { missingTakeoffs, permitIssued } from './takeoffs'
 import { modelKey } from '../data/models'
+import { isStepListCustomized, stepListKey } from '../data/lifecycles'
 import { shutoffFor } from './shutoff'
 import { permitExpiryFor } from './permitExpiry'
 import { stalenessFor, isStale } from './staleness'
@@ -58,6 +59,15 @@ const OUR_COURT: Record<Stream, Set<string>> = {
   septic: new Set(['seval', 'sapplied', 'scounty', 'snrb']),
   permit: new Set(['submitted', 'approved']), // submit it / go pick it up
   materials: new Set(), // handled via the order count instead
+}
+
+/** Is this stream's pending next-action something WE act on (vs. waiting on a
+ *  utility/installer)? For built-in lists we use the curated OUR_COURT keys;
+ *  once the owner CUSTOMIZES a list we can't know, so any pending custom step
+ *  counts as our move (better surfaced on Today than silently dropped). */
+function ourCourt(stream: Stream, key: string, p: Project, ps: ProjectState): boolean {
+  if (key === 'done') return false
+  return OUR_COURT[stream].has(key) || isStepListCustomized(stepListKey(stream, p, ps))
 }
 
 const SEV_RANK: Record<Severity, number> = { crit: 0, warn: 1, info: 2 }
@@ -174,14 +184,14 @@ export function buildActionCenter(
     // --- your move: the next step where the ball is in our court ---
     const todos: { stream: Stream; label: string }[] = []
     const e = nextElectricAction(p, ps)
-    if (OUR_COURT.electric.has(e.key)) todos.push({ stream: 'electric', label: e.label })
+    if (ourCourt('electric', e.key, p, ps)) todos.push({ stream: 'electric', label: e.label })
     const w = nextWaterAction(p, ps)
-    if (OUR_COURT.water.has(w.key)) todos.push({ stream: 'water', label: w.label })
+    if (ourCourt('water', w.key, p, ps)) todos.push({ stream: 'water', label: w.label })
     const s = nextSepticAction(ps)
-    if (OUR_COURT.septic.has(s.key)) todos.push({ stream: 'septic', label: s.label })
+    if (ourCourt('septic', s.key, p, ps)) todos.push({ stream: 'septic', label: s.label })
     if (permitNeedsAction(ps)) {
       const pm = nextPermitAction(ps)
-      if (OUR_COURT.permit.has(pm.key)) todos.push({ stream: 'permit', label: pm.label })
+      if (ourCourt('permit', pm.key, p, ps)) todos.push({ stream: 'permit', label: pm.label })
     }
     for (const t of todos) {
       moves.push({ ...base, stream: t.stream, kind: 'todo', icon: STREAM_ICON[t.stream], text: t.label, severity: 'info', sortDays: 0 })

@@ -281,6 +281,15 @@ export interface WorkbenchState {
    * project files) plus editable facts the roster can't hold.
    */
   models?: Record<string, ModelState>
+  /**
+   * Owner-edited checklist steps, replacing the code defaults for a given
+   * step-list (keyed by a stable list key like 'septic:Septic', 'water:Well',
+   * 'electric', 'permit'). Absent key = use the built-in default list. Lets the
+   * owner add/remove/rename/reorder steps in-app without code changes; applies
+   * to every house. Shape mirrors lifecycles.ts StepDef (inlined to avoid an
+   * import cycle).
+   */
+  stepOverrides?: Record<string, { id: string; label: string; wmOnly?: boolean }[]>
 }
 
 /** One model's library page: its plan files + editable facts. */

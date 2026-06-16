@@ -3602,3 +3602,79 @@ a.map-btn {
 /* Owner's per-comment actions (Mark read · Remove) on the project Overview. */
 .inv-comment-actions { float: right; display: inline-flex; gap: 6px; }
 .inv-comment-actions .doc-btn { display: inline-flex; align-items: center; gap: 3px; }
+
+/* ---------- Step editor (edit a stream's standard checklist) ---------- */
+.edit-steps-btn { margin-top: 4px; }
+.step-editor {
+  margin-top: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+}
+.se-head { display: flex; align-items: center; gap: 8px; }
+.se-title { font-family: var(--font-display); font-size: var(--text-md); font-weight: 700; color: var(--ink); flex: 1; }
+.se-note { font-size: var(--text-sm); color: var(--ink-3); margin: 6px 0 12px; }
+.se-rows { display: flex; flex-direction: column; gap: 8px; }
+.se-row { display: flex; align-items: center; gap: 8px; }
+.se-reorder { display: flex; flex-direction: column; }
+.se-move {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.se-move:first-child { border-radius: var(--radius-sm) var(--radius-sm) 0 0; border-bottom: none; }
+.se-move:last-child { border-radius: 0 0 var(--radius-sm) var(--radius-sm); }
+.se-move:disabled { opacity: 0.4; cursor: not-allowed; }
+.se-move:hover:not(:disabled) { background: var(--surface-3); }
+.se-input {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.se-input:focus { outline: none; border-color: var(--rust); }
+.se-del {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.se-del:hover { color: var(--danger); border-color: var(--danger); }
+.se-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 10px;
+  padding: 7px 12px;
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--rust-tint-ink);
+  background: var(--rust-tint);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.se-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }

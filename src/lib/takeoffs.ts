@@ -5,6 +5,7 @@
 import type { ProjectState, WorkbenchState } from '../types'
 import { TAKEOFF_TYPES, type TakeoffType } from '../data/takeoffs'
 import { modelKey } from '../data/models'
+import { permitSteps } from './../data/lifecycles'
 
 /** The takeoff types not yet gathered for this model ('' model key → none). */
 export function missingTakeoffs(
@@ -17,7 +18,10 @@ export function missingTakeoffs(
   return TAKEOFF_TYPES.filter((t) => !got[t.id]?.done)
 }
 
-/** Is this project's permit issued? (That's when missing takeoffs become a fire.) */
+/** Is this project's permit issued? (That's when missing takeoffs become a fire.)
+ *  Keyed off the FINAL permit step of the (possibly owner-edited) list — same
+ *  edit-safe rule as isPermitDone — so it survives renaming/replacing 'issued'. */
 export function permitIssued(ps: ProjectState): boolean {
-  return !!ps.steps.permit.issued?.done
+  const steps = permitSteps()
+  return steps.length > 0 && Boolean(ps.steps.permit[steps[steps.length - 1].id]?.done)
 }

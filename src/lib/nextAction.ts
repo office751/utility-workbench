@@ -20,7 +20,35 @@ import type {
   Utility,
   WaterSource,
 } from '../types'
-import { PERMIT_STEPS, septicStepsFor, waterStepsFor } from '../data/lifecycles'
+import {
+  type StepDef,
+  electricSteps,
+  isStepListCustomized,
+  permitSteps,
+  septicStepsFor,
+  waterStepsFor,
+} from '../data/lifecycles'
+
+/** Edit-safe "done": the LAST step of a (possibly owner-edited) list is checked.
+ *  For every built-in list the last step IS the old hard-coded done-step
+ *  (power / cconn / sapproved / issued / wdrilled), so this matches today's
+ *  behavior exactly — and keeps working when the owner adds/removes steps. */
+function lastStepDone(steps: StepDef[], bucket: Record<string, { done?: boolean }>): boolean {
+  if (steps.length === 0) return false
+  return Boolean(bucket[steps[steps.length - 1].id]?.done)
+}
+
+/** Generic "first step not yet checked" walk. Used for electric/permit ONLY when
+ *  the owner has customized that list — so the Next line follows their edits
+ *  instead of the hand-coded default brain (which keys on built-in step ids). */
+function firstPending(
+  steps: StepDef[],
+  bucket: Record<string, { done?: boolean }>,
+  doneLabel: string,
+): NextAction {
+  for (const step of steps) if (!bucket[step.id]?.done) return { key: step.id, label: step.label }
+  return { key: 'done', label: doneLabel }
+}
 import { PERMIT_PORTALS, PROJECT_FOLDERS } from '../data/sharepoint'
 import { PERMIT_DATES } from '../data/permitDates'
 import { shutoffFor } from './shutoff'
@@ -78,6 +106,8 @@ export interface NextAction {
  */
 export function nextElectricAction(p: Project, ps: ProjectState): NextAction {
   const done = ps.steps.electric
+  // Owner edited the electric checklist → follow their list, not the default brain.
+  if (isStepListCustomized('electric')) return firstPending(electricSteps(), done, 'Complete')
   const u = utilityOf(p, ps)
 
   if (u === 'CLAY') return { key: 'clay', label: 'Clay Electric — outside SECO/Duke' }
@@ -95,9 +125,10 @@ export function nextElectricAction(p: Project, ps: ProjectState): NextAction {
   return { key: 'done', label: 'Complete' }
 }
 
-/** Fully done = power is on AND the account was transferred after sale. */
+/** Fully done = the final electric step is checked AND the account was
+ *  transferred after sale. */
 export function isElectricDone(ps: ProjectState): boolean {
-  return Boolean(ps.steps.electric['power']?.done && ps.transferred)
+  return lastStepDone(electricSteps(), ps.steps.electric) && Boolean(ps.transferred)
 }
 
 /**
@@ -134,12 +165,11 @@ export function nextWaterAction(p: Project, ps: ProjectState): NextAction {
   }
 }
 
-/** Water is "done" at well-drilled (wells) or connected (city). */
+/** Water is "done" when the final step of its resolved list is checked
+ *  (well-drilled for wells, connected for city). No source set → not done. */
 export function isWaterDone(p: Project, ps: ProjectState): boolean {
-  const source = waterSourceOf(p, ps)
-  if (source === 'Well') return Boolean(ps.steps.water['wdrilled']?.done)
-  if (source === 'City' || source === 'CityWM') return Boolean(ps.steps.water['cconn']?.done)
-  return false
+  if (!waterSourceOf(p, ps)) return false
+  return lastStepDone(waterStepsFor(p, ps), ps.steps.water)
 }
 
 export function waterNeedsAction(p: Project, ps: ProjectState): boolean {
@@ -168,9 +198,7 @@ export function nextSepticAction(ps: ProjectState): NextAction {
 }
 
 export function isSepticDone(ps: ProjectState): boolean {
-  return septicSourceOf(ps) === 'Sewer'
-    ? Boolean(ps.steps.septic['swerconn']?.done)
-    : Boolean(ps.steps.septic['sapproved']?.done)
+  return lastStepDone(septicStepsFor(ps), ps.steps.septic)
 }
 
 export function septicNeedsAction(ps: ProjectState): boolean {
@@ -206,21 +234,23 @@ export function permitCountyStatusOf(p: Project): string {
 
 /** Report the next REQUIRED permit milestone. */
 export function nextPermitAction(ps: ProjectState): NextAction {
+  // Owner edited the permit checklist → follow their list, not the default brain.
+  if (isStepListCustomized('permit')) return firstPending(permitSteps(), ps.steps.permit, 'Permit issued ✓')
   if (isPermitDone(ps)) return { key: 'done', label: 'Permit issued ✓' }
   // No steps done yet → it hasn't been submitted.
   if (!ps.steps.permit['submitted']?.done) return { key: 'submitted', label: 'Not submitted' }
   // "corrections" is an OPTIONAL aside (only when the county requests them),
   // so it never counts as the thing you're waiting on — skip it here.
-  for (const step of PERMIT_STEPS) {
+  for (const step of permitSteps()) {
     if (step.id === 'corrections') continue
     if (!ps.steps.permit[step.id]?.done) return { key: step.id, label: step.label }
   }
   return { key: 'done', label: 'Permit issued ✓' }
 }
 
-/** Permit is done once it's been issued / picked up. */
+/** Permit is done when the final permit step is checked. */
 export function isPermitDone(ps: ProjectState): boolean {
-  return Boolean(ps.steps.permit['issued']?.done)
+  return lastStepDone(permitSteps(), ps.steps.permit)
 }
 
 /**

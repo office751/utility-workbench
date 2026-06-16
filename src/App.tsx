@@ -17,6 +17,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import './App.css'
 import type { Stream } from './types'
 import { useProjects } from './hooks/useProjects'
+import { applyStepOverrides } from './data/lifecycles'
 import { supabase, hasSupabase } from './lib/supabase'
 import { buildActionCenter } from './lib/actionCenter'
 import { daysUntilDue, dueSoonTasks, waitingOnTasks } from './lib/tasks'
@@ -106,11 +107,17 @@ function App({ role = 'admin' }: { role?: AppRole }) {
     addTask,
     updateTask,
     removeTask,
+    setStepList,
+    resetStepList,
     setTemplate,
     replaceState,
     saveState,
     saveNow,
   } = useProjects()
+
+  // Sync the global step-list overrides into the lifecycles resolver BEFORE any
+  // child computes a next-action / checklist (pure step getters read this).
+  applyStepOverrides(state.stepOverrides)
 
   // Dark mode (persists per device — see hooks/useTheme.ts).
   const { theme, toggle: toggleTheme } = useTheme()
@@ -381,6 +388,8 @@ function App({ role = 'admin' }: { role?: AppRole }) {
             updateTask={updateTask}
             removeTask={removeTask}
             dismissNotification={dismissNotification}
+            setStepList={setStepList}
+            resetStepList={resetStepList}
             onBack={() => {
               setSelectedId(null)
               setOpenStream(undefined)

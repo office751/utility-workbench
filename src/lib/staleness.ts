@@ -17,8 +17,8 @@
  */
 import type { Project, ProjectState, Stream } from '../types'
 import {
-  ELECTRIC_STEPS,
-  PERMIT_STEPS,
+  electricSteps,
+  permitSteps,
   septicStepsFor,
   waterStepsFor,
   type StepDef,
@@ -38,11 +38,11 @@ export interface StaleInfo {
 
 /** Which steps apply to this project for a given stream (mirrors the detail view). */
 function streamSteps(stream: Stream, p: Project, ps: ProjectState): StepDef[] {
-  if (stream === 'electric') return ELECTRIC_STEPS
+  if (stream === 'electric') return electricSteps()
   if (stream === 'water') return waterStepsFor(p, ps)
   if (stream === 'septic') return septicStepsFor(ps)
   // "corrections" is an optional aside, never the thing you're waiting on.
-  if (stream === 'permit') return PERMIT_STEPS.filter((s) => s.id !== 'corrections')
+  if (stream === 'permit') return permitSteps().filter((s) => s.id !== 'corrections')
   return [] // materials isn't a linear lifecycle — staleness doesn't apply
 }
 
