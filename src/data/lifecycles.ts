@@ -33,12 +33,10 @@ export const ELECTRIC_STEPS: StepDef[] = [
 ]
 
 /* -------------------------- WATER --------------------------- */
-export const WATER_STEPS_WELL: StepDef[] = [
-  { id: 'wpermit', label: 'Well permit applied' },
-  { id: 'wissued', label: 'Well permit issued' },
-  { id: 'wdrilled', label: 'Well drilled / installed' },
-  { id: 'wpump', label: 'Pump set & passed inspection' },
-]
+// Well lots: the only thing Adam tracks here is whether the well is in the
+// ground. (Permit/pump steps were dropped per his request — `isWaterDone` and
+// `nextWaterAction` already key off `wdrilled`, so done-state is unchanged.)
+export const WATER_STEPS_WELL: StepDef[] = [{ id: 'wdrilled', label: 'Well drilled & installed' }]
 
 export const WATER_STEPS_CITY: StepDef[] = [
   { id: 'cavail', label: 'Water availability confirmed (Marion County Utilities)' },

@@ -15,12 +15,14 @@ import { useEffect, useState } from 'react'
 import {
   addComment,
   commentsFor,
+  deleteComment,
   markCommentRead,
   sharedFilesFor,
   updateSharedFile,
   type InvestorComment,
   type SharedFile,
 } from '../lib/investor'
+import Icon from './Icon'
 
 interface Props {
   projectId: number
@@ -101,18 +103,29 @@ function InvestorCuration({ projectId, refreshKey }: Props) {
             <p key={c.id} className={'inv-comment' + (c.read_by_owner ? '' : ' unread')}>
               <b>{c.author_name || 'Investor'}</b>
               <span className="muted"> · {new Date(c.created_at).toLocaleDateString()}</span>
-              {!c.read_by_owner && (
+              <span className="inv-comment-actions">
+                {!c.read_by_owner && (
+                  <button
+                    className="doc-btn"
+                    onClick={async () => {
+                      await markCommentRead(c.id)
+                      setComments(await commentsFor(projectId))
+                    }}
+                  >
+                    <Icon name="check" size={13} /> Mark read
+                  </button>
+                )}
                 <button
-                  className="mini"
-                  style={{ float: 'right' }}
+                  className="doc-btn x"
+                  title="Remove this comment"
                   onClick={async () => {
-                    await markCommentRead(c.id)
-                    setComments(await commentsFor(projectId))
+                    if (!confirm('Remove this comment? The investor will no longer see it.')) return
+                    if (await deleteComment(c.id)) setComments(await commentsFor(projectId))
                   }}
                 >
-                  ✓ Mark read
+                  <Icon name="delete" size={13} /> Remove
                 </button>
-              )}
+              </span>
               <br />
               {c.body}
             </p>

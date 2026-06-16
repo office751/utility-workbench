@@ -3598,3 +3598,7 @@ a.map-btn {
   box-shadow: 0 8px 24px rgba(179, 84, 30, 0.32);
 }
 .ip-msg-btn:hover { background: var(--rust-strong); }
+
+/* Owner's per-comment actions (Mark read · Remove) on the project Overview. */
+.inv-comment-actions { float: right; display: inline-flex; gap: 6px; }
+.inv-comment-actions .doc-btn { display: inline-flex; align-items: center; gap: 3px; }

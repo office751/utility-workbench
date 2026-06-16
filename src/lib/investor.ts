@@ -186,6 +186,15 @@ export async function markCommentRead(id: string): Promise<boolean> {
   return !error
 }
 
+/** OWNER: permanently delete a comment (e.g. remove an investor's message from
+ *  the conversation). RLS — the "owners manage comments" policy (`for all`) —
+ *  lets admins/business-owners delete; investors cannot. */
+export async function deleteComment(id: string): Promise<boolean> {
+  if (!supabase) return false
+  const { error } = await supabase.from('comments').delete().eq('id', id)
+  return !error
+}
+
 /** OWNER: publish/update the Current Progress card for one shared project. */
 export async function publishSnapshot(snap: StatusSnapshot): Promise<boolean> {
   if (!supabase) return false
