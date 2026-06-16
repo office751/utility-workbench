@@ -25,6 +25,7 @@ import {
 import { isMaterialsDone, materialsNeedsAction, ordersSummary } from '../lib/orders'
 import Filters, { NO_FILTERS, countActive, type FilterState } from './Filters'
 import ShareMenu from './ShareMenu'
+import Icon from './Icon'
 
 interface Props {
   /** The live roster from saved state. */
@@ -52,12 +53,13 @@ function streamCells(p: Project, ps: ProjectState): Cell[] {
     icon,
     state: done ? 'done' : fire ? 'fire' : 'go',
   })
+  // Icons are Material Symbols ligature names (the design's single icon set).
   return [
-    mk('electric', '⚡', isElectricDone(ps), electricNeedsAction(p, ps)),
-    mk('water', '💧', isWaterDone(p, ps), waterNeedsAction(p, ps)),
-    mk('septic', '🚽', isSepticDone(ps), septicNeedsAction(ps)),
-    mk('permit', '📋', isPermitDone(ps), permitNeedsAction(ps)),
-    mk('materials', '🛒', isMaterialsDone(ps), materialsNeedsAction(ps)),
+    mk('electric', 'bolt', isElectricDone(ps), electricNeedsAction(p, ps)),
+    mk('water', 'water_drop', isWaterDone(p, ps), waterNeedsAction(p, ps)),
+    mk('septic', 'plumbing', isSepticDone(ps), septicNeedsAction(ps)),
+    mk('permit', 'description', isPermitDone(ps), permitNeedsAction(ps)),
+    mk('materials', 'shopping_cart', isMaterialsDone(ps), materialsNeedsAction(ps)),
   ]
 }
 
@@ -75,10 +77,27 @@ function nextLine(p: Project, ps: ProjectState, cells: Cell[]): string {
           : fire.key === 'permit'
             ? nextPermitAction(ps).label
             : ordersSummary(ps)
-  return `→ ${label}`
+  return label
 }
 
-const GLYPH: Record<CellState, string> = { done: '✓', fire: '!', go: '·' }
+/** One status cell, rendered to the design's strip style (icon + marker). */
+function StatusCell({ cell }: { cell: Cell }) {
+  const attn = cell.state === 'fire'
+  const done = cell.state === 'done'
+  const iconColor = attn
+    ? 'var(--warn)'
+    : cell.key === 'water' && done
+      ? 'var(--info)'
+      : 'var(--ink-2)'
+  return (
+    <span className={'sstrip-cell' + (attn ? ' attn' : '')} title={`${cell.key}: ${cell.state}`}>
+      <Icon name={cell.icon} size={15} color={iconColor} />
+      {done && <Icon name="check" size={13} color="var(--success)" />}
+      {attn && <Icon name="priority_high" size={13} color="var(--warn)" />}
+      {cell.state === 'go' && <span className="sstrip-na">·</span>}
+    </span>
+  )
+}
 
 function ProjectList({ projects, onSelect, onAdd, onBatchApply, onStatusReport, getProjectState }: Props) {
   const [search, setSearch] = useState('')
@@ -120,78 +139,106 @@ function ProjectList({ projects, onSelect, onAdd, onBatchApply, onStatusReport, 
   const nActive = countActive(filters)
 
   return (
-    <section className="project-list">
-      <div className="search-row">
-        <div className="search-wrap">
-          <input
-            className="search"
-            placeholder="Search address, permit #, parcel, WO#, city, zip, model…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          {search && (
-            <button className="search-clear" title="Clear" onClick={() => setSearch('')}>
-              ✕
-            </button>
-          )}
-        </div>
-        <button
-          className={'filter-btn' + (showFilters || nActive > 0 ? ' on' : '')}
-          onClick={() => setShowFilters(!showFilters)}
-          title="Filters"
-        >
-          ▾ {nActive > 0 ? nActive : ''}
-        </button>
-      </div>
-
-      {showFilters && <Filters filters={filters} onChange={setFilters} />}
-
-      <div className="list-head">
-        <span className="muted">
-          Showing {visible.length} of {projects.length}
-        </span>
-        <span className="list-head-actions">
-          <button className="mini apply-btn" onClick={onBatchApply} title="Draft electric applications for every house that needs one">
-            ⚡ Batch apply
-          </button>
-          <button className="mini" onClick={onStatusReport} title="Build a status update for one, several, or all houses">
-            📋 Status report
-          </button>
-          <ShareMenu visible={visible.map((r) => r.p)} all={projects} getProjectState={getProjectState} />
-          <button className="add-btn" onClick={onAdd}>
-            ＋ Add project
-          </button>
-        </span>
-      </div>
-
-      <div className="list">
-        {visible.map(({ p, ps, cells, next }) => (
-          <div key={p.id} className="item" onClick={() => onSelect(p.id)}>
-            <div className="item-top">
-              <span className="item-addr">{p.address}</span>
-              {p.listStatus === 'CO' && <span className="status-pill co">C.O.</span>}
-              {p.listStatus === 'Hold' && <span className="status-pill hold">HOLD</span>}
-              {ps.isInvestorProject && (
-                <span className="item-investor" title={`Investor project — ${ps.investorName || 'investor not named'}`}>
-                  👤 {ps.investorName || 'Investor'}
-                </span>
+    <section className="project-list-wrap">
+      <div className="pl-panel">
+        <div className="pl-head">
+          {/* search + Filter */}
+          <div className="pl-search-row">
+            <div className="search-wrap">
+              <Icon name="search" size={17} color="var(--ink-3)" className="search-ico" />
+              <input
+                className="search"
+                placeholder="Search address, permit #, parcel, WO#, city, zip, model…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              {search && (
+                <button className="search-clear" title="Clear" onClick={() => setSearch('')}>
+                  ✕
+                </button>
               )}
             </div>
-            <div className="item-sub">
-              {p.model} · {p.subdivision} · {p.city} {p.zip}
-              {p.permit && <> · {p.permit}</>}
+            <button
+              className={'btn btn-secondary' + (showFilters || nActive > 0 ? ' on' : '')}
+              onClick={() => setShowFilters(!showFilters)}
+              title="Filters"
+            >
+              <Icon name="filter_list" size={18} />
+              Filter
+              {nActive > 0 && <span className="btn-count">{nActive}</span>}
+            </button>
+          </div>
+
+          {/* count + toolbar */}
+          <div className="pl-actions-row">
+            <span className="pl-count">
+              Showing <b>{visible.length}</b> of {projects.length}
+            </span>
+            <span className="pl-spacer" />
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={onBatchApply}
+              title="Draft electric applications for every house that needs one"
+            >
+              <Icon name="bolt" size={16} />
+              Batch apply
+            </button>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={onStatusReport}
+              title="Build a status update for one, several, or all houses"
+            >
+              <Icon name="description" size={16} />
+              Status report
+            </button>
+            <ShareMenu visible={visible.map((r) => r.p)} all={projects} getProjectState={getProjectState} />
+            <button className="btn btn-primary btn-sm" onClick={onAdd}>
+              <Icon name="add" size={16} />
+              Add project
+            </button>
+          </div>
+        </div>
+
+        {showFilters && (
+          <div className="pl-filters">
+            <Filters filters={filters} onChange={setFilters} />
+          </div>
+        )}
+
+        {/* rows */}
+        {visible.map(({ p, ps, cells, next }) => (
+          <div key={p.id} className="prow" onClick={() => onSelect(p.id)}>
+            <div className="prow-main">
+              <div className="prow-addr-line">
+                <span className="prow-addr">{p.address}</span>
+                {p.listStatus === 'CO' && <span className="prow-pill co">C.O.</span>}
+                {p.listStatus === 'Hold' && <span className="prow-pill hold">HOLD</span>}
+                {ps.isInvestorProject && (
+                  <span className="prow-investor" title={`Investor project — ${ps.investorName || 'investor not named'}`}>
+                    <Icon name="person" size={13} />
+                    {ps.investorName || 'Investor'}
+                  </span>
+                )}
+              </div>
+              <div className="prow-sub">
+                {p.model} · {p.subdivision} · {p.city} {p.zip}
+                {p.permit && <> · {p.permit}</>}
+              </div>
+              {next && (
+                <div className="prow-stage">
+                  <Icon name="arrow_right_alt" size={16} color="var(--rust)" />
+                  <span>{next}</span>
+                </div>
+              )}
             </div>
-            <div className="row-streams">
+            <div className="sstrip">
               {cells.map((c) => (
-                <span key={c.key} className={'row-cell ' + c.state} title={c.key}>
-                  {c.icon} {GLYPH[c.state]}
-                </span>
+                <StatusCell key={c.key} cell={c} />
               ))}
             </div>
-            {next && <div className="item-next">{next}</div>}
           </div>
         ))}
-        {visible.length === 0 && <p className="muted pad">No matches.</p>}
+        {visible.length === 0 && <p className="pl-empty">No matches.</p>}
       </div>
     </section>
   )

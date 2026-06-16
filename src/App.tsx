@@ -33,7 +33,6 @@ import InspectionsView from './components/InspectionsView'
 import TemplatesView from './components/TemplatesView'
 import ExportImport from './components/ExportImport'
 import AddProject from './components/AddProject'
-import QuickAdd from './components/QuickAdd'
 import InvestorInbox from './components/InvestorInbox'
 import { publishInvestorSnapshots } from './lib/investorPublish'
 import { ROLES, type AppRole } from './data/roles'
@@ -392,9 +391,9 @@ function App({ role = 'admin' }: { role?: AppRole }) {
             }}
           />
         ) : (
-          // The Landing: a cross-project capture bar + the searchable list of every house.
+          // The Landing: the searchable list of every house. (The cross-project
+          // quick-add bar was removed per the redesign — Projects is just the list.)
           <div className="projects-landing">
-            <QuickAdd projects={projects} getProjectState={getProjectState} addOrder={addOrder} />
             <ProjectList
               projects={projects}
               onSelect={(id) => {

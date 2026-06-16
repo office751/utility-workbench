@@ -53,6 +53,7 @@ import PermitNotifications from './PermitNotifications'
 import InvestorCuration from './InvestorCuration'
 import ProjectSettings from './ProjectSettings'
 import MaterialsBody from './MaterialsBody'
+import Icon from './Icon'
 
 /** The updater functions every body needs — grouped to avoid repetition. */
 interface Updaters {
@@ -107,13 +108,14 @@ const WATER_LABEL: Record<string, string> = {
   '': 'source?',
 }
 
-/** The five streams, for the per-project overview strip at the top of Detail. */
+/** The five streams, for the per-project overview strip at the top of Detail.
+ *  Icons are Material Symbols ligature names (the design's single icon set). */
 const STREAM_TABS: { key: Stream; icon: string; name: string }[] = [
-  { key: 'electric', icon: '⚡', name: 'Electric' },
-  { key: 'water', icon: '💧', name: 'Water' },
-  { key: 'septic', icon: '🚽', name: 'Septic' },
-  { key: 'permit', icon: '📋', name: 'Permit' },
-  { key: 'materials', icon: '🛒', name: 'Materials' },
+  { key: 'electric', icon: 'bolt', name: 'Electric' },
+  { key: 'water', icon: 'water_drop', name: 'Water' },
+  { key: 'septic', icon: 'plumbing', name: 'Septic' },
+  { key: 'permit', icon: 'description', name: 'Permit' },
+  { key: 'materials', icon: 'shopping_cart', name: 'Materials' },
 ]
 
 /** One project's status in a single stream: its next action + whether it's done. */
@@ -140,81 +142,95 @@ function Detail(props: Props) {
     grantedProjectIds().then(setGranted)
   }, [])
 
+  // The one high-level "where this house is right now" badge for the header:
+  // the first stream that isn't done yet, with its next action.
+  const stageStream = STREAM_TABS.find((s) => !streamStatus(s.key, p, ps).done)
+  const headerStage = stageStream
+    ? `${stageStream.name} — ${streamStatus(stageStream.key, p, ps).label}`
+    : 'All streams complete'
+
+  const mapQuery = /^tbd\b/i.test(p.address)
+    ? `${p.subdivision}, ${p.city}, FL ${p.zip}`
+    : `${p.address}, ${p.city}, FL ${p.zip}`
+
   return (
     <section className="detail">
-      <div className="detail-head">
-        <button className="mini back" onClick={onBack}>
-          ← All projects
+      {/* ---- Detail header: back · address · sub-line · badges · Map/Settings ---- */}
+      <div className="pd-header">
+        <button className="btn btn-ghost btn-sm pd-back" onClick={onBack}>
+          <Icon name="arrow_back" size={16} />
+          All projects
         </button>
-        {/* 🗺️ jump to the site on Google Maps (TBD addresses fall back to the
-            subdivision, which at least lands you in the right neighborhood) */}
-        <a
-          className="mini map-btn"
-          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-            /^tbd\b/i.test(p.address)
-              ? `${p.subdivision}, ${p.city}, FL ${p.zip}`
-              : `${p.address}, ${p.city}, FL ${p.zip}`,
-          )}`}
-          target="_blank"
-          rel="noreferrer"
-          title="Open this site in Google Maps"
-        >
-          🗺️ Map
-        </a>
-        <button
-          className={'mini gear' + (showSettings ? ' on' : '')}
-          onClick={() => setShowSettings((s) => !s)}
-          title="Project settings"
-        >
-          ⚙️ Settings
-        </button>
+        <div className="pd-header-row">
+          <div className="pd-header-main">
+            <h1 className="pd-addr">{p.address}</h1>
+            <div className="pd-sub">
+              {p.model} · {p.subdivision} · {p.city}, FL {p.zip} · parcel {p.parcel}
+              {p.permit && <> · permit {p.permit}</>}
+              {p.workOrder && <> · WO# {p.workOrder}</>}
+            </div>
+            <div className="pd-badges">
+              {p.listStatus === 'CO' && <span className="prow-pill co">C.O.</span>}
+              {p.listStatus === 'Hold' && <span className="prow-pill hold">HOLD</span>}
+              {ps.isInvestorProject ? (
+                <span className="pd-badge investor">
+                  <Icon name="person" size={14} />
+                  Investor: {ps.investorName || 'name not set'}
+                </span>
+              ) : (
+                <span className="pd-badge">
+                  <Icon name="domain" size={14} />
+                  {ps.ownerName || 'Iron Shield Construction'} · spec build
+                </span>
+              )}
+              <span className="pd-badge accent">
+                <Icon name="arrow_right_alt" size={14} />
+                {headerStage}
+              </span>
+            </div>
+          </div>
+          <div className="pd-header-actions">
+            {/* jump to the site on Google Maps (TBD addresses fall back to the
+                subdivision, which at least lands you in the right neighborhood) */}
+            <a
+              className="btn btn-secondary"
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`}
+              target="_blank"
+              rel="noreferrer"
+              title="Open this site in Google Maps"
+            >
+              <Icon name="map" size={18} />
+              Map
+            </a>
+            <button
+              className={'btn btn-secondary' + (showSettings ? ' on' : '')}
+              onClick={() => setShowSettings((s) => !s)}
+              title="Project settings"
+            >
+              <Icon name="settings" size={18} />
+              Settings
+            </button>
+          </div>
+        </div>
       </div>
 
-      <h2 className="detail-title">
-        {p.address}
-        {p.listStatus === 'CO' && <span className="status-pill co">C.O.</span>}
-        {p.listStatus === 'Hold' && <span className="status-pill hold">HOLD</span>}
-      </h2>
-      <p className="meta">
-        {p.model} · {p.subdivision} · {p.city}, FL {p.zip} · parcel {p.parcel}
-        {p.permit && <> · permit {p.permit}</>}
-        {p.workOrder && <> · WO# {p.workOrder}</>}
-      </p>
-
-      {/* Who owns this house — at a glance. Investor projects get a chip with
-          the investor's name; everything else reads as our own spec build. */}
-      <p className="owner-line">
-        {ps.isInvestorProject ? (
-          <span className="owner-chip investor">👤 Investor: {ps.investorName || 'name not set'}</span>
-        ) : (
-          <span className="owner-chip">🏢 {ps.ownerName || 'Iron Shield Construction'} · spec build</span>
-        )}
-      </p>
-
-      {/* The workspace tab bar: Overview + the five streams (each shows its status). */}
-      <div className="stream-strip">
+      {/* Tab strip — navigation ONLY (status lives in the Overview cards, once). */}
+      <div className="pd-tabs">
         <button
-          className={'ss-chip' + (activeTab === 'overview' ? ' active' : '')}
+          className={'pd-tab' + (activeTab === 'overview' ? ' active' : '')}
           onClick={() => setActiveTab('overview')}
         >
-          <span className="ss-name">🏠 Overview</span>
+          Overview
         </button>
-        {STREAM_TABS.map(({ key, icon, name }) => {
-          const st = streamStatus(key, p, ps)
-          return (
-            <button
-              key={key}
-              className={'ss-chip' + (key === activeTab ? ' active' : '') + (st.done ? ' done' : '')}
-              onClick={() => setActiveTab(key)}
-              title={`${name}: ${st.label}`}
-            >
-              <span className="ss-name">
-                {icon} {name}
-                {st.done ? ' ✓' : ''}
-              </span>
-            </button>
-          )
-        })}
+        {STREAM_TABS.map(({ key, name }) => (
+          <button
+            key={key}
+            className={'pd-tab' + (key === activeTab ? ' active' : '')}
+            onClick={() => setActiveTab(key)}
+          >
+            {name}
+          </button>
+        ))}
       </div>
 
       {/* The gear panel: all editable config for the whole project. */}
@@ -225,19 +241,25 @@ function Detail(props: Props) {
       {/* ---- OVERVIEW: at-a-glance status + project-wide things (files, delete) ---- */}
       {activeTab === 'overview' && (
         <div className="overview">
-          <div className="overview-cards">
+          {/* Status grid — ONE card per stream, the single source of truth.
+              (The tabs above are navigation only — no duplicate status marks.) */}
+          <div className="pd-status-grid">
             {STREAM_TABS.map(({ key, icon, name }) => {
               const st = streamStatus(key, p, ps)
+              const color = st.done ? 'var(--success)' : 'var(--rust)'
               return (
-                <button
-                  key={key}
-                  className={'ov-card' + (st.done ? ' done' : '')}
-                  onClick={() => setActiveTab(key)}
-                >
-                  <div className="ov-card-h">
-                    {icon} {name} {st.done ? '✓' : ''}
+                <button key={key} className="pd-scard" onClick={() => setActiveTab(key)}>
+                  <div className="pd-scard-h">
+                    <Icon name={icon} size={18} color={color} fill={st.done} />
+                    <span className="pd-scard-name">{name}</span>
+                    <span className="pd-scard-spacer" />
+                    {st.done ? (
+                      <Icon name="check_circle" size={16} color="var(--success)" fill />
+                    ) : (
+                      <span className="pd-scard-prog">In progress</span>
+                    )}
                   </div>
-                  <div className="ov-card-next">{st.label}</div>
+                  <div className="pd-scard-status">{st.label}</div>
                 </button>
               )
             })}
@@ -264,16 +286,19 @@ function Detail(props: Props) {
           {granted.has(p.id) && <InvestorCuration projectId={p.id} refreshKey={shareBump} />}
 
           {/* Danger zone — confirm() forces a deliberate yes before deleting. */}
-          <button
-            className="mini danger"
-            onClick={() => {
-              if (confirm(`Remove ${p.address} and ALL its progress (electric, water, septic, permit)?`)) {
-                onDelete()
-              }
-            }}
-          >
-            🗑 Remove this project
-          </button>
+          <div className="pd-footer">
+            <button
+              className="btn btn-danger btn-sm"
+              onClick={() => {
+                if (confirm(`Remove ${p.address} and ALL its progress (electric, water, septic, permit)?`)) {
+                  onDelete()
+                }
+              }}
+            >
+              <Icon name="delete" size={16} />
+              Remove this project
+            </button>
+          </div>
         </div>
       )}
 
@@ -360,14 +385,15 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField }: Pro
     <>
       {needsVerify(p, ps) && (
         <div className="banner">
-          ⚠️ Territory not verified — confirm SECO vs Duke before applying
-          (subdivision: {p.subdivision}). Set the utility in ⚙️ Settings.
+          <Icon name="warning" size={15} color="var(--warn)" /> Territory not verified — confirm SECO vs Duke before
+          applying (subdivision: {p.subdivision}). Set the utility in Settings.
         </div>
       )}
 
-      {/* Read-only config summary — edit these in ⚙️ Settings. */}
+      {/* Read-only config summary — edit these in Settings. */}
       <p className="summary">
-        ⚡ {u || 'utility?'} · {SERVICE_LABEL[serviceTypeOf(p, ps)]} · Engineer: {eng || '—'}
+        <Icon name="bolt" size={15} color="var(--rust)" /> {u || 'utility?'} ·{' '}
+        {SERVICE_LABEL[serviceTypeOf(p, ps)]} · Engineer: {eng || '—'}
       </p>
 
       {/* Duke applies through a multi-page WEB form, not email — this opens
@@ -376,11 +402,12 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField }: Pro
       {u === 'DUKE' && (
         <div className="contact-row">
           <button className="contact" onClick={openDukePortal} disabled={dukeState === 'building'}>
+            <Icon name={dukeState === 'building' ? 'hourglass_top' : dukeState === 'idle' ? 'bolt' : 'check'} size={15} />
             {dukeState === 'building'
-              ? '⏳ Computing directions + fill data…'
+              ? ' Computing directions + fill data…'
               : dukeState === 'opened' || dukeState === 'noclip'
-                ? '✓ Portal opened — see next step ↓'
-                : '⚡ Duke portal — new service application'}
+                ? ' Portal opened — see next step ↓'
+                : ' Duke portal — new service application'}
           </button>
         </div>
       )}
@@ -435,7 +462,8 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField }: Pro
 
         {shutoff && (
           <span className={'shutoff' + (shutoff.daysLeft <= 7 ? ' due' : shutoff.daysLeft <= 14 ? ' warn' : '')}>
-            ⏰ Shut off / transfer electric by <b>{shutoff.date}</b> ({shutoff.daysLeft} days)
+            <Icon name="schedule" size={14} /> Shut off / transfer electric by <b>{shutoff.date}</b> ({shutoff.daysLeft}{' '}
+            days)
           </span>
         )}
 
@@ -446,7 +474,7 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField }: Pro
               checked={ps.transferred ?? false}
               onChange={(e) => setField(p.id, 'transferred', e.target.checked)}
             />
-            Account transferred / shut off ✓
+            Account transferred / shut off
           </label>
         )}
       </div>
@@ -462,12 +490,14 @@ function WaterBody({ project: p, ps, toggleStep, setStepNote }: Props) {
 
   return (
     <>
-      <p className="summary">💧 {WATER_LABEL[source]}</p>
+      <p className="summary">
+        <Icon name="water_drop" size={15} color="var(--info)" /> {WATER_LABEL[source]}
+      </p>
 
       {source === 'CityWM' && (
         <div className="flag">
-          🛠 Water-main extension required — agreement, fees, and construction
-          come before the tap/meter.
+          <Icon name="construction" size={15} /> Water-main extension required — agreement, fees, and construction come
+          before the tap/meter.
         </div>
       )}
 
@@ -503,7 +533,7 @@ function SepticBody({ project: p, ps, toggleStep, setStepNote }: Props) {
   return (
     <>
       <p className="summary">
-        🚽 {source === 'Sewer' ? 'City Sewer' : 'Septic'}
+        <Icon name="plumbing" size={15} color="var(--rust)" /> {source === 'Sewer' ? 'City Sewer' : 'Septic'}
         {source === 'Septic' && system && <> · {system}</>}
       </p>
 
@@ -517,8 +547,8 @@ function SepticBody({ project: p, ps, toggleStep, setStepNote }: Props) {
           checklist (see septicStepsFor in lifecycles.ts) — this flag explains why. */}
       {source === 'Septic' && system === 'INRB' && (
         <div className="flag">
-          📄 INRB system — a recorded INRB notice must be sent to Georges
-          Plumbing (it appears as a checklist step below).
+          <Icon name="description" size={15} /> INRB system — a recorded INRB notice must be sent to Georges Plumbing
+          (it appears as a checklist step below).
         </div>
       )}
 
@@ -641,9 +671,9 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, u
         </div>
       )}
 
-      {/* Read-only summary — edit responsible / links / dates in ⚙️ Settings. */}
+      {/* Read-only summary — edit responsible / links / dates in Settings. */}
       <p className="summary">
-        📋 Responsible: {permitResponsibleOf(ps)}
+        <Icon name="description" size={15} color="var(--rust)" /> Responsible: {permitResponsibleOf(ps)}
         {countyStatus && <> · County: {countyStatus}</>}
         {issued && <> · Issued {issued}</>}
       </p>
@@ -657,16 +687,17 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, u
             names — paste them over the draft's [PASTE HERE] marker, fill the
             [FILL IN] blanks, send. */}
         <button className="contact" onClick={emailJennifer} disabled={drafting}>
-          {drafting ? '⏳ Creating download links…' : '📨 Email Jennifer — permit package'}
+          <Icon name={drafting ? 'hourglass_top' : 'mail'} size={15} />
+          {drafting ? ' Creating download links…' : ' Email Jennifer — permit package'}
         </button>
         {folder && (
           <a className="contact" href={encodeURI(folder)} target="_blank" rel="noreferrer">
-            📁 Open project folder
+            <Icon name="folder" size={15} /> Open project folder
           </a>
         )}
         {permitUrl && (
           <a className="contact" href={permitUrl} target="_blank" rel="noreferrer">
-            🔗 Open permit record
+            <Icon name="link" size={15} /> Open permit record
           </a>
         )}
       </div>
@@ -677,10 +708,15 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, u
       {/* Expiry reminder (only when a date is known), colored by urgency. */}
       {expiry && (
         <p className={'shutoff' + (expiry.daysLeft <= 7 ? ' due' : expiry.daysLeft <= 30 ? ' warn' : '')}>
+          <Icon name="schedule" size={14} />{' '}
           {expiry.daysLeft < 0 ? (
-            <>⏰ Permit EXPIRED <b>{expiry.date}</b> ({-expiry.daysLeft} days ago)</>
+            <>
+              Permit EXPIRED <b>{expiry.date}</b> ({-expiry.daysLeft} days ago)
+            </>
           ) : (
-            <>⏰ Permit expires <b>{expiry.date}</b> ({expiry.daysLeft} days)</>
+            <>
+              Permit expires <b>{expiry.date}</b> ({expiry.daysLeft} days)
+            </>
           )}
         </p>
       )}

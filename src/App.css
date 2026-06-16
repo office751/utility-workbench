@@ -3053,3 +3053,548 @@ a.map-btn {
   .inv-stats { grid-template-columns: 1fr 1fr; }
   .inv-gallery { grid-template-columns: 1fr; gap: 12px; }
 }
+
+/* ============================================================================
+   CLAUDE DESIGN — "Calm Canvas" shared button family + Projects board.
+   (Implements ui_kits/projects + the design Button component. See
+   docs/design-system.md.) These tokens flip with the theme automatically.
+   ========================================================================== */
+
+/* The ONE button family for the whole product: primary (rust solid),
+   secondary (bordered/quiet), ghost (text-only), danger (danger-tinted ghost). */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-2);
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-sm { height: 32px; padding: 0 12px; gap: 6px; font-size: var(--text-xs); }
+.btn-block { display: flex; width: 100%; }
+
+.btn-primary { background: var(--rust); color: var(--on-rust); border-color: var(--rust); font-weight: 700; }
+.btn-primary:hover:not(:disabled) { background: var(--rust-strong); border-color: var(--rust-strong); }
+
+.btn-secondary { background: var(--surface); color: var(--ink-2); border-color: var(--border); }
+.btn-secondary:hover:not(:disabled) { background: var(--surface-2); color: var(--ink); }
+.btn-secondary.on { background: var(--rust-tint); color: var(--rust-tint-ink); border-color: var(--rust-tint); }
+
+.btn-ghost { background: transparent; color: var(--ink-2); }
+.btn-ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--ink); }
+
+.btn-danger { background: transparent; color: var(--danger); }
+.btn-danger:hover:not(:disabled) { background: var(--danger-bg); }
+
+/* a count chip that rides inside a button (e.g. Filter "2") */
+.btn-count {
+  background: var(--rust);
+  color: var(--on-rust);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---------- Projects board (single inset card: header + rows) ---------- */
+.pl-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.pl-head {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--divider);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pl-search-row { display: flex; gap: 8px; }
+.pl-search-row .search-wrap { flex: 1 1 auto; }
+/* the search input, restyled to the design field (leading icon, 38px, no margin) */
+.pl-search-row .search {
+  height: 38px;
+  margin: 0;
+  padding: 0 12px 0 34px;
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  font-size: var(--text-sm);
+}
+.search-ico {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.pl-actions-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pl-count { font-size: 12.5px; color: var(--ink-3); }
+.pl-count b { color: var(--ink-2); }
+.pl-spacer { flex: 1; }
+.pl-filters { padding: 12px 16px; border-bottom: 1px solid var(--divider); }
+.pl-empty { padding: 28px 16px; color: var(--ink-3); text-align: center; }
+
+/* one house */
+.prow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 13px 16px;
+  flex-wrap: wrap;
+  cursor: pointer;
+}
+.prow + .prow { border-top: 1px solid var(--divider); }
+.prow:hover { background: var(--surface-2); }
+.prow-main { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.prow-addr-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.prow-addr {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.prow-sub { font-size: 12px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prow-stage {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--rust-tint-ink);
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 0;
+}
+.prow-stage span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* small chips in the address line */
+.prow-pill { font-size: var(--text-2xs); font-weight: 700; padding: 1px 8px; border-radius: var(--radius-pill); white-space: nowrap; }
+.prow-pill.co { background: var(--success-bg); color: var(--success); }
+.prow-pill.hold { background: var(--warn-bg); color: var(--warn); }
+.prow-investor {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  padding: 1px 8px 1px 6px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--investor) 16%, transparent);
+  color: var(--investor);
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* the 5-stream status strip, right-aligned so statuses line up down the list */
+.sstrip { display: flex; gap: 6px; flex: 0 0 auto; }
+.sstrip-cell { display: inline-flex; align-items: center; gap: 3px; background: var(--surface-3); border-radius: var(--radius); padding: 4px 7px; }
+.sstrip-cell.attn { background: var(--warn-tint); }
+.sstrip-na { font-size: 13px; line-height: 1; color: var(--ink-3); width: 9px; text-align: center; }
+
+@media (max-width: 640px) {
+  .prow { gap: 10px; }
+  .sstrip { width: 100%; }
+}
+
+/* ============================================================================
+   CLAUDE DESIGN — Project detail (ui_kits/project-detail).
+   Fixes: tab strip is navigation-only; the Overview status cards are the single
+   source of truth; one button family for every action.
+   ========================================================================== */
+.pd-header { display: flex; flex-direction: column; gap: 8px; }
+.pd-back { margin-left: -8px; align-self: flex-start; }
+.pd-header-row { display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.pd-header-main { flex: 1 1 auto; min-width: 0; }
+.pd-addr {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: var(--ink);
+}
+.pd-sub { font-size: 12.5px; color: var(--ink-3); margin-top: 4px; }
+.pd-badges { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+.pd-header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.pd-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-3);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.pd-badge.accent { background: var(--rust-tint); color: var(--rust-tint-ink); }
+.pd-badge.investor { background: color-mix(in srgb, var(--investor) 16%, transparent); color: var(--investor); }
+
+.pd-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  margin-top: 6px;
+}
+.pd-tab {
+  appearance: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 11px 14px;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--ink-2);
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+.pd-tab:hover { color: var(--ink); }
+.pd-tab.active { color: var(--rust); font-weight: 700; border-bottom-color: var(--rust); }
+
+.pd-status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  gap: 10px;
+}
+.pd-scard {
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* sits inside the .detail panel, so use surface-2 to read as raised */
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  font: inherit;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.pd-scard:hover { background: var(--surface-3); border-color: var(--ink-3); }
+.pd-scard-h { display: flex; align-items: center; gap: 8px; }
+.pd-scard-name { font-size: var(--text-sm); font-weight: 700; color: var(--ink); }
+.pd-scard-spacer { flex: 1; }
+.pd-scard-prog { font-size: var(--text-xs); font-weight: 700; color: var(--rust); }
+.pd-scard-status { font-size: var(--text-sm); color: var(--ink-2); }
+
+.pd-footer { border-top: 1px solid var(--divider); padding-top: 16px; margin-top: 4px; }
+
+/* ============================================================================
+   CLAUDE DESIGN — Tasks (ui_kits/tasks). "B & C mix": hat headings outside
+   inset list cards, starred tasks float into a rust Today's Focus card.
+   ========================================================================== */
+.tasks-stack { display: flex; flex-direction: column; gap: 18px; }
+.tasks-head h1 {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--ink);
+}
+.tasks-intro { font-size: 13.5px; color: var(--ink-3); margin: 6px 0 0; max-width: 660px; line-height: 1.5; }
+.tasks-toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
+.tasks-empty { color: var(--ink-3); padding: 8px 2px; }
+
+/* a list card (inset) + the rust-accented Today's Focus variant */
+.tcard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.tcard.accent { border-left: 3px solid var(--rust); }
+
+.tfocus-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--divider); }
+.tfocus-title { font-family: var(--font-display); font-size: var(--text-md); font-weight: 700; color: var(--ink); }
+
+/* hat group heading (sits OUTSIDE the card) */
+.tg-section { display: flex; flex-direction: column; gap: 10px; }
+.tg-head { display: flex; align-items: center; gap: 8px; padding: 0 2px; }
+.tg-label { font-family: var(--font-display); font-size: var(--text-md); font-weight: 700; color: var(--ink); }
+.tg-count {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--ink-3);
+  background: var(--surface-3);
+  border-radius: var(--radius-pill);
+  padding: 1px 8px;
+}
+
+/* one task row */
+.trow { display: flex; align-items: center; gap: 11px; padding: 11px 14px; }
+.trow + .trow { border-top: 1px solid var(--divider); }
+.trow-check {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  cursor: pointer;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.trow-check.on { border-color: var(--success); background: var(--success); }
+.trow-star { flex: 0 0 auto; padding: 0; border: none; background: none; cursor: pointer; display: inline-flex; }
+.trow-text { flex: 1; min-width: 0; font-size: var(--text-base); line-height: 1.4; color: var(--ink); }
+.trow.done .trow-text { color: var(--ink-3); text-decoration: line-through; }
+.trow-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface-3);
+  color: var(--ink-2);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+.trow-due { font-size: 12px; font-weight: 700; color: var(--ink-2); white-space: nowrap; }
+.trow-due.over { color: var(--danger); }
+.trow-x {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--ink-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.trow-x:hover { color: var(--danger); border-color: var(--danger); }
+
+.tdone-btn {
+  appearance: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 7px 12px;
+  color: var(--ink-2);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.tdone-btn:hover { background: var(--surface-3); }
+
+/* ============================================================================
+   CLAUDE DESIGN — Investor portal (ui_kits/investor-portal). Light editorial,
+   mobile-first phone column; the only client-facing surface. Maps onto real
+   curated data (status snapshot · shared photos · comments) — no faked %/
+   milestones. Comment thread/box reuse the existing .inv-thread/.inv-box.
+   ========================================================================== */
+.ip-outer { background: var(--surface-2); min-height: 100vh; display: flex; justify-content: center; }
+.ip-shell {
+  width: 100%;
+  max-width: 460px;
+  background: var(--paper);
+  min-height: 100vh;
+  position: relative;
+  box-shadow: 0 0 60px rgba(60, 45, 30, 0.08);
+}
+
+.ip-hero {
+  position: relative;
+  height: 232px;
+  background: linear-gradient(135deg, var(--rust), #8f3f12);
+  background-size: cover;
+  background-position: center;
+}
+.ip-hero-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.34), transparent 38%, rgba(0, 0, 0, 0.6));
+}
+.ip-hero-top { position: relative; display: flex; align-items: center; gap: 8px; padding: 15px 18px; }
+.ip-hero-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: #fff;
+  font-size: 17px;
+}
+.ip-hero-spacer { flex: 1; }
+.ip-switcher { position: relative; }
+.ip-switch-btn {
+  appearance: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  padding: 5px 7px 5px 12px;
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.ip-switch-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 5;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: 4px;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ip-switch-item {
+  appearance: none;
+  text-align: left;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 13px;
+}
+.ip-switch-item:hover { background: var(--surface-2); }
+.ip-switch-item.act { color: var(--rust); font-weight: 700; }
+.ip-signout {
+  appearance: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(4px);
+}
+.ip-hero-addr { position: absolute; left: 18px; right: 18px; bottom: 16px; }
+.ip-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255, 255, 255, 0.82); }
+.ip-addr {
+  font-family: var(--font-display);
+  font-size: 25px;
+  font-weight: 700;
+  color: #fff;
+  margin: 4px 0 0;
+  letter-spacing: -0.01em;
+  line-height: 1.12;
+}
+.ip-sub { font-size: 12.5px; color: rgba(255, 255, 255, 0.8); margin-top: 3px; }
+
+.ip-body { padding: 20px 18px 40px; display: flex; flex-direction: column; gap: 22px; }
+
+.ip-progress { display: flex; flex-direction: column; gap: 12px; }
+.ip-prow { display: flex; align-items: baseline; gap: 10px; }
+.ip-prow-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  width: 84px;
+  flex: 0 0 auto;
+}
+.ip-prow-val { font-size: 14px; color: var(--ink); }
+.ip-updated { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+
+.ip-note {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--rust);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+.ip-note-head { display: flex; align-items: center; gap: 10px; }
+.ip-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--rust);
+  color: var(--on-rust);
+  font-weight: 700;
+  font-size: 14px;
+  flex: 0 0 auto;
+}
+.ip-note-who { font-size: 14px; font-weight: 700; color: var(--ink); }
+.ip-note-when { font-size: 12px; color: var(--ink-3); }
+.ip-note-body { font-size: 14px; color: var(--ink-2); line-height: 1.55; }
+
+.ip-section-title { font-family: var(--font-display); font-size: 18px; font-weight: 700; color: var(--ink); margin-bottom: 14px; }
+.ip-empty { font-size: 13px; color: var(--ink-3); }
+
+.ip-feed { display: flex; flex-direction: column; gap: 14px; }
+.ip-update { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.ip-update-photo { display: block; width: 100%; height: 200px; object-fit: cover; }
+.ip-update-skel { height: 200px; background: var(--surface-3); }
+.ip-update-file { display: flex; align-items: center; gap: 8px; padding: 16px; color: var(--rust); font-weight: 600; text-decoration: none; }
+.ip-update-body { padding: 15px; }
+.ip-update-meta { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+.ip-update-title { font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--ink); flex: 1; min-width: 0; }
+.ip-update-when { font-size: 12px; color: var(--ink-3); white-space: nowrap; }
+
+.ip-msgbar { position: sticky; bottom: 0; padding: 14px; background: linear-gradient(transparent, var(--paper) 26%); }
+.ip-msg-btn {
+  appearance: none;
+  cursor: pointer;
+  width: 100%;
+  height: 50px;
+  border-radius: 14px;
+  border: none;
+  background: var(--rust);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 15.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  box-shadow: 0 8px 24px rgba(179, 84, 30, 0.32);
+}
+.ip-msg-btn:hover { background: var(--rust-strong); }

@@ -12,6 +12,7 @@
 import { useState } from 'react'
 import type { Project, ProjectState } from '../types'
 import { COLUMNS, copyAsText, downloadXlsx, loadPrintCols, openPrintView, savePrintCols } from '../lib/exportList'
+import Icon from './Icon'
 
 interface Props {
   /** The rows currently visible (search + filters applied). */
@@ -69,8 +70,13 @@ function ShareMenu({ visible, all, getProjectState }: Props) {
 
   return (
     <div className="share-menu">
-      <button className="mini share-btn" onClick={() => setOpen((o) => !o)} title="Export / print / share this list">
-        📤 Share {busy && '…'}
+      <button
+        className="btn btn-secondary btn-sm share-btn"
+        onClick={() => setOpen((o) => !o)}
+        title="Export / print / share this list"
+      >
+        <Icon name="ios_share" size={16} />
+        Share {busy && '…'}
       </button>
 
       {open && !choosing && (

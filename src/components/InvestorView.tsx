@@ -7,11 +7,18 @@
  * the server decides what the queries return; this component is just the
  * picture frame.
  *
- * Built mobile-first (most investors open this on a phone): a clean top bar,
- * the project title, a Current Progress card, a captioned photo gallery, and
- * a conversation. Photos use 1-hour SIGNED URLs + loading="lazy", so the
- * browser only pulls each image when it scrolls into view — fast on cellular,
- * and it scales as photos pile up.
+ * Calm Canvas "B & C mix" (Claude Design): a light, editorial/premium look
+ * carrying warm, personal content. Mobile-first phone column —
+ *   Hero (site photo + ★ Lodestar + portfolio switcher + address)
+ *   → Current progress (the real stream statuses)
+ *   → A note from the builder (the latest builder message)
+ *   → Recent updates (the captioned photo feed)
+ *   → a sticky "Message us" primary action.
+ *
+ * Honest by design: the app has no % / milestone-timeline / model+permit data
+ * for an investor, so those design sections are omitted rather than faked.
+ * Photos use 1-hour SIGNED URLs + loading="lazy" so the browser only pulls each
+ * image when it scrolls into view.
  */
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
@@ -27,6 +34,7 @@ import {
   type SharedFile,
   type StatusSnapshot,
 } from '../lib/investor'
+import Icon from './Icon'
 
 const IMG_RE = /\.(png|jpe?g|gif|webp|heic)$/i
 
@@ -39,6 +47,7 @@ function InvestorView() {
   const [urls, setUrls] = useState<Record<string, string>>({}) // shared_file id → signed URL
   const [comments, setComments] = useState<InvestorComment[]>([])
   const [drafts, setDrafts] = useState<Record<string, string>>({}) // '' = project box
+  const [switching, setSwitching] = useState(false)
 
   // Who am I + which project(s) may I see? Land on the first.
   useEffect(() => {
@@ -87,6 +96,16 @@ function InvestorView() {
   const projectComments = comments.filter((c) => !c.shared_file_id)
   const fileComments = (id: string) => comments.filter((c) => c.shared_file_id === id)
 
+  // The "note from the builder": the most recent project-level comment that
+  // ISN'T the investor's own — real data, no fabrication. (Empty author = us.)
+  const builderNote = [...projectComments]
+    .reverse()
+    .find((c) => !c.author_name || c.author_name.toLowerCase() !== name.toLowerCase())
+
+  // First shared image becomes the hero backdrop; otherwise a warm gradient.
+  const heroFile = files.find((f) => urls[f.id] && IMG_RE.test(f.name))
+  const heroUrl = heroFile ? urls[heroFile.id] : null
+
   const thread = (list: InvestorComment[]) =>
     list.length > 0 && (
       <div className="inv-thread">
@@ -101,15 +120,15 @@ function InvestorView() {
       </div>
     )
 
-  const box = (key: string, placeholder: string) => (
-    <div className="inv-box">
+  const box = (key: string, placeholder: string, id?: string) => (
+    <div className="inv-box" id={id}>
       <textarea
         rows={2}
         value={drafts[key] ?? ''}
         onChange={(e) => setDrafts((d) => ({ ...d, [key]: e.target.value }))}
         placeholder={placeholder}
       />
-      <button className="mini inv-post" onClick={() => post(key)} disabled={!(drafts[key] ?? '').trim()}>
+      <button className="btn btn-primary btn-sm inv-post" onClick={() => post(key)} disabled={!(drafts[key] ?? '').trim()}>
         Post
       </button>
     </div>
@@ -128,87 +147,148 @@ function InvestorView() {
         <div className="login-card">
           <h1>Iron Shield Construction</h1>
           <p className="meta">No project is linked to this account yet — please contact Iron Shield.</p>
-          <button className="mini" onClick={() => supabase?.auth.signOut()}>⎋ Sign out</button>
+          <button className="btn btn-secondary btn-sm" onClick={() => supabase?.auth.signOut()}>
+            Sign out
+          </button>
         </div>
       </div>
     )
 
-  return (
-    <div className="inv">
-      {/* Thin portal bar: brand left, sign-out right — reads like a client
-          portal, not the owner app. */}
-      <header className="inv-topbar">
-        <span className="inv-brand">⚡ Iron Shield Construction</span>
-        <button className="inv-signout" onClick={() => supabase?.auth.signOut()}>
-          ⎋ Sign out
-        </button>
-      </header>
+  const streams: { ic: string; label: string; val?: string }[] = [
+    { ic: 'description', label: 'Permitting', val: snap?.permitting },
+    { ic: 'bolt', label: 'Electric', val: snap?.electric },
+    { ic: 'water_drop', label: 'Water', val: snap?.water },
+    { ic: 'plumbing', label: 'Septic', val: snap?.septic },
+  ]
 
-      <div className="inv-page">
-        {/* Project title + (if more than one) a chip row to switch. */}
-        <div className="inv-titlewrap">
-          <h1 className="inv-title">{snap?.address || 'Your project'}</h1>
-          <p className="inv-sub">Investor portal · {name}</p>
-          {projects.length > 1 && (
-            <div className="inv-chips">
-              {projects.map((id) => (
-                <button key={id} className={'inv-chip' + (id === pid ? ' act' : '')} onClick={() => setPid(id)}>
-                  Project {id}
+  return (
+    <div className="ip-outer">
+      <div className="ip-shell">
+        {/* ── Hero: site photo (or warm gradient) + brand + switcher + address ── */}
+        <div className={'ip-hero' + (heroUrl ? ' has-photo' : '')} style={heroUrl ? { backgroundImage: `url(${heroUrl})` } : undefined}>
+          <div className="ip-hero-scrim" />
+          <div className="ip-hero-top">
+            <span className="ip-hero-brand">
+              <Icon name="star" size={20} color="#e8b53a" fill />
+              Lodestar
+            </span>
+            <span className="ip-hero-spacer" />
+            {projects.length > 1 && (
+              <div className="ip-switcher">
+                <button
+                  className="ip-switch-btn"
+                  onClick={() => setSwitching((s) => !s)}
+                  title="Switch home"
+                >
+                  Home {projects.indexOf(pid) + 1} of {projects.length}
+                  <Icon name="expand_more" size={17} color="#fff" />
                 </button>
-              ))}
-            </div>
-          )}
+                {switching && (
+                  <div className="ip-switch-menu">
+                    {projects.map((id, i) => (
+                      <button
+                        key={id}
+                        className={'ip-switch-item' + (id === pid ? ' act' : '')}
+                        onClick={() => {
+                          setPid(id)
+                          setSwitching(false)
+                        }}
+                      >
+                        Home {i + 1}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            <button className="ip-signout" onClick={() => supabase?.auth.signOut()} title="Sign out">
+              <Icon name="logout" size={18} color="#fff" />
+            </button>
+          </div>
+          <div className="ip-hero-addr">
+            <div className="ip-eyebrow">Your home</div>
+            <h1 className="ip-addr">{snap?.address || 'Your project'}</h1>
+            <div className="ip-sub">Investor portal · {name}</div>
+          </div>
         </div>
 
-        {/* ── Current Progress ───────────────────────────────────────── */}
-        <section className="detail inv-progress">
-          <h2 className="detail-title">Current Progress</h2>
-          {snap ? (
-            <div className="inv-stats">
-              <div><span className="inv-k">📋 Permitting</span><span>{snap.permitting || '—'}</span></div>
-              <div><span className="inv-k">⚡ Electric</span><span>{snap.electric || '—'}</span></div>
-              <div><span className="inv-k">💧 Water</span><span>{snap.water || '—'}</span></div>
-              <div><span className="inv-k">🚽 Septic</span><span>{snap.septic || '—'}</span></div>
-            </div>
-          ) : (
-            <p className="summary">Status will appear here shortly.</p>
-          )}
-          {snap?.updated_at && <p className="meta">Updated {new Date(snap.updated_at).toLocaleDateString()}</p>}
-        </section>
-
-        {/* ── Photo gallery ──────────────────────────────────────────── */}
-        <section className="detail">
-          <h2 className="detail-title">Photos &amp; updates</h2>
-          {files.length === 0 && <p className="summary">No photos shared yet — check back soon.</p>}
-          <div className="inv-gallery">
-            {files.map((f) => (
-              <figure key={f.id} className="inv-photo">
-                {urls[f.id] && IMG_RE.test(f.name) ? (
-                  <img src={urls[f.id]} alt={f.caption || f.name} loading="lazy" decoding="async" />
-                ) : urls[f.id] ? (
-                  <a className="inv-file" href={urls[f.id]} target="_blank" rel="noreferrer" download={f.name}>
-                    📄 {f.name}
-                  </a>
-                ) : (
-                  <div className="inv-photo-skel" aria-hidden="true" />
-                )}
-                <figcaption>
-                  <b>{f.caption || f.name}</b>
-                  <span className="muted"> · {new Date(f.created_at).toLocaleDateString()}</span>
-                </figcaption>
-                {thread(fileComments(f.id))}
-                {box(f.id, 'Ask or comment on this photo…')}
-              </figure>
+        <div className="ip-body">
+          {/* ── Current progress (real stream statuses; no fabricated %) ── */}
+          <section className="ip-progress">
+            {streams.map((s) => (
+              <div key={s.label} className="ip-prow">
+                <Icon name={s.ic} size={18} color="var(--rust)" />
+                <span className="ip-prow-label">{s.label}</span>
+                <span className="ip-prow-val">{s.val || '—'}</span>
+              </div>
             ))}
-          </div>
-        </section>
+            {snap?.updated_at && (
+              <div className="ip-updated">Updated {new Date(snap.updated_at).toLocaleDateString()}</div>
+            )}
+          </section>
 
-        {/* ── Project conversation ───────────────────────────────────── */}
-        <section className="detail">
-          <h2 className="detail-title">Questions &amp; comments</h2>
-          {thread(projectComments)}
-          {box('', 'Write a message to Iron Shield…')}
-        </section>
+          {/* ── A note from the builder (latest builder message) ── */}
+          {builderNote && (
+            <div className="ip-note">
+              <div className="ip-note-head">
+                <span className="ip-avatar">{(builderNote.author_name || 'IS').slice(0, 1).toUpperCase()}</span>
+                <div>
+                  <div className="ip-note-who">A note from {builderNote.author_name || 'Iron Shield'}</div>
+                  <div className="ip-note-when">Your builder · {new Date(builderNote.created_at).toLocaleDateString()}</div>
+                </div>
+              </div>
+              <div className="ip-note-body">{builderNote.body}</div>
+            </div>
+          )}
+
+          {/* ── Recent updates: the captioned photo feed ── */}
+          <section>
+            <div className="ip-section-title">Recent updates</div>
+            {files.length === 0 && <p className="ip-empty">No photos shared yet — check back soon.</p>}
+            <div className="ip-feed">
+              {files.map((f) => (
+                <article key={f.id} className="ip-update">
+                  {urls[f.id] && IMG_RE.test(f.name) ? (
+                    <img className="ip-update-photo" src={urls[f.id]} alt={f.caption || f.name} loading="lazy" decoding="async" />
+                  ) : urls[f.id] ? (
+                    <a className="ip-update-file" href={urls[f.id]} target="_blank" rel="noreferrer" download={f.name}>
+                      <Icon name="description" size={18} color="var(--rust)" />
+                      {f.name}
+                    </a>
+                  ) : (
+                    <div className="ip-update-skel" aria-hidden="true" />
+                  )}
+                  <div className="ip-update-body">
+                    <div className="ip-update-meta">
+                      <span className="ip-update-title">{f.caption || f.name}</span>
+                      <span className="ip-update-when">{new Date(f.created_at).toLocaleDateString()}</span>
+                    </div>
+                    {thread(fileComments(f.id))}
+                    {box(f.id, 'Ask or comment on this photo…')}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          {/* ── Questions & comments ── */}
+          <section>
+            <div className="ip-section-title">Questions &amp; comments</div>
+            {thread(projectComments)}
+            {box('', 'Write a message to Iron Shield…', 'ip-msg')}
+          </section>
+        </div>
+
+        {/* Sticky primary action — jumps to the message composer. */}
+        <div className="ip-msgbar">
+          <button
+            className="ip-msg-btn"
+            onClick={() => document.getElementById('ip-msg')?.querySelector('textarea')?.focus()}
+          >
+            <Icon name="chat_bubble" size={19} color="#fff" />
+            Message us
+          </button>
+        </div>
       </div>
     </div>
   )

@@ -76,6 +76,29 @@
   --tap-min: 44px;   /* min touch target on phones */
   --fs-input: 16px;  /* min input font on touch — stops iOS focus-zoom */
   --bp-sm: 640px;    /* phone breakpoint (documented; media queries use the px) */
+
+  /* ── CLAUDE DESIGN aliases ────────────────────────────────────────────────
+     The Claude Design components/CSS speak a slightly different token vocabulary
+     (--paper, --ink, --rust, --gold…). We alias those names onto the app's
+     existing tokens so design-faithful CSS reads cleanly AND theming still flows
+     from the one source above — each alias points at a theme-aware var, so the
+     dark twins below need no duplication. */
+  --paper: var(--bg);
+  --surface: var(--panel);
+  --ink: var(--text);
+  --ink-2: var(--muted);
+  /* --ink-3 already defined */
+  --rust: var(--accent);
+  --on-rust: var(--on-accent);
+  --gold: var(--star);
+  --investor: var(--accent-2);
+  --warn-tint: var(--warn-bg);
+  --success-tint: var(--success-bg);
+  --info-tint: var(--info-bg);
+  --danger-tint: var(--danger-bg);
+  --danger-ink: var(--danger);
+  /* The single icon set — Material Symbols Outlined (loaded in index.html). */
+  --font-icon: 'Material Symbols Outlined';
 }
 
 /*

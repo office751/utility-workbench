@@ -17,11 +17,27 @@
  * Tasks "bubble up" on their own: a due date or a who's-waiting tag is enough to
  * surface a task here without you having to star it (that's the auto-urgency).
  */
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { Stream, Task } from '../types'
 import type { ActionCenter, ActionItem } from '../lib/actionCenter'
 import { daysUntilDue, dueLabel, dueSoonTasks, focusTasks, waitingOnTasks } from '../lib/tasks'
 import { hatOf } from '../data/hats'
+import Icon from './Icon'
+
+/** Action-center items carry EMOJI icons (so the status-report text keeps them);
+ *  on the Today screen we render them as Material Symbols glyphs instead. */
+const MI_FOR: Record<string, string> = {
+  '⚡': 'bolt',
+  '💧': 'water_drop',
+  '🚽': 'plumbing',
+  '📋': 'description',
+  '🛒': 'shopping_cart',
+  '🧩': 'extension',
+  '⏰': 'schedule',
+  '⚠': 'warning',
+  '⚠️': 'warning',
+}
+const miFor = (emoji: string): string => MI_FOR[emoji] ?? 'task_alt'
 
 interface Props {
   /**
@@ -57,12 +73,29 @@ function StatChip({ n, l }: { n: number; l: string }) {
   )
 }
 
-/** The consistent header above every section: emoji + uppercase label + count. */
-function SecHead({ icon, label, count, hint }: { icon: string; label: string; count: number; hint?: string }) {
+/** The consistent header above every section: Material Symbol + uppercase label
+ *  + count. `icon` is a Material Symbols ligature name. */
+function SecHead({
+  icon,
+  label,
+  count,
+  hint,
+  color = 'var(--ink-2)',
+  fill = false,
+}: {
+  icon: string
+  label: string
+  count: number
+  hint?: string
+  color?: string
+  fill?: boolean
+}) {
   return (
     <div className="t-sec-head">
       <div className="t-sec-line">
-        <span className="t-sec-icon">{icon}</span>
+        <span className="t-sec-icon">
+          <Icon name={icon} size={18} color={color} fill={fill} />
+        </span>
         <span className="t-sec-label">{label}</span>
         <span className="t-sec-count">{count}</span>
       </div>
@@ -80,22 +113,24 @@ function TaskRow({
   onCompleteTask,
 }: {
   t: Task
-  badge: string | null
+  badge: ReactNode
   badgeTone: BadgeTone
-  bodyWaiting: boolean // show the ⏳ person in the body? (false when it's the badge)
+  bodyWaiting: boolean // show the waiting-on person in the body? (false when it's the badge)
   onCompleteTask: (id: string) => void
 }) {
   const hat = hatOf(t.category)
   return (
     <div className="t-row">
       <input type="checkbox" className="t-check" title="Mark done" onChange={() => onCompleteTask(t.id)} />
-      <span className="t-row-icon">{hat.icon}</span>
+      <span className="t-row-icon">
+        <Icon name={hat.mi} size={18} color="var(--ink-2)" />
+      </span>
       <span className="t-row-body">
         <span className="t-row-title">{t.text}</span>
         <span className="t-row-meta">
           {hat.label}
           {t.company ? ` · ${t.company}` : ''}
-          {bodyWaiting && t.waitingOn ? ` · ⏳ ${t.waitingOn}` : ''}
+          {bodyWaiting && t.waitingOn ? ` · waiting on ${t.waitingOn}` : ''}
         </span>
       </span>
       {badge && <span className={`t-badge t-badge--${badgeTone}`}>{badge}</span>}
@@ -108,7 +143,9 @@ function AttnRow({ item, onOpen }: { item: ActionItem; onOpen: (id: number, s: S
   const tone: BadgeTone = item.severity === 'crit' ? 'danger' : item.severity === 'warn' ? 'warn' : 'neutral'
   return (
     <button className="t-row t-row--link" onClick={() => onOpen(item.projectId, item.stream)}>
-      <span className="t-row-icon">{item.icon}</span>
+      <span className="t-row-icon">
+        <Icon name={miFor(item.icon)} size={18} color="var(--ink-2)" />
+      </span>
       <span className="t-row-body">
         <span className="t-row-title">{item.text}</span>
         <span className="t-row-meta">
@@ -138,7 +175,9 @@ function MoveGroup({
     <>
       <button className="t-row t-row--link t-move-head" onClick={() => setOpen((o) => !o)}>
         <span className="t-move-caret">{open ? '▾' : '▸'}</span>
-        <span className="t-row-icon ready">{icon}</span>
+        <span className="t-row-icon ready">
+          <Icon name={miFor(icon)} size={18} color="var(--ready-icon)" />
+        </span>
         <span className="t-row-body">
           <span className="t-row-title">{label}</span>
         </span>
@@ -225,18 +264,19 @@ function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks }: Props) {
 
       {everythingClear && (
         <div className="t-clear">
-          🎉 You're all caught up — nothing needs you across {ac.stats.projects} projects and your task list.
+          <Icon name="celebration" size={18} color="var(--success)" />
+          You're all caught up — nothing needs you across {ac.stats.projects} projects and your task list.
         </div>
       )}
 
       {/* ⭐ Today's Focus — your chosen few (rust-accented card) */}
       <section className="t-sec">
-        <SecHead icon="⭐" label="Today's focus" count={focus.length} />
+        <SecHead icon="star" label="Today's focus" count={focus.length} color="var(--gold)" fill />
         {focus.length === 0 ? (
           <div className="t-card t-card--accent t-empty">
             Nothing starred yet.{' '}
             <button className="linklike" onClick={onGoTasks}>
-              Open ✓ Tasks
+              Open Tasks
             </button>{' '}
             and star a few must-dos — they’ll live right here.
           </div>
@@ -252,7 +292,12 @@ function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks }: Props) {
       {/* 🔥 Needs attention — task fires first, then construction deadlines */}
       {(attnTasks.length > 0 || fires.length > 0) && (
         <section className="t-sec">
-          <SecHead icon="🔥" label="Needs attention" count={attnTasks.length + fires.length} />
+          <SecHead
+            icon="local_fire_department"
+            label="Needs attention"
+            count={attnTasks.length + fires.length}
+            color="var(--danger)"
+          />
           <div className="t-card">
             {attnTasks.map((t) => (
               <TaskRow
@@ -275,9 +320,10 @@ function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks }: Props) {
       {stalled.length > 0 && (
         <section className="t-sec">
           <SecHead
-            icon="⚠️"
+            icon="warning"
             label="Gone quiet — overdue at a stage"
             count={stalled.length}
+            color="var(--warn)"
             hint="These have sat at their current step longer than expected — time for a nudge."
           />
           <div className="t-card">
@@ -291,13 +337,25 @@ function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks }: Props) {
       {/* ⏳ Waiting on you — people you're holding up */}
       {waiting.length > 0 && (
         <section className="t-sec">
-          <SecHead icon="⏳" label="Waiting on you" count={waiting.length} hint="Clear one of these and you unblock someone." />
+          <SecHead
+            icon="hourglass_top"
+            label="Waiting on you"
+            count={waiting.length}
+            color="var(--info)"
+            hint="Clear one of these and you unblock someone."
+          />
           <div className="t-card">
             {waiting.map((t) => (
               <TaskRow
                 key={t.id}
                 t={t}
-                badge={t.waitingOn ? `⏳ ${t.waitingOn}` : null}
+                badge={
+                  t.waitingOn ? (
+                    <>
+                      <Icon name="hourglass_top" size={12} /> {t.waitingOn}
+                    </>
+                  ) : null
+                }
                 badgeTone="neutral"
                 bodyWaiting={false}
                 onCompleteTask={onCompleteTask}
@@ -311,9 +369,11 @@ function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks }: Props) {
       {moveGroups.length > 0 && (
         <section className="t-sec">
           <SecHead
-            icon="✅"
+            icon="check_circle"
             label="Ready for your move"
             count={ac.stats.moves}
+            color="var(--success)"
+            fill
             hint="Grouped by action — open a group, then a project."
           />
           <div className="t-card">

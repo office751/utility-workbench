@@ -9,19 +9,20 @@
 export interface Hat {
   id: string
   label: string
-  icon: string
+  icon: string // legacy emoji (kept for any older surface that still uses it)
+  mi: string // Material Symbols ligature name — the design's single icon set
 }
 
 export const HATS: Hat[] = [
-  { id: 'construction', label: 'Construction', icon: '🏗️' },
-  { id: 'it', label: 'IT', icon: '🖥️' },
-  { id: 'office', label: 'Office', icon: '🗂️' },
-  { id: 'supplies', label: 'Supplies', icon: '📦' },
-  { id: 'research', label: 'Research', icon: '🔎' },
-  { id: 'other', label: 'Other', icon: '📌' },
+  { id: 'construction', label: 'Construction', icon: '🏗️', mi: 'construction' },
+  { id: 'it', label: 'IT', icon: '🖥️', mi: 'computer' },
+  { id: 'office', label: 'Office', icon: '🗂️', mi: 'folder' },
+  { id: 'supplies', label: 'Supplies', icon: '📦', mi: 'inventory_2' },
+  { id: 'research', label: 'Research', icon: '🔎', mi: 'search' },
+  { id: 'other', label: 'Other', icon: '📌', mi: 'push_pin' },
 ]
 
 /** Look up a hat by id (falls back to a generic pin so the UI never breaks). */
 export function hatOf(id: string): Hat {
-  return HATS.find((h) => h.id === id) ?? { id, label: id || 'Other', icon: '📌' }
+  return HATS.find((h) => h.id === id) ?? { id, label: id || 'Other', icon: '📌', mi: 'push_pin' }
 }
