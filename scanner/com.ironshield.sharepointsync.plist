@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Nightly SharePoint sync. Pushes electric + core facts from the Workbench blob
+  into the "Construction Jobs Permitting" SharePoint list. Runs --apply at
+  6:00 AM (just after the 5:30 permit scan). It is FILL-ONLY and conflict-safe:
+  it only fills blank/"Not Applied" cells and never overwrites a real value.
+
+  Install:
+    cp scanner/com.ironshield.sharepointsync.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.ironshield.sharepointsync.plist
+  Pause / remove:
+    launchctl unload ~/Library/LaunchAgents/com.ironshield.sharepointsync.plist
+  Run once now (preview only): cd scanner && node sync-sharepoint.mjs
+  Logs: scanner/logs/sharepoint-sync.log
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.ironshield.sharepointsync</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/Construction/.nvm/versions/node/v24.16.0/bin/node</string>
+    <string>sync-sharepoint.mjs</string>
+    <string>--apply</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/Users/Construction/Documents/Claude/Projects/Lodestar/construction-lodestar/scanner</string>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>6</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>StandardOutPath</key>
+  <string>/Users/Construction/Documents/Claude/Projects/Lodestar/construction-lodestar/scanner/logs/sharepoint-sync.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/Construction/Documents/Claude/Projects/Lodestar/construction-lodestar/scanner/logs/sharepoint-sync.err.log</string>
+</dict>
+</plist>
