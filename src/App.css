@@ -3681,3 +3681,19 @@ a.map-btn {
 
 /* note under a Project-settings section heading */
 .ps-note { margin: 2px 0 10px; font-size: var(--text-sm); }
+
+/* People & access — inline-editable display name (reads as text until hover/focus) */
+.person-name-input {
+  font: inherit;
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  flex: 1;
+  min-width: 0;
+}
+.person-name-input:hover { border-color: var(--border); background: var(--surface-2); }
+.person-name-input:focus { outline: none; border-color: var(--rust); background: var(--surface); }

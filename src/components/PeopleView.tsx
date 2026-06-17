@@ -14,7 +14,7 @@
 import { useEffect, useState } from 'react'
 import type { Project } from '../types'
 import { ROLES, ROLE_ORDER, normalizeRole } from '../data/roles'
-import { allProjectAccess, listAppUsers, setUserProjects, setUserRole, type AppUserRow } from '../lib/admin'
+import { allProjectAccess, listAppUsers, setUserName, setUserProjects, setUserRole, type AppUserRow } from '../lib/admin'
 
 function PeopleView({ roster }: { roster: Project[] }) {
   const [users, setUsers] = useState<AppUserRow[]>([])
@@ -35,6 +35,17 @@ function PeopleView({ roster }: { roster: Project[] }) {
   function note(msg: string) {
     setFlash(msg)
     setTimeout(() => setFlash((m) => (m === msg ? '' : m)), 2500)
+  }
+
+  async function changeName(u: AppUserRow, name: string) {
+    const trimmed = name.trim()
+    if (!trimmed || trimmed === u.display_name) return
+    if (await setUserName(u.user_id, trimmed)) {
+      setUsers((prev) => prev.map((x) => (x.user_id === u.user_id ? { ...x, display_name: trimmed } : x)))
+      note(`Renamed to "${trimmed}".`)
+    } else {
+      note('Could not save the name.')
+    }
   }
 
   async function changeRole(u: AppUserRow, role: string) {
@@ -82,7 +93,17 @@ function PeopleView({ roster }: { roster: Project[] }) {
             return (
               <div key={u.user_id} className="person card">
                 <div className="person-head">
-                  <span className="person-name">{u.display_name || '(unnamed login)'}</span>
+                  {/* Editable display name — saves on blur or Enter. */}
+                  <input
+                    className="person-name-input"
+                    defaultValue={u.display_name || ''}
+                    placeholder="(unnamed login)"
+                    title="Edit this person's display name"
+                    onBlur={(e) => changeName(u, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                    }}
+                  />
                   <label className="person-role">
                     Role
                     <select value={u.role} onChange={(e) => changeRole(u, e.target.value)}>

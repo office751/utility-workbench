@@ -43,6 +43,17 @@ export async function setUserRole(userId: string, role: string): Promise<boolean
   }
 }
 
+/** Rename a login — the display name shown here AND on the investor portal. */
+export async function setUserName(userId: string, displayName: string): Promise<boolean> {
+  if (!supabase) return false
+  try {
+    const { error } = await supabase.from('app_users').update({ display_name: displayName }).eq('user_id', userId)
+    return !error
+  } catch {
+    return false
+  }
+}
+
 /** All project assignments (admin reads every row). Map user_id → project ids. */
 export async function allProjectAccess(): Promise<Record<string, number[]>> {
   if (!supabase) return {}
