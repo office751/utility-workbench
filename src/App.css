@@ -3678,3 +3678,6 @@ a.map-btn {
   cursor: pointer;
 }
 .se-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+
+/* note under a Project-settings section heading */
+.ps-note { margin: 2px 0 10px; font-size: var(--text-sm); }

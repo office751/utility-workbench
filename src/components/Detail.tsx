@@ -83,6 +83,8 @@ interface Updaters {
   /** Save / clear the GLOBAL step list for a stream-variant key (the step editor). */
   setStepList: (key: string, steps: StepDef[]) => void
   resetStepList: (key: string) => void
+  /** Edit this project's core roster facts (address, model, parcel, permit…). */
+  updateProjectFacts: (id: number, patch: Partial<Project>) => void
 }
 
 /** A tab in the project workspace: the Overview summary, or one stream. */
@@ -249,7 +251,13 @@ function Detail(props: Props) {
 
       {/* The gear panel: all editable config for the whole project. */}
       {showSettings && (
-        <ProjectSettings project={p} ps={ps} setField={setField} onClose={() => setShowSettings(false)} />
+        <ProjectSettings
+          project={p}
+          ps={ps}
+          setField={setField}
+          updateFacts={props.updateProjectFacts}
+          onClose={() => setShowSettings(false)}
+        />
       )}
 
       {/* ---- OVERVIEW: at-a-glance status + project-wide things (files, delete) ---- */}

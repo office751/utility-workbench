@@ -501,6 +501,17 @@ export function useProjects() {
     return newId
   }
 
+  /** Edit a project's CORE FACTS (the roster fields: address, model, parcel,
+   *  permit, subdivision, city/zip, WO#, status…). These start as a copy of
+   *  data/projects.ts but the saved roster is the source of truth, so edits
+   *  persist — e.g. a "TBD" address that now has a real house number. */
+  function updateProjectFacts(id: number, patch: Partial<Project>) {
+    setState((prev) => ({
+      ...prev,
+      roster: prev.roster.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+    }))
+  }
+
   /** Remove a project AND all its saved progress. */
   function deleteProject(id: number) {
     setState((prev) => {
@@ -762,6 +773,7 @@ export function useProjects() {
     setNote,
     setField,
     addProject,
+    updateProjectFacts,
     deleteProject,
     addProjectFiles,
     removeProjectFile,

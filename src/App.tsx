@@ -109,6 +109,7 @@ function App({ role = 'admin' }: { role?: AppRole }) {
     removeTask,
     setStepList,
     resetStepList,
+    updateProjectFacts,
     setTemplate,
     replaceState,
     saveState,
@@ -390,6 +391,7 @@ function App({ role = 'admin' }: { role?: AppRole }) {
             dismissNotification={dismissNotification}
             setStepList={setStepList}
             resetStepList={resetStepList}
+            updateProjectFacts={updateProjectFacts}
             onBack={() => {
               setSelectedId(null)
               setOpenStream(undefined)

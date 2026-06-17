@@ -41,11 +41,29 @@ interface Props {
   project: Project
   ps: ProjectState
   setField: <K extends keyof ProjectState>(id: number, field: K, value: ProjectState[K]) => void
+  /** Edit the core roster facts (address, model, parcel, permit, status…). */
+  updateFacts: (id: number, patch: Partial<Project>) => void
   /** Close the panel (the Done button). */
   onClose: () => void
 }
 
-function ProjectSettings({ project: p, ps, setField, onClose }: Props) {
+/** listStatus options with plain-English labels (the type allows all eight). */
+const STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: 'NotApplied', label: 'Active (default)' },
+  { value: 'InProgress', label: 'In progress' },
+  { value: 'Applied', label: 'Applied' },
+  { value: 'Scheduled', label: 'Scheduled' },
+  { value: 'MeterSet', label: 'Meter set' },
+  { value: 'PowerOn', label: 'Power on' },
+  { value: 'Hold', label: 'On hold' },
+  { value: 'CO', label: 'C.O. — finished' },
+]
+
+function ProjectSettings({ project: p, ps, setField, updateFacts, onClose }: Props) {
+  // Edit a core roster fact (address, model, …) directly on the project. Only
+  // string-valued fields are edited here, so the computed-key cast is safe.
+  type FactField = 'address' | 'city' | 'zip' | 'model' | 'parcel' | 'subdivision' | 'permit' | 'workOrder' | 'listStatus'
+  const fact = (field: FactField, value: string) => updateFacts(p.id, { [field]: value } as Partial<Project>)
   const septicIsSeptic = septicSourceOf(ps) === 'Septic'
   const isInvestor = ps.isInvestorProject ?? false
 
@@ -61,10 +79,63 @@ function ProjectSettings({ project: p, ps, setField, onClose }: Props) {
     <div className="proj-settings card">
       <div className="ps-head">
         <span>⚙️ Project settings</span>
-        <span className="muted">— overrides for this project; saved automatically</span>
+        <span className="muted">— details &amp; overrides for this project; saved automatically</span>
         <button className="mini" onClick={onClose}>
           ✓ Done
         </button>
+      </div>
+
+      {/* ---- Project details (the core roster facts — editable anytime) ---- */}
+      <h4>🏠 Project details</h4>
+      <p className="ps-note muted">
+        The core facts for this house — fix anything that changed (e.g. a “TBD” address that now has a house number).
+      </p>
+      <div className="settings">
+        <label className="grow">
+          Address
+          <input value={p.address} onChange={(e) => fact('address', e.target.value)} placeholder="14667 SW 79th Terrace Rd" />
+        </label>
+        <label>
+          City
+          <input value={p.city} onChange={(e) => fact('city', e.target.value)} />
+        </label>
+        <label>
+          ZIP
+          <input value={p.zip} onChange={(e) => fact('zip', e.target.value)} placeholder="34473" />
+        </label>
+        <label>
+          Model / floor plan
+          <input value={p.model} onChange={(e) => fact('model', e.target.value)} placeholder="E2-RH" />
+        </label>
+        <label>
+          Parcel #
+          <input value={p.parcel} onChange={(e) => fact('parcel', e.target.value)} placeholder="8011-1376-25" />
+        </label>
+        <label className="grow">
+          Subdivision
+          <input value={p.subdivision} onChange={(e) => fact('subdivision', e.target.value)} placeholder="Marion Oaks Unit 11" />
+        </label>
+        <label>
+          Permit #
+          <input value={p.permit} onChange={(e) => fact('permit', e.target.value)} placeholder="2025020809" />
+        </label>
+        <label>
+          Duke WO# (if any)
+          <input value={p.workOrder} onChange={(e) => fact('workOrder', e.target.value)} />
+        </label>
+        <label>
+          Status
+          <select value={p.listStatus} onChange={(e) => fact('listStatus', e.target.value)}>
+            {STATUS_OPTIONS.some((o) => o.value === p.listStatus) ? null : (
+              <option value={p.listStatus}>{String(p.listStatus)}</option>
+            )}
+            {STATUS_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {/* ---- Ownership ---- */}
