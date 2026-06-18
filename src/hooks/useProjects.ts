@@ -74,6 +74,18 @@ function normalize(ps: ProjectState): ProjectState {
     steps[s] = backfillDoneAt(steps[s] ?? {})
     if (notes[s] == null) notes[s] = ''
   }
+  // 'meternotify' is a NEWER electric step that sits BEFORE 'meter' in the
+  // lifecycle. Saves that already reached the meter set (meter/power done)
+  // predate it, so without this backfill they'd re-open as a pending "notify
+  // the utility — ready for meter" action (and a false stale flag). Mark it
+  // done for any house already PAST the meter stage — additive + idempotent
+  // (only fills when missing). Houses still BETWEEN field-work and meter
+  // correctly get it as a genuine pending step. '(inferred)' = not a real date,
+  // so backfillDoneAt won't stamp a doneAt and staleness won't time it.
+  const elec = steps.electric
+  if ((elec['meter']?.done || elec['power']?.done) && !elec['meternotify']?.done) {
+    steps.electric = { ...elec, meternotify: { done: true, date: '(inferred)' } }
+  }
   // Older saves predate material orders — ensure it's an array.
   const orders = Array.isArray(ps.orders) ? ps.orders : []
   // Files: a project-level list now. Older saves kept names under `permitDocs`

@@ -54,7 +54,7 @@ export interface ActionCenter {
  * next*Action functions return these keys; see lib/nextAction.ts.)
  */
 const OUR_COURT: Record<Stream, Set<string>> = {
-  electric: new Set(['verify', 'apply', 'addr', 'deposit', 'rough']),
+  electric: new Set(['verify', 'apply', 'addr', 'deposit', 'rough', 'meternotify']),
   water: new Set(['wsrc', 'cavail', 'capply', 'wpermit']),
   septic: new Set(['seval', 'sapplied', 'scounty', 'snrb']),
   permit: new Set(['submitted', 'approved']), // submit it / go pick it up

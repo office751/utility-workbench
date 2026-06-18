@@ -120,6 +120,8 @@ export function nextElectricAction(p: Project, ps: ProjectState): NextAction {
   if (!done['deposit']?.done) return { key: 'deposit', label: 'Pay deposit / fees' }
   if (!done['engineer']?.done) return { key: 'eng', label: 'Awaiting engineer' }
   if (!done['rough']?.done) return { key: 'rough', label: 'Notify utility when rough plumbing passes' }
+  if (!done['meternotify']?.done)
+    return { key: 'meternotify', label: 'Notify utility ready for meter — send photos (green tag, downpipe, sweep, straps, clear path)' }
   if (!done['meter']?.done) return { key: 'field', label: 'Awaiting field work / meter set' }
   if (!done['power']?.done) return { key: 'power', label: 'Awaiting power on' }
   return { key: 'done', label: 'Complete' }
@@ -140,7 +142,7 @@ export function electricNeedsAction(p: Project, ps: ProjectState): boolean {
   const key = nextElectricAction(p, ps).key
   const so = shutoffFor(ps)
   return (
-    ['verify', 'apply', 'addr', 'deposit', 'rough'].includes(key) ||
+    ['verify', 'apply', 'addr', 'deposit', 'rough', 'meternotify'].includes(key) ||
     Boolean(so && so.daysLeft <= 10)
   )
 }

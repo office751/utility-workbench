@@ -50,6 +50,7 @@ import { shutoffFor } from '../lib/shutoff'
 import { permitExpiryFor } from '../lib/permitExpiry'
 import { permitHandoffDraft, permitHandoffDraftWithLinks, type HandoffDraft } from '../lib/permitHandoff'
 import { DUKE_PORTAL_URL, dukeWebPayloadText, dukeWebPayloadTextWithDirections } from '../lib/dukeWebApply'
+import { meterNotifyDraft } from '../lib/loadForm'
 import { getShareUrl } from '../lib/files'
 import { grantedProjectIds, shareFileToInvestor } from '../lib/investor'
 import { writeRichClipboard } from '../lib/richCopy'
@@ -388,7 +389,7 @@ function Detail(props: Props) {
 
 /* ==================== ELECTRIC ==================== */
 
-function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField }: Props) {
+function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField, templates }: Props) {
   const next = nextElectricAction(p, ps)
   const shutoff = shutoffFor(ps)
   const u = utilityOf(p, ps)
@@ -399,6 +400,10 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField }: Pro
   //              to drive the form (a button can't type into Duke's portal)
   //   noclip   → same, but the browser blocked the clipboard write
   const [dukeState, setDukeState] = useState<'idle' | 'building' | 'opened' | 'noclip'>('idle')
+  // 📸 Meter-notify email (the green-tag photos the utility needs before a
+  // meter set). Same busy-flag idiom as the Duke portal button below.
+  const [notifying, setNotifying] = useState(false)
+  const [notifyNote, setNotifyNote] = useState<string | null>(null)
 
   /** Copy this project's portal fill-data (JSON) — including computed
    *  turn-by-turn directions from the nearest main road — and open the
@@ -426,6 +431,26 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField }: Pro
     }
     window.open(DUKE_PORTAL_URL, '_blank', 'noopener')
     setDukeState(copied ? 'opened' : 'noclip')
+  }
+
+  /** Draft the "home is ready for the meter set" email — with the photo
+   *  checklist the utility asks for — to SECO Engineering or the Duke EDA
+   *  office. mailto only; no project data is mutated. */
+  function notifyReadyForMeter() {
+    const draft = meterNotifyDraft(p, ps, templates)
+    if (!draft) {
+      setNotifyNote('⚠️ Set the utility (SECO or Duke) first.')
+      return
+    }
+    setNotifying(true)
+    setNotifyNote(`Drafting to ${draft.to}…`)
+    window.location.href = draft.mailto
+    // Clear the transient note when the busy window ends so "Drafting…" doesn't
+    // linger as a stuck message after the mail client has opened.
+    setTimeout(() => {
+      setNotifying(false)
+      setNotifyNote(null)
+    }, 1500)
   }
 
   return (
@@ -481,6 +506,18 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField }: Pro
           )}
         </div>
       )}
+
+      {/* 📸 Once the home green-tags: tell the utility it's ready for the meter
+          set and send the photos they require (SECO Engineering / Duke EDA). */}
+      {(u === 'SECO' || u === 'DUKE') && (
+        <div className="contact-row">
+          <button className="contact" onClick={notifyReadyForMeter} disabled={notifying}>
+            <Icon name={notifying ? 'hourglass_top' : 'photo_camera'} size={15} />
+            {notifying ? ' Drafting…' : ' Notify utility — ready for meter'}
+          </button>
+        </div>
+      )}
+      {notifyNote && <p className={'shutoff' + (notifyNote.startsWith('⚠️') ? ' warn' : '')}>{notifyNote}</p>}
 
       <p className="next-line">
         Next: <b>{next.label}</b>

@@ -66,8 +66,8 @@ const ELECTRIC_STATUS_STEPS: Record<string, string[]> = {
   Applied: ['verify', 'submit'],
   InProgress: ['verify', 'submit'],
   Scheduled: ['verify', 'submit', 'deposit', 'engineer', 'rough', 'fieldsched'],
-  MeterSet: ['verify', 'submit', 'deposit', 'engineer', 'rough', 'fieldsched', 'fielddone', 'meter'],
-  PowerOn: ['verify', 'submit', 'deposit', 'engineer', 'rough', 'fieldsched', 'fielddone', 'meter', 'power'],
+  MeterSet: ['verify', 'submit', 'deposit', 'engineer', 'rough', 'fieldsched', 'fielddone', 'meternotify', 'meter'],
+  PowerOn: ['verify', 'submit', 'deposit', 'engineer', 'rough', 'fieldsched', 'fielddone', 'meternotify', 'meter', 'power'],
   // NotApplied → nothing done
 }
 

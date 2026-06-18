@@ -28,6 +28,7 @@ export const ELECTRIC_STEPS: StepDef[] = [
   { id: 'rough', label: 'Rough plumbing passed — notified utility' },
   { id: 'fieldsched', label: 'Field work scheduled' },
   { id: 'fielddone', label: 'Field work complete — notified utility' },
+  { id: 'meternotify', label: 'Notified utility ready for meter — photos sent (green tag, downpipe, sweep, straps, clear path)' },
   { id: 'meter', label: 'Meter set / county inspection passed' },
   { id: 'power', label: 'Power ON' },
 ]

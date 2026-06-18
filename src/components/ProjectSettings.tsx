@@ -190,6 +190,20 @@ function ProjectSettings({ project: p, ps, setField, updateFacts, onClose }: Pro
             <option value="CLAY">Clay</option>
           </select>
         </label>
+        {/* Duke replies (load form, meter-notify) go to whichever EDA office
+            emailed the Work Order — Ocala for most jobs, Inverness out west. */}
+        {utilityOf(p, ps) === 'DUKE' && (
+          <label>
+            Duke EDA office
+            <select
+              value={ps.dukeOffice ?? 'Ocala'}
+              onChange={(e) => setField(p.id, 'dukeOffice', e.target.value as 'Ocala' | 'Inverness')}
+            >
+              <option value="Ocala">Ocala (EDA-Ocala)</option>
+              <option value="Inverness">Inverness (EDA-Inverness)</option>
+            </select>
+          </label>
+        )}
         <label>
           Service
           <select

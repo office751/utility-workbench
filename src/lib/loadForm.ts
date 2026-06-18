@@ -11,13 +11,15 @@
 import type { Project, ProjectState, TemplateOverride } from '../types'
 import { specFor } from '../data/models'
 import { legalFor, LEGAL_PLACEHOLDER } from '../data/legal'
-import { COMPANY, DUKE_EMAIL_INVERNESS, DUKE_EMAIL_OCALA, OFFICE_CC, SECO_EMAIL } from '../data/contacts'
+import { COMPANY, DUKE_EMAIL_INVERNESS, DUKE_EMAIL_OCALA, OFFICE_CC, SECO_EMAIL, SECO_ENGINEERING } from '../data/contacts'
 import { septicSourceOf, serviceTypeOf, utilityOf } from './nextAction'
 import {
   DEFAULT_APPLY_DUKE_BODY,
   DEFAULT_APPLY_DUKE_SUBJECT,
   DEFAULT_APPLY_SECO_BODY,
   DEFAULT_APPLY_SECO_SUBJECT,
+  DEFAULT_METERNOTIFY_BODY,
+  DEFAULT_METERNOTIFY_SUBJECT,
   effectiveTemplate,
   renderTemplate,
 } from './templates'
@@ -153,6 +155,54 @@ export function applicationDraft(
     body,
     packet,
     warnings,
+    mailto: `mailto:${to}?cc=${encodeURIComponent(OFFICE_CC)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
+  }
+}
+
+/** Everything the "ready for meter" notification email needs. */
+export interface MeterNotifyDraft {
+  utility: 'SECO' | 'DUKE'
+  to: string
+  subject: string
+  body: string
+  mailto: string
+  warnings: string[]
+}
+
+/**
+ * Draft the "ready for meter — please set the meter" email for one house.
+ * SECO routes to its engineering team (engineeringmsa@); Duke routes to the EDA
+ * office that owns the territory (Ocala/Inverness, per ps.dukeOffice). Wording
+ * comes from the editable 'electric:meternotify' template; the photo checklist
+ * SECO asks for lives in the default body. Returns null for non-SECO/Duke
+ * utilities (Clay/unknown) so the calling button can hide itself.
+ */
+export function meterNotifyDraft(
+  p: Project,
+  ps: ProjectState,
+  overrides?: Record<string, TemplateOverride>,
+): MeterNotifyDraft | null {
+  const u = utilityOf(p, ps)
+  if (u !== 'SECO' && u !== 'DUKE') return null
+
+  const to = u === 'SECO' ? SECO_ENGINEERING.email : dukeOfficeEmail(ps)
+  const t = effectiveTemplate(overrides, 'electric:meternotify', {
+    subject: DEFAULT_METERNOTIFY_SUBJECT,
+    body: DEFAULT_METERNOTIFY_BODY,
+  })
+  const vars: Record<string, string> = {
+    site: `${p.address}, ${p.city}, FL ${p.zip}`,
+    utility: u === 'SECO' ? 'SECO' : 'Duke',
+  }
+  const subject = renderTemplate(t.subject, vars)
+  const body = renderTemplate(t.body, vars)
+
+  return {
+    utility: u,
+    to,
+    subject,
+    body,
+    warnings: [],
     mailto: `mailto:${to}?cc=${encodeURIComponent(OFFICE_CC)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
   }
 }

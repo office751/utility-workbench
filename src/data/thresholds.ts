@@ -25,6 +25,7 @@ export const STALE_OVERRIDES: Partial<Record<Stream, Record<string, number>>> = 
   electric: {
     engineer: 30, // utilities can take a month to assign / contact an engineer
     fieldsched: 21, // field scheduling tends to drag
+    meternotify: 7, // photos are on US — chase quickly once the home green-tags
     meter: 21, // awaiting the meter set / county inspection
   },
   water: {

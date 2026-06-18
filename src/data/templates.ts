@@ -13,6 +13,8 @@ import {
   DEFAULT_APPLY_DUKE_SUBJECT,
   DEFAULT_APPLY_SECO_BODY,
   DEFAULT_APPLY_SECO_SUBJECT,
+  DEFAULT_METERNOTIFY_BODY,
+  DEFAULT_METERNOTIFY_SUBJECT,
   DEFAULT_PERMIT_HANDOFF_BODY,
   DEFAULT_PERMIT_HANDOFF_SUBJECT,
   DEFAULT_STATUS_DETAILED_BODY,
@@ -60,6 +62,11 @@ const APPLY_VARS: TemplateVar[] = [
   { token: '{{workOrder}}', desc: 'Duke Work Order # from Duke\'s email ("[paste WO# from Duke]" until set)' },
   { token: '{{septic_clause}}', desc: 'Duke only: " showing the septic location" on septic lots, blank for sewer' },
   { token: '{{packet}}', desc: 'the fully-filled application form (used by "Copy form" for the PDF/portal)' },
+]
+
+const METERNOTIFY_VARS: TemplateVar[] = [
+  { token: '{{site}}', desc: 'full site line — address, city, FL zip' },
+  { token: '{{utility}}', desc: 'the utility — SECO or Duke' },
 ]
 
 // The SUBJECT line understands these (whole-report); the BODY is one block per
@@ -159,6 +166,17 @@ export function templateSpecs(): TemplateSpec[] {
       vars: APPLY_VARS,
       subject: DEFAULT_APPLY_DUKE_SUBJECT,
       body: DEFAULT_APPLY_DUKE_BODY,
+    },
+    {
+      id: 'electric:meternotify',
+      group: 'Electric application emails',
+      icon: '📸',
+      name: 'Ready for meter — notify utility',
+      description:
+        'Drafted by "📸 Notify utility — ready for meter" on a project\'s Electric tab — tells the power company the home passed inspection and is ready for the meter set, with the photos they ask for. Goes to SECO Engineering (engineeringmsa@secoenergy.com) for SECO, or the Duke EDA office (Ocala/Inverness) for Duke.',
+      vars: METERNOTIFY_VARS,
+      subject: DEFAULT_METERNOTIFY_SUBJECT,
+      body: DEFAULT_METERNOTIFY_BODY,
     },
     ...VENDORS.map((v) => ({
       id: `vendor:${v.id}`,

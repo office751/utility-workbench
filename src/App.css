@@ -2370,6 +2370,58 @@ button.danger:hover {
 .doc-btn.applied:hover {
   border-color: var(--success);
 }
+/* ── Duke's two real steps (M2): portal apply, then the WO# load-form reply ── */
+.ba-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 auto;
+}
+.ba-step {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.ba-step-label {
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--muted);
+  min-width: 44px;
+}
+.ba-office {
+  font-size: 12px;
+}
+/* A locked Step-2 action — greyed + non-clickable. Deliberately a <span>, not a
+   disabled <button>, so the adjacent .ba-waiting tooltip stays hoverable. */
+.ba-locked {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.ba-waiting {
+  font-size: 12px;
+  color: var(--warn-strong);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* ── "How this works" note per utility group (M2) ───────────────────────── */
+.ba-how {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  background: var(--info-bg);
+  color: var(--info);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  margin: 0 0 12px;
+}
+
 .ba-preview {
   width: 100%;
   font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;

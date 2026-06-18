@@ -70,6 +70,30 @@ export const DEFAULT_APPLY_DUKE_BODY = [
 // ^ {{septic_clause}} = " showing the septic location" for septic lots (Duke
 //   asks for the septic on the site plan); blank for sewer lots.
 
+/**
+ * "Ready for meter — notify utility" email. Drafted by the 📸 button on a
+ * project's Electric tab once the home green-tags. SECO explicitly asks for
+ * these photos before a meter set (and notes the county doesn't always tell
+ * them), so we send them directly. The recipient is chosen by the builder
+ * (SECO Engineering vs the Duke EDA office), not the body — so the wording
+ * stays utility-neutral and works for both. */
+export const DEFAULT_METERNOTIFY_SUBJECT = 'Ready for meter set — {{site}}'
+export const DEFAULT_METERNOTIFY_BODY = [
+  'Hello,',
+  '',
+  'The home at {{site}} has passed its electrical inspection and is ready for the meter set.',
+  '',
+  'Attached photos:',
+  '- Passed inspection / green tag',
+  '- Downpipe (weatherhead)',
+  '- Sweep',
+  '- Straps',
+  '- Clear path to the meter can',
+  '',
+  "Please note the county doesn't always notify you when a home is ready, so we're letting you know directly. Let me know if you need anything else to schedule the meter set.",
+].join('\n')
+// ^ No sign-off — the mail client appends Adam's real signature.
+
 /** Default wording for the permit-package handoff email to Jennifer's
  *  Permitting Service ("📨 Email Jennifer" on the Permit tab). Built from her
  *  own checklist (her email, May 13 2026): location, job cost, subs, AC/energy

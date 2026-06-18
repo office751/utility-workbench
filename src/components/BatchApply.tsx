@@ -13,6 +13,7 @@ import { useState } from 'react'
 import type { Project, ProjectState, TemplateOverride } from '../types'
 import { needsVerify, utilityOf } from '../lib/nextAction'
 import { applicationDraft } from '../lib/loadForm'
+import Icon from './Icon'
 
 interface Props {
   projects: Project[]
@@ -53,16 +54,46 @@ function BatchApply({ projects, getProjectState, templates, markApplied, onClose
     setTimeout(() => setCopiedId(null), 1200)
   }
 
-  const renderGroup = (label: string, group: Project[]) =>
+  const renderGroup = (label: string, group: Project[], utility: 'SECO' | 'DUKE') =>
     group.length > 0 && (
       <div className="ba-group" key={label}>
         <h3>
           {label} <span className="muted">({group.length})</span>
         </h3>
+        {/* Plain-English reminder of how THIS utility's process actually works. */}
+        <p className="ba-how">
+          <Icon name="info" size={16} />
+          {utility === 'SECO'
+            ? 'SECO is email-first: one email to SECO with the completed load form + site plan attached. Draft it, copy the form data for the PDF, then mark applied.'
+            : 'Duke is portal-first, then a reply. Step 1: apply in the Builder Portal. Step 2 unlocks once Duke emails a Work Order # — reply to that email with the completed load form + site plan (keep “WO#…” in the subject).'}
+        </p>
         {group.map((p) => {
           const ps = getProjectState(p.id)
           const d = applicationDraft(p, ps, templates)
           if (!d) return null
+          const previewBtn = (
+            <button className="doc-btn" onClick={() => setPreviewId(previewId === p.id ? null : p.id)}>
+              👁 {previewId === p.id ? 'Hide' : 'Preview'}
+            </button>
+          )
+          const copyBtn = (
+            <button
+              className="doc-btn"
+              onClick={() => copyPacket(p)}
+              title="Copy the filled load-form data to type into the load form"
+            >
+              {copiedId === p.id ? '✓ Copied' : '📋 Copy form'}
+            </button>
+          )
+          const appliedBtn = (
+            <button
+              className="doc-btn applied"
+              onClick={() => markApplied(p.id)}
+              title="Check this house's 'verified' + 'application submitted' steps"
+            >
+              ✓ Mark applied
+            </button>
+          )
           return (
             <div key={p.id} className="ba-row">
               <div className="ba-info">
@@ -75,24 +106,55 @@ function BatchApply({ projects, getProjectState, templates, markApplied, onClose
                   <div className="ba-warn">⚠ {d.warnings.join(' · ')}</div>
                 )}
               </div>
-              <div className="ba-actions">
-                <button className="doc-btn" onClick={() => setPreviewId(previewId === p.id ? null : p.id)}>
-                  👁 {previewId === p.id ? 'Hide' : 'Preview'}
-                </button>
-                <a className="doc-btn" href={d.mailto} title={`Draft to ${d.to} (CC office)`}>
-                  ✉️ Draft email
-                </a>
-                <button className="doc-btn" onClick={() => copyPacket(p)} title="Copy just the filled form (e.g. for the Duke portal)">
-                  {copiedId === p.id ? '✓ Copied' : '📋 Copy form'}
-                </button>
-                <button
-                  className="doc-btn applied"
-                  onClick={() => markApplied(p.id)}
-                  title="Check this house's 'verified' + 'application submitted' steps"
-                >
-                  ✓ Mark applied
-                </button>
-              </div>
+
+              {utility === 'DUKE' ? (
+                <div className="ba-steps">
+                  <div className="ba-step">
+                    <span className="ba-step-label">Step 1</span>
+                    <button
+                      className="doc-btn"
+                      onClick={() => onOpen(p.id)}
+                      title="Apply in the Duke Builder Portal (opens this house's Electric tab, where the portal button + fill data live)"
+                    >
+                      ⚡ Apply in portal
+                    </button>
+                    <span className="ba-office muted">→ reply goes to {d.to}</span>
+                  </div>
+                  <div className="ba-step">
+                    <span className="ba-step-label">Step 2</span>
+                    {p.workOrder ? (
+                      <>
+                        <a className="doc-btn" href={d.mailto} title={`Reply to ${d.to} with the load form (WO#${p.workOrder})`}>
+                          ✉️ Send load form
+                        </a>
+                        {copyBtn}
+                        {previewBtn}
+                        {appliedBtn}
+                      </>
+                    ) : (
+                      <>
+                        <span className="doc-btn ba-locked">✉️ Send load form</span>
+                        <span
+                          className="ba-waiting"
+                          title="Apply in the portal first; Duke emails a Work Order # (~next day). Paste the WO# in ⚙️ Settings, then reply with the load form."
+                        >
+                          ⏳ waiting on Duke's WO# email
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="ba-actions">
+                  {previewBtn}
+                  <a className="doc-btn" href={d.mailto} title={`Draft to ${d.to} (CC office)`}>
+                    ✉️ Draft email
+                  </a>
+                  {copyBtn}
+                  {appliedBtn}
+                </div>
+              )}
+
               {previewId === p.id && <pre className="ba-preview">{d.body}</pre>}
             </div>
           )
@@ -116,8 +178,8 @@ function BatchApply({ projects, getProjectState, templates, markApplied, onClose
 
       {ready.length === 0 && <p className="muted pad">🎉 Nothing waiting — every verified house has its application in.</p>}
 
-      {renderGroup('⚡ SECO', bySeco)}
-      {renderGroup('⚡ Duke', byDuke)}
+      {renderGroup('⚡ SECO', bySeco, 'SECO')}
+      {renderGroup('⚡ Duke', byDuke, 'DUKE')}
 
       {notReady.length > 0 && (
         <div className="ba-group">
@@ -147,8 +209,8 @@ function BatchApply({ projects, getProjectState, templates, markApplied, onClose
       )}
 
       <p className="muted ba-note">
-        📎 Reminder: SECO wants the signed notification form + site plan attached; Duke wants the site plan.
-        Attach from the project's 📎 Files before sending.
+        📎 Attach from the project's 📂 Files before sending: SECO wants the completed load form + site plan;
+        Duke's reply wants the completed load form + site plan (with the septic on it).
       </p>
     </section>
   )
