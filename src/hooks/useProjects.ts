@@ -281,41 +281,62 @@ export function useProjects() {
       cloudReady.current = true
       return
     }
+    const sb = supabase
     let cancelled = false
-    ;(async () => {
+    let attempt = 0
+
+    async function reconcile() {
       try {
-        const { data, error } = await supabase
-          .from('workbench')
-          .select('data')
-          .eq('id', 'main')
-          .maybeSingle()
+        const { data, error } = await sb.from('workbench').select('data').eq('id', 'main').maybeSingle()
         if (cancelled) return
         if (error) throw error
         if (data?.data) {
+          // The cloud has real data → it WINS (shared source of truth). Only
+          // after this successful read do we allow this browser to write back.
           const cloudData = data.data as Partial<WorkbenchState>
           // Normally a cloud load shouldn't echo back as a write. EXCEPTION:
           // when migrate() is about to CHANGE the data (merging the C.O./Hold
           // homes, or moving inspection-result tasks into `inspections`), we
           // WANT that written back — so only skip when NO migration applies.
           if (cloudData.extrasSeeded && cloudData.inspectionsMigrated) skipNextSave.current = true
-          // Mark ready BEFORE setState so, when a merge IS needed, the save
-          // effect that setState triggers actually fires (it gates on this).
-          cloudReady.current = true
+          cloudReady.current = true // ✅ reconciled — saves may now go up
           setState(migrate(cloudData))
         } else {
-          // Cloud is empty → seed it with whatever this browser currently has.
-          await supabase
+          // The row is GENUINELY absent (an authenticated read returned no row),
+          // i.e. first-ever run for the org → seed it from this browser. This is
+          // the ONLY place we write defaults up, and only on a confirmed-empty read.
+          await sb
             .from('workbench')
-            .upsert({ id: 'main', data: { ...state, __origin: clientId.current }, updated_at: new Date().toISOString() })
+            .upsert({ id: 'main', data: { ...stateRef.current, __origin: clientId.current }, updated_at: new Date().toISOString() })
+          if (!cancelled) cloudReady.current = true
         }
       } catch (e) {
-        console.warn('[workbench] cloud load failed — running on local data', e)
-      } finally {
-        if (!cancelled) cloudReady.current = true
+        // CRITICAL (data-loss guard): a failed/transient reconcile must NOT
+        // enable saving. Otherwise this browser's possibly-seed-default state
+        // could overwrite the real cloud blob (this is exactly what reverted
+        // edited data to data/projects.ts defaults — June 2026). Keep
+        // cloudReady=false (app still runs on localStorage), and RETRY, so we
+        // only ever write UP after successfully reading the cloud DOWN.
+        console.warn('[workbench] cloud reconcile failed — retrying, NOT saving until loaded', e)
+        if (!cancelled && attempt < 6) {
+          attempt++
+          setTimeout(reconcile, 3000)
+        }
       }
-    })()
+    }
+
+    reconcile()
+    // Also retry the moment the tab refocuses or regains connectivity, so a
+    // device that started offline reconciles (and re-enables saving) ASAP.
+    const retryIfNotReady = () => {
+      if (!cloudReady.current) reconcile()
+    }
+    window.addEventListener('focus', retryIfNotReady)
+    window.addEventListener('online', retryIfNotReady)
     return () => {
       cancelled = true
+      window.removeEventListener('focus', retryIfNotReady)
+      window.removeEventListener('online', retryIfNotReady)
     }
   }, []) // once, on mount
 
