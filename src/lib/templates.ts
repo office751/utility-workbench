@@ -35,29 +35,40 @@ export const DEFAULT_VENDOR_BODY = [
 ].join('\n')
 // ^ No sign-off — the mail client appends Adam's real signature.
 
-/** Default wording for the SECO / Duke electric application emails.
- *  {{packet}} injects the fully-filled notification/service form. */
-export const DEFAULT_APPLY_SECO_SUBJECT = 'New Construction Electric Service — {{address}}'
+/* ---- Electric application emails ----
+ * The two utilities work DIFFERENTLY, and these templates now match what Adam
+ * actually sends (verified against his real mail, June 2026):
+ *
+ *  • SECO is email-FIRST — one email to newconstruction@secoenergy.com with the
+ *    completed load form + site plan ATTACHED (PDFs). The body is short: the
+ *    form IS the attachment, not pasted text. The filled packet is still on tap
+ *    via "Copy form" to transcribe onto the SECO load-form PDF.
+ *
+ *  • Duke is portal-FIRST — you apply on the Builder Portal, then Duke emails
+ *    you a Work Order # and the blank load form. This template is that REPLY:
+ *    you send the completed form + site plan back, keeping "WO#…" in the subject
+ *    (Duke warns that removing it delays the response). So it leads with the WO#
+ *    and reads as a reply, NOT a fresh "we'd like to apply".
+ */
+export const DEFAULT_APPLY_SECO_SUBJECT = 'New Construction Application – {{site}}'
 export const DEFAULT_APPLY_SECO_BODY = [
-  'Good morning,',
+  'Hello,',
   '',
-  'We would like to apply for new construction electric service at {{address}} ({{parcel}}).',
-  'The completed notification details are below; the signed form and site plan are attached.',
-  '',
-  '{{packet}}',
+  "We'd like to apply for new construction electric service at {{site}} (parcel {{parcel}}). The completed load form and site plan are attached.",
 ].join('\n')
 // ^ No sign-off — the mail client appends Adam's real signature.
 
-export const DEFAULT_APPLY_DUKE_SUBJECT = 'New Service - {{address}}'
+export const DEFAULT_APPLY_DUKE_SUBJECT = 'WO#{{workOrder}} — {{site}}'
 export const DEFAULT_APPLY_DUKE_BODY = [
-  'Good morning,',
+  'Hi,',
   '',
-  'We would like to apply for new construction electric service at {{address}} ({{parcel}}).',
-  'The service information is below; site plan attached.',
+  'Attached is the completed load form for {{address}}, along with the site plan{{septic_clause}}.',
   '',
-  '{{packet}}',
+  'Please let me know if you need anything else to proceed.',
 ].join('\n')
 // ^ No sign-off — the mail client appends Adam's real signature.
+// ^ {{septic_clause}} = " showing the septic location" for septic lots (Duke
+//   asks for the septic on the site plan); blank for sewer lots.
 
 /** Default wording for the permit-package handoff email to Jennifer's
  *  Permitting Service ("📨 Email Jennifer" on the Permit tab). Built from her

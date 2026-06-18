@@ -143,6 +143,9 @@ export interface InspectionItem {
 export interface ProjectState {
   electricCo?: Utility
   serviceType?: ServiceType
+  /** Duke only: which EDA office emailed the Work Order (Ocala vs Inverness),
+   *  so the load-form reply goes back to the right place. Defaults to Ocala. */
+  dukeOffice?: 'Ocala' | 'Inverness'
   engineer?: string
   waterSource?: WaterSource
   septicSource?: SepticSource

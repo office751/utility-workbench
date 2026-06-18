@@ -57,7 +57,9 @@ const APPLY_VARS: TemplateVar[] = [
   { token: '{{parcel}}', desc: 'parcel number' },
   { token: '{{permit}}', desc: 'permit number' },
   { token: '{{model}}', desc: 'house model' },
-  { token: '{{packet}}', desc: 'the fully-filled application form (auto-generated)' },
+  { token: '{{workOrder}}', desc: 'Duke Work Order # from Duke\'s email ("[paste WO# from Duke]" until set)' },
+  { token: '{{septic_clause}}', desc: 'Duke only: " showing the septic location" on septic lots, blank for sewer' },
+  { token: '{{packet}}', desc: 'the fully-filled application form (used by "Copy form" for the PDF/portal)' },
 ]
 
 // The SUBJECT line understands these (whole-report); the BODY is one block per
@@ -140,8 +142,9 @@ export function templateSpecs(): TemplateSpec[] {
       id: 'apply:SECO',
       group: 'Electric application emails',
       icon: '⚡',
-      name: 'SECO application',
-      description: 'Drafted by ⚡ Batch Apply (and the Electric tab) for SECO houses — sent to newconstruction@secoenergy.com.',
+      name: 'SECO application (email-first)',
+      description:
+        'Drafted by ⚡ Batch Apply for SECO houses — ONE email to newconstruction@secoenergy.com with the completed load form + site plan attached. Short body on purpose; the form is the attachment.',
       vars: APPLY_VARS,
       subject: DEFAULT_APPLY_SECO_SUBJECT,
       body: DEFAULT_APPLY_SECO_BODY,
@@ -150,8 +153,9 @@ export function templateSpecs(): TemplateSpec[] {
       id: 'apply:DUKE',
       group: 'Electric application emails',
       icon: '⚡',
-      name: 'Duke application',
-      description: 'Drafted by ⚡ Batch Apply (and the Electric tab) for Duke houses — sent to EDA-Ocala@duke-energy.com.',
+      name: 'Duke load-form reply (portal-first)',
+      description:
+        "Duke is portal-first: apply on the Builder Portal, then Duke emails a Work Order #. This is the REPLY that sends the completed load form + site plan back to the EDA office that wrote you (Ocala or Inverness, set in ⚙️ Settings). Keep WO# in the subject.",
       vars: APPLY_VARS,
       subject: DEFAULT_APPLY_DUKE_SUBJECT,
       body: DEFAULT_APPLY_DUKE_BODY,

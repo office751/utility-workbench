@@ -11,8 +11,8 @@
 import type { Project, ProjectState, TemplateOverride } from '../types'
 import { specFor } from '../data/models'
 import { legalFor, LEGAL_PLACEHOLDER } from '../data/legal'
-import { COMPANY, DUKE_EMAIL, OFFICE_CC, SECO_EMAIL } from '../data/contacts'
-import { serviceTypeOf, utilityOf } from './nextAction'
+import { COMPANY, DUKE_EMAIL_INVERNESS, DUKE_EMAIL_OCALA, OFFICE_CC, SECO_EMAIL } from '../data/contacts'
+import { septicSourceOf, serviceTypeOf, utilityOf } from './nextAction'
 import {
   DEFAULT_APPLY_DUKE_BODY,
   DEFAULT_APPLY_DUKE_SUBJECT,
@@ -21,6 +21,12 @@ import {
   effectiveTemplate,
   renderTemplate,
 } from './templates'
+
+/** The Duke EDA office this project's load form replies to (defaults to Ocala —
+ *  the western/Citrus side is Inverness; set per project in ⚙️ Settings). */
+function dukeOfficeEmail(ps: ProjectState): string {
+  return ps.dukeOffice === 'Inverness' ? DUKE_EMAIL_INVERNESS : DUKE_EMAIL_OCALA
+}
 
 /** The SECO single-site notification, filled in for one house. */
 export function buildSecoPacket(p: Project, ps: ProjectState): string {
@@ -59,7 +65,7 @@ export function buildDukePacket(p: Project, ps: ProjectState): string {
   const t = serviceTypeOf(p, ps) || 'OH'
   const lotMatch = legalFor(p.parcel).match(/Lots? ([0-9 &]+)/)
   return `DUKE — Builder Portal / Residential Service Information Form
-Portal: builderportal.duke-energy.app  ·  Form reply to: ${DUKE_EMAIL}
+Portal: builderportal.duke-energy.app  ·  Form reply to: ${dukeOfficeEmail(ps)}
 ${p.workOrder ? 'Work Order: WO#' + p.workOrder : ''}
 SERVICE ADDRESS / STRUCTURE
   Address: ${p.address}, ${p.city}, FL ${p.zip}
@@ -120,17 +126,25 @@ export function applicationDraft(
     parcel: p.parcel,
     permit: p.permit,
     model: p.model,
+    // Duke reply tokens: the WO# from Duke's email (loud placeholder until set),
+    // and the septic clause that mirrors Adam's real wording on the site plan.
+    workOrder: p.workOrder || '[paste WO# from Duke]',
+    septic_clause: u === 'DUKE' && septicSourceOf(ps) !== 'Sewer' ? ' showing the septic location' : '',
     packet,
   }
   const subject = renderTemplate(t.subject, vars)
   const body = renderTemplate(t.body, vars)
-  const to = u === 'SECO' ? SECO_EMAIL : DUKE_EMAIL
+  const to = u === 'SECO' ? SECO_EMAIL : dukeOfficeEmail(ps)
 
   const m = specFor(p.model)
   const warnings: string[] = []
   if (!m.sqft || !m.tons) warnings.push('model specs incomplete')
   if (u === 'SECO' && legalFor(p.parcel) === LEGAL_PLACEHOLDER) warnings.push('legal description needs lookup')
   if (!p.permit) warnings.push('no permit # yet')
+  // Duke is portal-first: you can't reply with the load form until Duke has
+  // emailed you the Work Order #. Flag it loudly so a reply can't go out blind.
+  if (u === 'DUKE' && !p.workOrder)
+    warnings.push('no Duke WO# yet — apply on the portal first; Duke emails the WO# (~next day), then reply')
 
   return {
     utility: u,

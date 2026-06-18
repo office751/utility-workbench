@@ -11,9 +11,33 @@ export const UTILITY_PHONES: Partial<Record<Utility, string>> = {
   CLAY: '1-800-224-4917',
 }
 
-/** Where new-construction electric applications go. */
+/** Where a SECO new-construction application goes — one email, form + site
+ *  plan attached up front. */
 export const SECO_EMAIL = 'newconstruction@secoenergy.com'
-export const DUKE_EMAIL = 'EDA-Ocala@duke-energy.com'
+
+/**
+ * SECO's engineering team. Once the application is in and the account is set
+ * up, the new-construction intake hands the job off to engineering — quotes
+ * and status updates come from (and go to) here, not newconstruction@.
+ */
+export const SECO_ENGINEERING = {
+  email: 'engineeringmsa@secoenergy.com',
+  phone: '352-770-7326',
+}
+
+/**
+ * Duke is different: you apply on the online Builder Portal FIRST, then Duke
+ * emails you a Work Order # plus the blank load form, and you REPLY to that
+ * email with the completed form + site plan. Which office writes you depends on
+ * the job's territory — most Marion County jobs are Ocala, but the western /
+ * Citrus side routes through Inverness. The reply must go back to whichever
+ * office emailed you, and keep the "WO#…" in the subject (Duke explicitly warns
+ * that removing it delays the response). Per-project office in ProjectState.dukeOffice.
+ */
+export const DUKE_EMAIL_OCALA = 'EDA-Ocala@duke-energy.com'
+export const DUKE_EMAIL_INVERNESS = 'EDA-Inverness@duke-energy.com'
+/** Default Duke office (most jobs). Kept as DUKE_EMAIL for older imports. */
+export const DUKE_EMAIL = DUKE_EMAIL_OCALA
 
 /** Marion County Utilities (city water + sewer). */
 export const MCU = {
