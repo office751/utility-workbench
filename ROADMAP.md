@@ -9,9 +9,8 @@ this file is the to-do list, the code is the truth.
 
 ## Up next (high value)
 
-Suggested order: the SECO/Duke packet generator is the natural next item
-(~one session — note its source data tables live in the original HTML file
-on the Mac, so plan it for a Mac session).
+(The high-value queue is clear — pick from "Materials / project-hub",
+"Later", or "Polish" below, or add a new item here.)
 
 - [x] **UI sizing — two parts** *(June 2026)*: draggable list/detail divider
       (`hooks/useResizableSidebar.ts`, persists width) + compact/comfortable
@@ -41,11 +40,20 @@ on the Mac, so plan it for a Mac session).
       expected duration. Tune the day-counts in `data/thresholds.ts`.
       NOTE: alerts that reach you when the app is CLOSED (phone/email/push)
       still require the Full-spec backend — see "Later".
-- [ ] **SECO/Duke application packet generator** — port from the original
-      HTML: ready-to-paste packet with legal description (Lot/Block/Sec/Twp/
-      Rge), model sqft + tonnage (whole numbers for Duke), OH/UG, copy
-      button. Data tables (`LEGAL`, `MODELS_DEFAULT`) live in
-      `../Electric Applications Workbench.html`. ~one session.
+- [x] **SECO/Duke application flow — matched to the REAL process** *(June 2026)*.
+      The packet generator from the original HTML was already ported
+      (`lib/loadForm.ts` + `data/legal.ts`/`data/models.ts`); this pass instead
+      fixed the *flow*, verified against Adam's actual email:
+      • **SECO = email-first** — one email to newconstruction@ with the load
+        form + site plan attached; templates now match his real short send.
+      • **Duke = portal-first → reply** — apply on the Builder Portal, then Duke
+        emails a WO# from the EDA office (Ocala *or* Inverness, new
+        `ps.dukeOffice` picker in ⚙️ Settings); the Duke email is now that
+        load-form REPLY (subject leads with WO#, gated until a WO# exists).
+        ⚡ Batch Apply shows Duke's two steps explicitly.
+      • **Post-submit** — new 📸 "Notify utility — ready for meter" email (green
+        tag / downpipe / sweep / straps / clear-path photos) to SECO Engineering
+        or the Duke EDA office, plus an additive `meternotify` electric step.
 
 ## Later (when the need is real)
 
