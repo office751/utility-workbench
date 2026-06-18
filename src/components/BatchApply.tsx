@@ -13,6 +13,7 @@ import { useState } from 'react'
 import type { Project, ProjectState, TemplateOverride } from '../types'
 import { needsVerify, utilityOf } from '../lib/nextAction'
 import { applicationDraft } from '../lib/loadForm'
+import { SECO_BLANK_FORM_URL, fillSecoLoadForm } from '../lib/secoForm'
 import Icon from './Icon'
 
 interface Props {
@@ -28,6 +29,7 @@ interface Props {
 function BatchApply({ projects, getProjectState, templates, markApplied, onClose, onOpen }: Props) {
   const [previewId, setPreviewId] = useState<number | null>(null)
   const [copiedId, setCopiedId] = useState<number | null>(null)
+  const [formBusyId, setFormBusyId] = useState<number | null>(null)
 
   // Houses that still need an application: active, electric 'submit' not done.
   const candidates = projects.filter((p) => {
@@ -52,6 +54,26 @@ function BatchApply({ projects, getProjectState, templates, markApplied, onClose
     await navigator.clipboard.writeText(d.packet)
     setCopiedId(p.id)
     setTimeout(() => setCopiedId(null), 1200)
+  }
+
+  // SECO: fetch the bundled blank PDF, pre-fill it from the project, and
+  // download it so Adam can tick the few radio buttons, sign, and attach it.
+  async function downloadSecoForm(p: Project) {
+    setFormBusyId(p.id)
+    try {
+      const blank = await (await fetch(SECO_BLANK_FORM_URL)).arrayBuffer()
+      const bytes = await fillSecoLoadForm(blank, p, getProjectState(p.id))
+      const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'application/pdf' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `SECO Load Form - ${p.address}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      alert(`Couldn't build the SECO form: ${(e as Error).message}`)
+    } finally {
+      setFormBusyId(null)
+    }
   }
 
   const renderGroup = (label: string, group: Project[], utility: 'SECO' | 'DUKE') =>
@@ -92,6 +114,18 @@ function BatchApply({ projects, getProjectState, templates, markApplied, onClose
               title="Check this house's 'verified' + 'application submitted' steps"
             >
               ✓ Mark applied
+            </button>
+          )
+          // SECO's real load form, pre-filled — replaces the text "Copy form"
+          // for SECO (Duke keeps Copy form: you type into the .docx Duke sends).
+          const secoFormBtn = (
+            <button
+              className="doc-btn"
+              onClick={() => downloadSecoForm(p)}
+              disabled={formBusyId === p.id}
+              title="Download the SECO load form pre-filled from this project — then tick Single Family / service / e-mail, sign, and attach it"
+            >
+              📄 {formBusyId === p.id ? 'Building…' : 'Load form (PDF)'}
             </button>
           )
           return (
@@ -150,7 +184,7 @@ function BatchApply({ projects, getProjectState, templates, markApplied, onClose
                   <a className="doc-btn" href={d.mailto} title={`Draft to ${d.to} (CC office)`}>
                     ✉️ Draft email
                   </a>
-                  {copyBtn}
+                  {secoFormBtn}
                   {appliedBtn}
                 </div>
               )}
@@ -209,8 +243,9 @@ function BatchApply({ projects, getProjectState, templates, markApplied, onClose
       )}
 
       <p className="muted ba-note">
-        📎 Attach from the project's 📂 Files before sending: SECO wants the completed load form + site plan;
-        Duke's reply wants the completed load form + site plan (with the septic on it).
+        📎 SECO: <b>📄 Load form (PDF)</b> downloads the form pre-filled from this project — tick the boxes
+        (Single Family / service / e-mail), sign, and attach it with the site plan. Duke's reply attaches the
+        completed load form Duke sent you + the site plan (with the septic on it).
       </p>
     </section>
   )
