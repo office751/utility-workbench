@@ -22,6 +22,9 @@ export interface Vendor {
   email: string
   /** Extra recipients CC'd on every order (e.g. Tibbetts: email Tina, CC Mark). */
   cc?: string
+  /** Best general phone for one-tap calling (tel:). Leave '' if unknown — the
+   *  📞 button hides until you fill it in. */
+  phone?: string
   /** First name for the greeting ("Hi Tina,") — falls back to the company name. */
   contact?: string
   icon: string
@@ -43,6 +46,7 @@ export const VENDORS: Vendor[] = [
     name: 'Tibbetts Lumber',
     email: 'tina.soucia@tibbettslumber.com',
     cc: 'Mark.Turenne@tibbettslumber.com', // Adam's rule: email Tina, CC Mark
+    phone: '352-347-7661', // Tibbetts Ocala store (6100 SE 68th St)
     contact: 'Tina',
     icon: '🪵',
     supplies: 'Truss & framing packages',
@@ -52,6 +56,7 @@ export const VENDORS: Vendor[] = [
     id: 'marion-masonry',
     name: 'Marion Masonry',
     email: 'dispatch@marionmasonry.com', // from Adam's sent lintel/slab orders
+    phone: '352-629-9788', // Marion Masonry of Ocala dispatch
     icon: '🧱',
     supplies: 'Slab package · lintels · sand',
     categories: ['Slab package', 'Lintels', 'Sand'],
@@ -62,6 +67,7 @@ export const VENDORS: Vendor[] = [
     id: 'dz-block',
     name: 'DZ Block',
     email: 'dispatch@dzblock.com',
+    phone: '352-915-5132', // DZ Block dispatch (Reggie Scott)
     icon: '🧊',
     supplies: 'Block',
     categories: ['Block'],
@@ -70,6 +76,7 @@ export const VENDORS: Vendor[] = [
     id: 'fgt',
     name: 'FGT Cabinetry',
     email: 'orlando@fgtcabinetry.com', // from Adam's sent cabinet orders
+    phone: '321-800-2036', // FGT Cabinetry Orlando (Destine Davis, Project Coordinator)
     icon: '🗄️',
     supplies: 'Cabinets',
     categories: ['Cabinets'],
@@ -80,6 +87,7 @@ export const VENDORS: Vendor[] = [
     id: 'florida-express',
     name: 'Florida Express',
     email: 'csr@floridaexpress.us', // from Adam's sent service requests
+    phone: '352-369-5411', // Florida Express Waste & Recycling (460 NW 52nd Ave, Ocala)
     icon: '🗑️',
     supplies: 'Dumpster & porta-potty — deliver / swap / remove',
     // Bare Dumpster/Porta-potty (from text-scans) PLUS the explicit
@@ -194,4 +202,18 @@ export function orderMailto(
   // vendor button; a single order reads better with the category up front).
   const subject = `${category} order — ${p.address}, ${p.city}`
   return { href: vendorDraftUrl(v, subject, renderTemplate(t.body, vars)), vendor: v }
+}
+
+/** A tel: link for one-tap calling (strip to digits), or null when no phone is
+ *  on file (the 📞 button then hides). Mirrors ContactLinks' tel() helper. */
+export function vendorCallHref(v: Vendor): string | null {
+  return v.phone ? 'tel:+1' + v.phone.replace(/\D/g, '') : null
+}
+
+/** A BLANK email to a vendor (TO + any CC) — for the global Vendors directory,
+ *  where there's no project to pre-fill. The pre-filled, per-project ORDER
+ *  emails come from vendorMailto / orderMailto above. */
+export function vendorPlainMailto(v: Vendor): string | null {
+  if (!v.email) return null
+  return `mailto:${v.email}${v.cc ? `?cc=${encodeURIComponent(v.cc)}` : ''}`
 }

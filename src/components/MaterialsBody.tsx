@@ -6,10 +6,10 @@
  * remove button. Plus a small "add an order" row. The Quick-Add bar up top is
  * the fast path; this is the full per-project view.
  */
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import type { OrderItem, OrderStatus, Project, ProjectState, TemplateOverride, WorkbenchState } from '../types'
 import { MATERIAL_CATEGORIES, ORDER_STATUSES, SITE_SERVICES } from '../data/orders'
-import { VENDORS, orderMailto, vendorMailto } from '../data/vendors'
+import { VENDORS, orderMailto, vendorCallHref, vendorMailto } from '../data/vendors'
 import { modelKey } from '../data/models'
 import { ordersOf } from '../lib/orders'
 import { missingTakeoffs, permitIssued } from '../lib/takeoffs'
@@ -83,14 +83,24 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
                 const draft = orderMailto(o.category, p, ps, templates, lists)
                 if (!draft) return null
                 const who = draft.vendor.contact || draft.vendor.name
+                const call = vendorCallHref(draft.vendor)
                 return (
-                  <a
-                    className="mini order-send"
-                    href={draft.href}
-                    title={`Draft the ${o.category} order to ${who}${draft.vendor.cc ? ` (CC ${draft.vendor.cc.split('@')[0].replace('.', ' ')})` : ''} — just press Send`}
-                  >
-                    ✉️ Order from {draft.vendor.name}
-                  </a>
+                  // One grid cell for both actions, so adding 📞 doesn't reflow
+                  // the order row's column layout.
+                  <span className="order-actions">
+                    <a
+                      className="mini order-send"
+                      href={draft.href}
+                      title={`Draft the ${o.category} order to ${who}${draft.vendor.cc ? ` (CC ${draft.vendor.cc.split('@')[0].replace('.', ' ')})` : ''} — just press Send`}
+                    >
+                      ✉️ Order from {draft.vendor.name}
+                    </a>
+                    {call && (
+                      <a className="mini order-call" href={call} title={`Call ${draft.vendor.name} — ${draft.vendor.phone}`}>
+                        📞
+                      </a>
+                    )}
+                  </span>
                 )
               })()}
 
@@ -164,17 +174,26 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
           have their own one-click ✉️ button). For one-offs / questions. */}
       {otherVendors.length > 0 && (
         <div className="vendor-row">
-          <span className="vendor-label">✉️ Other vendors:</span>
-          {otherVendors.map((v) => (
-            <a
-              key={v.id}
-              className="vendor-btn"
-              href={vendorMailto(v, p, ps, templates, lists)}
-              title={`Draft an email to ${v.name} — ${v.supplies}`}
-            >
-              {v.icon} {v.name}
-            </a>
-          ))}
+          <span className="vendor-label">Other vendors:</span>
+          {otherVendors.map((v) => {
+            const call = vendorCallHref(v)
+            return (
+              <Fragment key={v.id}>
+                <a
+                  className="vendor-btn"
+                  href={vendorMailto(v, p, ps, templates, lists)}
+                  title={`Draft an email to ${v.name} — ${v.supplies}`}
+                >
+                  ✉️ {v.icon} {v.name}
+                </a>
+                {call && (
+                  <a className="vendor-btn" href={call} title={`Call ${v.name} — ${v.phone}`}>
+                    📞
+                  </a>
+                )}
+              </Fragment>
+            )
+          })}
         </div>
       )}
     </>

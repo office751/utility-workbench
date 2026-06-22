@@ -590,6 +590,76 @@ textarea {
 /* .vendor-btn shares the small-button shell above (it used to be a round
    999px pill — now matches the rectangular order buttons it sits near). */
 
+/* ---------- 🚚 Vendors directory (VendorsView) ---------- */
+.vendors-view {
+  max-width: 920px;
+}
+.vendor-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  margin: 14px 0;
+}
+.vendor-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.vendor-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.vendor-card-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+.vendor-card-name {
+  font-weight: var(--weight-bold);
+  font-size: var(--text-md);
+}
+.vendor-card-supplies {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+.vendor-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.vendor-cat-chip {
+  font-size: var(--text-2xs);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--rust-tint);
+  color: var(--rust-tint-ink);
+}
+.vendor-cat-chip.gap {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+.vendor-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+.vendor-nophone {
+  font-size: var(--text-sm);
+  align-self: center;
+}
+.vendor-gap {
+  margin-top: 22px;
+  padding-top: 14px;
+  border-top: 1px solid var(--divider);
+}
+
 /* ---------- permit "Portal items" (reviews / holds) ---------- */
 .reviews {
   margin: 14px 0 4px;
@@ -1272,6 +1342,13 @@ button.primary.on {
 }
 .order-date {
   max-width: 140px;
+}
+/* ✉️ + 📞 share one grid cell so the 📞 doesn't push the row's columns around. */
+.order-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
 }
 .order-add {
   display: flex;
