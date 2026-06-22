@@ -94,13 +94,23 @@ export async function dukeWebPayloadWithDirections(p: Project, ps: ProjectState)
   const base = dukeWebPayload(p, ps)
   const fallback = `${base.legalDescription} — parcel ${p.parcel}${p.permit ? ` — permit ${p.permit}` : ''}`
   const route = await directionsFromMainRoad(p.address, p.city, p.zip)
+  // route.text can be null (routing missed) even when route.firstStreet is set
+  // (geocode worked) — so we keep the cross street and only fall back the
+  // directions TEXT. That's what stops the portal stalling on a blank required
+  // "Nearest Cross Street" field.
+  const directions = route?.text
+    ? `${route.text} (${base.legalDescription}, parcel ${p.parcel})`.slice(0, 300)
+    : fallback
+  const directionsSource = route?.text
+    ? `computed from OSM via ${route.mainRoad}`
+    : route?.firstStreet
+      ? 'cross street from OSM; directions = lot/parcel (no route found)'
+      : 'FALLBACK — lot/parcel only; write directions + cross street by hand'
   return {
     ...base,
-    directions: route
-      ? `${route.text} (${base.legalDescription}, parcel ${p.parcel})`.slice(0, 300)
-      : fallback,
+    directions,
     crossStreet: route?.firstStreet ?? '',
-    directionsSource: route ? `computed from OSM via ${route.mainRoad}` : 'FALLBACK — lot/parcel only, write directions by hand',
+    directionsSource,
   }
 }
 
