@@ -4,3 +4,5 @@ node_modules/
 profile/
 backups/
 logs/
+# Per-machine "last scanned" cursor for scan-josh.mjs (local state, not code).
+.josh-state.json

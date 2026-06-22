@@ -6,7 +6,9 @@
   "description": "Scans Marion County (EnerGov) permit portals for ACTIVE holds + inspection/review rejections and turns them into Iron Shield Workbench tasks. Runs on Adam's Mac (nightly via launchd). Isolated from the web app — never shipped to the browser.",
   "scripts": {
     "login": "node login.mjs",
-    "scan": "node scan.mjs"
+    "scan": "node scan.mjs",
+    "scan:josh": "node scan-josh.mjs --write",
+    "scan:josh:preview": "node scan-josh.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
