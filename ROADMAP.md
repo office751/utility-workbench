@@ -7,10 +7,97 @@ this file is the to-do list, the code is the truth.
 > Tip: in a future session, just say "let's do the next roadmap item"
 > (or name one) and Claude Code will pick it up from here.
 
-## Up next (high value)
+## Up next — Carey-readiness sprint *(scoped June 23 2026)*
 
-(The high-value queue is clear — pick from "Materials / project-hub",
-"Later", or "Polish" below, or add a new item here.)
+Carey starts next week and takes over everything **except permitting**. The
+login/role plumbing (the `coworker` role) is already live and works — tabs
+gate, Settings/People/financials hide. What's NOT ready is everything she'd
+actually *do*: the app is still built for one operator (you). Each item below
+is what closes a verified day-one trap. Two of them (#1, #3) are also live
+bugs that bite you today — those are the cheapest and I'd ship them first.
+
+Recommended sequence: **1 → 3 → 2 → 4 → 5** (two quick bug-fixes, then the
+keystone, then the safety/training layer). Effort tags: small ≈ <1 session,
+medium ≈ 1–2 sessions.
+
+- [x] **1. Re-wire QuickAdd into the Materials screen** *(small — also a live
+      bug)* — **DONE June 23 2026**: mounted on the Projects landing (role-safe
+      for the coworker tab set); `scan-josh` guide rewritten Quick-Add-first /
+      any-device so it's correct for a Windows operator. **Was verified:**
+      `QuickAdd.tsx` (exports a default at line 189) was
+      imported by **zero** components — orphaned in the Calm-Canvas redesign;
+      only the *parser* `parseQuickAdd` in `lib/orders.ts` is still wired.
+      So today the ONLY working order-intake is `scanner/scan-josh.mjs`, pinned
+      to the office Mac, and the in-app `scan-josh` guide literally tells the
+      operator to walk over to it. Materials is Carey's flagship job — mount
+      `QuickAdd` back into `MaterialsBody.tsx` (or Today) so she can capture an
+      order from any device by typing/pasting what Josh texted. The logic +
+      double-order guard already exist; this is re-mounting, not rebuilding.
+      Also fix the `scan-josh` guide copy that points at the Mac.
+      ⚠ Open question that changes scope: **is Carey on Mac or Windows?** If
+      Windows, the scanner can't move to her at all → this item is mandatory.
+
+- [ ] **2. Give Carey a real queue (multi-operator model)** *(medium — the
+      keystone)*. Today the app is Adam-hardcoded: `Today.tsx` greets "Good
+      morning, Adam", `buildActionCenter()` (`lib/actionCenter.ts`) merges ALL
+      work for one person, and `Task` (`types.ts`) has no `assignedTo`
+      (only `waitingOn`, which means who's blocking *you*). Two operators on
+      one merged list → either both act on a house (double-order / duplicate
+      application) or each assumes the other has it (missed permit-expiry /
+      shut-off deadline). Add `assignedTo` to `Task` AND `ProjectState`, an
+      operator switch on Today ("Viewing: Carey ▾"), and filter the action
+      center by it. **Must fail OPEN** — unassigned work shows in BOTH queues
+      with a visible "Unassigned (N)" bucket, never vanishes from both. While
+      in there, fix the `waitingOn` label contradiction (field/header both say
+      "waiting on you" but render "waiting on Mickey") so a two-person team
+      can't misread who's blocking whom. Migration via `migrate()` as usual.
+
+- [x] **3. Fix Duke EDA office routing** *(small — also a live bug)* —
+      **DONE June 23 2026**: `dukeOfficeEmail()` (lib/loadForm.ts) is now the
+      single source of truth and is exported; `ContactLinks` routes through it,
+      the hardcoded `DUKE_EMAIL` constant is gone, and the EDA-office dropdown
+      is required/blank-by-default with a subdivision hint + unset warning.
+      **Was verified:** `ContactLinks.tsx` line 61 had hardcoded `DUKE_EMAIL`
+      (= `DUKE_EMAIL_OCALA`, `contacts.ts:40`) for the "✉️ Email Duke" button
+      and ignores `ps.dukeOffice`, while `loadForm.ts:29` (`dukeOfficeEmail`)
+      routes Batch Apply + meter-notify to the correct office. Same house →
+      two different EDA offices depending on which button is clicked, and a
+      wrong-office reply never bounces (silent stall Carey can't diagnose).
+      Fix: point ContactLinks at `dukeOfficeEmail(ps)` too, make the EDA-office
+      dropdown in `ProjectSettings.tsx` required/blank-by-default with a
+      subdivision hint ("most Marion → Ocala; western/Citrus → Inverness"),
+      and add a `needsVerify`-style warning when utility=Duke and no office set.
+
+- [ ] **4. Water + Septic playbook guides + inline callouts** *(small)*.
+      Her two core streams have NO guide in `data/guides.ts` and NO inline
+      `GuideCallout` in `WaterBody`/`SepticBody` — unlike Electric/Permit
+      (your streams) which do. Worse: septic source defaults to "Septic", so
+      `nextSepticAction` will walk her into a DEP septic-permit sequence even
+      on a City-Sewer lot. Add `manage-water` + `manage-septic` guides
+      (mirror `apply-seco`/`apply-duke` shape) and render them inline in the
+      Water/Septic bodies. Step 1 of each = "confirm the source in ⚙️ Settings
+      BEFORE doing anything." Name the right contacts (Marion County Utilities
+      for city water/sewer, Georges Plumbing for septic/INRB, which Vicki
+      notices matter) so she can't pick wrong.
+
+- [ ] **5. Pre-send confirmation gate on irreversible actions** *(medium —
+      the safety net)*. Every workflow (Batch Apply, Jennifer permit package,
+      vendor orders, meter-notify) ends by firing a real `mailto:` draft with
+      no preview, no second pair of eyes, no undo. Add a one-dialog gate that
+      restates the load-bearing facts before the draft opens — e.g. "Emailing
+      SECO for [address] (subdivision [X]) — right utility? Attach: signed load
+      form + site plan." and for Jennifer "Did you paste the file links over
+      [PASTE HERE]?" and for meter-notify "This email only LISTS the photos —
+      attach them yourself." Also block ✓ Mark applied whenever the row still
+      shows a yellow ⚠ warning (e.g. legal-description-needs-lookup). Turns the
+      guides' buried prose warnings into an in-the-moment checklist exactly
+      where the irreversible action happens.
+
+Not in this sprint (acknowledged, lower priority): server-side RLS for
+financial-field hiding (today it's frontend-gated — fine for a trusted
+operator, revisit if a less-trusted role appears); one-click in-app invite
+(Carey's login is still created in the Supabase dashboard, then role-assigned
+in 👥 People); per-stream/per-project scoping for the coworker role.
 
 - [x] **UI sizing — two parts** *(June 2026)*: draggable list/detail divider
       (`hooks/useResizableSidebar.ts`, persists width) + compact/comfortable

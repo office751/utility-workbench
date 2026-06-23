@@ -24,6 +24,7 @@ import { daysUntilDue, dueSoonTasks, waitingOnTasks } from './lib/tasks'
 import { useTheme } from './hooks/useTheme'
 import { useDensity } from './hooks/useDensity'
 import ProjectList from './components/ProjectList'
+import QuickAdd from './components/QuickAdd'
 import BatchApply from './components/BatchApply'
 import StatusReport from './components/StatusReport'
 import Detail from './components/Detail'
@@ -427,9 +428,19 @@ function App({ role = 'admin' }: { role?: AppRole }) {
             }}
           />
         ) : (
-          // The Landing: the searchable list of every house. (The cross-project
-          // quick-add bar was removed per the redesign — Projects is just the list.)
+          // The Landing: a cross-project Quick-Add capture bar above the
+          // searchable list of every house. The bar lets ANYONE drop in
+          // "ready to order" items from ANY device — type "almond slab" or
+          // paste a whole block (one house per line) and it matches the house +
+          // item and files it as "To order", skipping anything already on order.
+          // This is the device-independent intake path: Carey works from a
+          // Windows machine and can't run the Mac-only Messages scanner, so the
+          // scanner is now just Adam's convenience — this bar is how orders
+          // actually get captured. Restored June 2026 (it was dropped in the
+          // Calm-Canvas redesign; only this mount was removed — the parser and
+          // CSS survived).
           <div className="projects-landing">
+            <QuickAdd projects={projects} getProjectState={getProjectState} addOrder={addOrder} />
             <ProjectList
               projects={projects}
               onSelect={(id) => {

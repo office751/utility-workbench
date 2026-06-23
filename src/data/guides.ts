@@ -95,6 +95,7 @@ export const GUIDES: Guide[] = [
     title: 'Order materials / reach a vendor',
     when: 'A house needs materials ordered, or you just need to call or email a supplier.',
     steps: [
+      { who: 'you', text: 'Need to capture a batch fast? The Quick add bar at the top of the Projects tab files items as "To order" across any houses at once — type "almond slab" or paste a block from Josh\'s texts (see "Capture orders from Josh\'s texts").' },
       { who: 'you', text: 'Open the house → Materials tab. Items still needing to be ordered are highlighted at the top.' },
       { who: 'you', text: 'On a "To order" row, click ✉️ Order from [vendor] (it names the supplier, e.g. ✉️ Order from Tibbetts Lumber).' },
       { who: 'app', text: 'A fully-written, fully-addressed email opens — correct supplier, any CC added, material details already in the body. Read it over, then just press Send.' },
@@ -138,15 +139,16 @@ export const GUIDES: Guide[] = [
   {
     id: 'scan-josh',
     icon: '💬',
-    title: 'Pull new orders & tasks from Josh\'s texts',
-    when: 'Each morning, or whenever Josh texts that something is needed — pull his new orders and asks into the app.',
+    title: 'Capture orders from Josh\'s texts',
+    when: 'Each morning, or whenever Josh texts that a house needs something — get his orders into the app fast.',
     steps: [
-      { who: 'you', text: 'On the OFFICE MAC, double-click the "Scan Josh" button on the Desktop. (This only works on that Mac — it reads the Messages app, which the browser can\'t.)' },
-      { who: 'app', text: 'It reads only Josh\'s texts since the last scan, then writes straight into the app: clear orders go to the matched house\'s 🛒 Materials, and his asks/questions go to ✓ Tasks (tagged "waiting on Josh", due today if urgent).' },
-      { who: 'app', text: 'A window shows what it added. It\'s add-only and remembers where it left off, so it never double-adds and never re-scans old messages.' },
-      { who: 'you', text: 'Open the app and review: tidy or delete anything you don\'t need on the 🛒 Materials and ✓ Tasks tabs, then send the orders with their ✉️ Order buttons.' },
+      { who: 'you', text: 'Open the Projects tab. The Quick add bar sits at the very top of the house list.' },
+      { who: 'you', text: 'Type the order in plain words — "almond slab", "trusses for the Oak St house" — or paste several of Josh\'s lines at once (one house per line). Press Enter (Shift+Enter adds another line).' },
+      { who: 'app', text: 'It matches each line to the right house + material and files it as "To order" on that house\'s 🛒 Materials. It SKIPS anything the house already has on order, so you can\'t double-order, and shows a summary of what it added, skipped, or couldn\'t pin to a house.' },
+      { who: 'you', text: 'If a line couldn\'t be matched, the summary says so — open that house\'s Materials tab and add it by hand.' },
+      { who: 'you', text: 'Then send each new order with its ✉️ Order button (see "Order materials / reach a vendor").' },
     ],
-    tip: 'Mac-only — it can\'t run in the browser or on another computer. Each click grabs only what\'s new since the last scan.',
+    tip: 'The Quick add bar works on ANY device you\'re signed in on — phone, Windows laptop, anywhere. (Separately, Adam\'s office Mac runs an automatic "Scan Josh" button that reads Messages directly and files orders without typing — but that is Mac-only, so the Quick add bar is the way everyone else captures orders.)',
   },
 ]
 
