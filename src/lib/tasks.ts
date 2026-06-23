@@ -62,6 +62,47 @@ export function waitingOnTasks(tasks: Task[]): Task[] {
   return openTasks(tasks).filter((t) => Boolean(t.waitingOn && t.waitingOn.trim()))
 }
 
+/* ----------------------- operator / "whose queue" ----------------------- */
+
+/** Compare two person names ignoring case + surrounding space. */
+export function sameName(a?: string, b?: string): boolean {
+  return (a ?? '').trim().toLowerCase() === (b ?? '').trim().toLowerCase()
+}
+
+/** Unassigned = the shared pile that shows in EVERYONE's queue (fail-open). */
+export function isUnassigned(t: Task): boolean {
+  return !t.assignedTo || !t.assignedTo.trim()
+}
+
+/**
+ * The tasks in `me`'s queue: their own PLUS every unassigned task. Unassigned
+ * always shows (fail-open) so a to-do can never vanish from both people's
+ * lists. With no operator (me empty — local dev / pre-RBAC) nothing is hidden.
+ */
+export function forOperator(tasks: Task[], me?: string): Task[] {
+  if (!me || !me.trim()) return tasks
+  return tasks.filter((t) => isUnassigned(t) || sameName(t.assignedTo, me))
+}
+
+/** Open, unassigned tasks — the shared "up for grabs" / training pile. */
+export function unassignedOpen(tasks: Task[]): Task[] {
+  return openTasks(tasks).filter(isUnassigned)
+}
+
+/** Distinct assignee names already used across tasks (feeds assignee pickers). */
+export function assigneesInUse(tasks: Task[]): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const t of tasks) {
+    const n = t.assignedTo?.trim()
+    if (n && !seen.has(n.toLowerCase())) {
+      seen.add(n.toLowerCase())
+      out.push(n)
+    }
+  }
+  return out
+}
+
 /** Group open tasks by hat id, preserving the order they were added. */
 export function tasksByHat(tasks: Task[]): Map<string, Task[]> {
   const map = new Map<string, Task[]>()
@@ -108,6 +149,7 @@ export function parseTaskLine(line: string): ParsedTask | null {
     const val = seg.slice(i + 1).trim()
     if (!val) continue
     if (key === 'waiting' || key === 'who') out.waitingOn = val
+    else if (key === 'assign' || key === 'for') out.assignedTo = val
     else if (key === 'due') out.dueDate = resolveDue(val)
     else if (key === 'company' || key === 'co') out.company = val
     else if (key === 'hat' || key === 'cat') {

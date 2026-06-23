@@ -24,15 +24,21 @@ function Root() {
   const { session, loading } = useAuth() // always called (Rules of Hooks)
   // null = still looking up the role; otherwise the resolved AppRole.
   const [role, setRole] = useState<AppRole | null>(null)
+  // The signed-in person's display name (app_users via myRole). Personalizes the
+  // greeting and scopes "my queue" task filtering. '' until resolved / unknown.
+  const [me, setMe] = useState<string>('')
 
   useEffect(() => {
     if (!session) {
       setRole(null)
+      setMe('')
       return
     }
     let alive = true
-    myRole().then((me) => {
-      if (alive) setRole(normalizeRole(me?.role)) // missing/legacy 'owner' → admin
+    myRole().then((prof) => {
+      if (!alive) return
+      setRole(normalizeRole(prof?.role)) // missing/legacy 'owner' → admin
+      setMe(prof?.name ?? '')
     })
     return () => {
       alive = false
@@ -52,7 +58,7 @@ function Root() {
   // Past the guards above, role is resolved. External investors get their own
   // scoped portal; every internal role gets the workbench, gated by its config.
   const r = role as AppRole
-  return ROLES[r].usesInvestorPortal ? <InvestorView /> : <App role={r} />
+  return ROLES[r].usesInvestorPortal ? <InvestorView /> : <App role={r} me={me} />
 }
 
 export default Root

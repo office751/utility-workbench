@@ -20,7 +20,7 @@
 import { useState, type ReactNode } from 'react'
 import type { Stream, Task } from '../types'
 import type { ActionCenter, ActionItem } from '../lib/actionCenter'
-import { daysUntilDue, dueLabel, dueSoonTasks, focusTasks, waitingOnTasks } from '../lib/tasks'
+import { daysUntilDue, dueLabel, dueSoonTasks, focusTasks, forOperator, unassignedOpen, waitingOnTasks } from '../lib/tasks'
 import { hatOf } from '../data/hats'
 import Icon from './Icon'
 
@@ -52,6 +52,9 @@ interface Props {
   onCompleteTask: (id: string) => void
   /** Jump to the Tasks tab (used by the empty-focus hint). */
   onGoTasks: () => void
+  /** The signed-in person's display name — personalizes the greeting and (in
+   *  the next step) scopes "my queue". Empty when unknown (local dev / pre-RBAC). */
+  me?: string
 }
 
 function greeting(): string {
@@ -199,8 +202,17 @@ function MoveGroup({
   )
 }
 
-function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks }: Props) {
-  const focus = focusTasks(tasks)
+function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks, me }: Props) {
+  // YOUR queue = tasks assigned to you PLUS every unassigned task (fail-open, so
+  // a to-do never disappears from both people's screens). Carey's assigned tasks
+  // drop off your Today; manage everyone's work from the Tasks tab. House alerts
+  // (ac.*) stay shared — a looming permit/shut-off shows to both of you.
+  const myTasks = forOperator(tasks, me)
+  const focus = focusTasks(myTasks)
+  // The shared "up for grabs" pile — open + unassigned. Shown as a banner count
+  // so the training/shared work is visible and gets claimed (it's also already
+  // mixed into the sections below, never hidden).
+  const upForGrabs = me ? unassignedOpen(tasks).length : 0
 
   // Split the construction attention list for display: hard DEADLINES (🔥 —
   // permit expiry, shut-offs, blocked takeoffs) vs projects that simply went
@@ -215,11 +227,11 @@ function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks }: Props) {
   // Starred tasks live in the Focus lane only — don't repeat them in the
   // sections below (a task you've already chosen shouldn't nag you twice).
   const focusIds = new Set(focus.map((t) => t.id))
-  const attnTasks = [...dueSoonTasks(tasks)]
+  const attnTasks = [...dueSoonTasks(myTasks)]
     .filter((t) => !focusIds.has(t.id))
     .sort((a, b) => (daysUntilDue(a) ?? 0) - (daysUntilDue(b) ?? 0))
   const attnIds = new Set(attnTasks.map((t) => t.id))
-  const waiting = waitingOnTasks(tasks)
+  const waiting = waitingOnTasks(myTasks)
     .filter((t) => !attnIds.has(t.id) && !focusIds.has(t.id))
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
 
@@ -251,8 +263,8 @@ function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks }: Props) {
       {/* Rust greeting banner with the four command-center stats as glass chips. */}
       <header className="t-banner">
         <div className="t-banner-text">
-          <h2>{greeting()}, Adam</h2>
-          <p>{summary}</p>
+          <h2>{greeting()}{me ? `, ${me.split(' ')[0]}` : ''}</h2>
+          <p>{summary}{upForGrabs > 0 ? ` · ${upForGrabs} unassigned task${upForGrabs !== 1 ? 's' : ''} up for grabs` : ''}</p>
         </div>
         <div className="t-stats">
           <StatChip n={focus.length} l="Focus" />

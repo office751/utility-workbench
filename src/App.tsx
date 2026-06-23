@@ -38,6 +38,7 @@ import AddProject from './components/AddProject'
 import InvestorInbox from './components/InvestorInbox'
 import { publishInvestorSnapshots } from './lib/investorPublish'
 import { ROLES, type AppRole } from './data/roles'
+import { listAppUsers } from './lib/admin'
 import PeopleView from './components/PeopleView'
 import VendorsView from './components/VendorsView'
 import GuideView from './components/GuideView'
@@ -82,7 +83,7 @@ function MoreMenu({ dirty, children }: { dirty?: boolean; children: ReactNode })
   )
 }
 
-function App({ role = 'admin' }: { role?: AppRole }) {
+function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
   // What this signed-in role may see (data/roles.ts). Defaults to admin so the
   // no-backend / local-dev path is unchanged.
   const roleCfg = ROLES[role]
@@ -128,6 +129,21 @@ function App({ role = 'admin' }: { role?: AppRole }) {
   const { theme, toggle: toggleTheme } = useTheme()
   // Compact/comfortable spacing (same pattern as dark mode).
   const { density, toggle: toggleDensity } = useDensity()
+
+  // The internal team's names, for the task "assign to" picker. Admins can read
+  // app_users; non-admins get [] back (RLS) and the Tasks view falls back to
+  // you + whoever's already on a task. Investors are filtered out (not operators).
+  const [people, setPeople] = useState<string[]>([])
+  useEffect(() => {
+    let alive = true
+    listAppUsers().then((rows) => {
+      if (!alive) return
+      setPeople(rows.filter((r) => r.role !== 'investor').map((r) => r.display_name).filter(Boolean))
+    })
+    return () => {
+      alive = false
+    }
+  }, [])
 
   // Shared UI state, lifted up to App:
   const [tab, setTab] = useState<View>('today') // default = the command center
@@ -312,6 +328,7 @@ function App({ role = 'admin' }: { role?: AppRole }) {
           <Today
           ac={ac}
           tasks={state.tasks}
+          me={me}
           onOpen={openProject}
           onCompleteTask={(id) => updateTask(id, { done: true, doneAt: new Date().toISOString() })}
           onGoTasks={() => setTab('tasks')}
@@ -320,7 +337,7 @@ function App({ role = 'admin' }: { role?: AppRole }) {
       )}
 
       {tab === 'tasks' && (
-        <TasksView tasks={state.tasks} addTask={addTask} updateTask={updateTask} removeTask={removeTask} />
+        <TasksView tasks={state.tasks} addTask={addTask} updateTask={updateTask} removeTask={removeTask} me={me} people={people} />
       )}
 
       {tab === 'models' && (

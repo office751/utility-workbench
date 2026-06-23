@@ -13,7 +13,7 @@
 import { useState } from 'react'
 import type { Task } from '../types'
 import { HATS, hatOf } from '../data/hats'
-import { dueLabel, openTasks, parseTaskLines, tasksByHat } from '../lib/tasks'
+import { assigneesInUse, dueLabel, isUnassigned, openTasks, parseTaskLines, sameName, tasksByHat } from '../lib/tasks'
 import Icon from './Icon'
 
 /** One task line — checkbox to complete, star to focus, chips, delete.
@@ -24,11 +24,17 @@ function TaskRow({
   updateTask,
   removeTask,
   showHat = false,
+  me = '',
+  assigneeOptions = [],
 }: {
   t: Task
   updateTask: (id: string, patch: Partial<Task>) => void
   removeTask: (id: string) => void
   showHat?: boolean
+  /** Logged-in name (marks "(me)" in the assignee picker). */
+  me?: string
+  /** Names offered in the per-row "assign to" picker (you + the team + names in use). */
+  assigneeOptions?: string[]
 }) {
   const due = dueLabel(t)
   const overdue = !t.done && t.dueDate ? new Date(t.dueDate + 'T00:00:00').getTime() < Date.now() : false
@@ -56,11 +62,25 @@ function TaskRow({
       )}
       {t.company && <span className="trow-chip">{t.company}</span>}
       {t.waitingOn && (
-        <span className="trow-chip">
+        <span className="trow-chip" title={`${t.waitingOn} is waiting on you to act`}>
           <Icon name="hourglass_top" size={13} />
           {t.waitingOn}
         </span>
       )}
+      {/* Who owns this to-do. Blank = Unassigned (shared pile, shows for everyone). */}
+      <select
+        className={'trow-assign' + (isUnassigned(t) ? ' unassigned' : '')}
+        title="Assign to"
+        value={t.assignedTo ?? ''}
+        onChange={(e) => updateTask(t.id, { assignedTo: e.target.value || undefined })}
+      >
+        <option value="">Unassigned</option>
+        {assigneeOptions.map((n) => (
+          <option key={n} value={n}>
+            {sameName(n, me) ? `${n} (me)` : n}
+          </option>
+        ))}
+      </select>
       {due && <span className={'trow-due' + (overdue ? ' over' : '')}>{due}</span>}
       <button className="trow-x" title="Delete" onClick={() => removeTask(t.id)}>
         <Icon name="close" size={15} />
@@ -69,14 +89,18 @@ function TaskRow({
   )
 }
 
-function TasksView({ tasks, addTask, updateTask, removeTask }: Props) {
+function TasksView({ tasks, addTask, updateTask, removeTask, me = '', people = [] }: Props) {
   // Capture-form state (local to this view).
   const [text, setText] = useState('')
   const [category, setCategory] = useState('it')
   const [company, setCompany] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [waitingOn, setWaitingOn] = useState('')
+  const [assignTo, setAssignTo] = useState(me) // new tasks default to you; '' = Unassigned
   const [focus, setFocus] = useState(false)
+  // Which queue is shown. 'mine' = your queue (yours + the shared/unassigned
+  // pile); 'unassigned' = just the shared pile; 'all' = everyone; or a name.
+  const [view, setView] = useState<string>(me ? 'mine' : 'all')
   const [showDone, setShowDone] = useState(false)
   const [showAdd, setShowAdd] = useState(false) // capture bar hidden until you click ＋
   const [showPaste, setShowPaste] = useState(false)
@@ -92,9 +116,11 @@ function TasksView({ tasks, addTask, updateTask, removeTask }: Props) {
       company: company.trim() || undefined,
       dueDate: dueDate || undefined,
       waitingOn: waitingOn.trim() || undefined,
+      assignedTo: assignTo.trim() || undefined,
       focus,
     })
-    // Reset the row, but KEEP the hat — you often add several of the same kind.
+    // Reset the row, but KEEP the hat + assignee — you often add several of the
+    // same kind, or several for the same person.
     setText('')
     setCompany('')
     setDueDate('')
@@ -126,9 +152,36 @@ function TasksView({ tasks, addTask, updateTask, removeTask }: Props) {
     if (added > 0) setPasteText('')
   }
 
-  const groups = tasksByHat(tasks)
-  const starred = tasks.filter((t) => t.focus && !t.done)
-  const done = tasks.filter((t) => t.done)
+  // Assignee picker options = you + the team + any names already on tasks (deduped,
+  // case-insensitive). Falls back gracefully when the team list couldn't load.
+  const assigneeOptions: string[] = (() => {
+    const seen = new Set<string>()
+    const out: string[] = []
+    for (const n of [me, ...people, ...assigneesInUse(tasks)]) {
+      const name = (n ?? '').trim()
+      if (name && !seen.has(name.toLowerCase())) {
+        seen.add(name.toLowerCase())
+        out.push(name)
+      }
+    }
+    return out
+  })()
+  const others = assigneeOptions.filter((n) => !sameName(n, me)) // for per-person filter chips
+
+  // Which tasks this view shows. "My queue" is fail-open (yours + unassigned) so
+  // the shared pile is never out of sight; the other filters are exact.
+  function inView(t: Task): boolean {
+    if (view === 'all') return true
+    if (view === 'mine') return isUnassigned(t) || sameName(t.assignedTo, me)
+    if (view === 'unassigned') return isUnassigned(t)
+    return sameName(t.assignedTo, view)
+  }
+  const shown = tasks.filter(inView)
+
+  const groups = tasksByHat(shown)
+  const starred = shown.filter((t) => t.focus && !t.done)
+  const done = shown.filter((t) => t.done)
+  const unassignedCount = openTasks(tasks).filter(isUnassigned).length
 
   return (
     <section className="tasks-view tasks-stack">
@@ -156,6 +209,35 @@ function TasksView({ tasks, addTask, updateTask, removeTask }: Props) {
           Paste from a text scan
         </button>
       </div>
+
+      {/* Whose queue — only shown once we know who you are (a real login). "My
+          queue" is fail-open (yours + the shared/unassigned pile); the rest are exact. */}
+      {me && (
+        <div className="tasks-filter">
+          <span className="tf-label">Show</span>
+          <button className={'btn btn-secondary btn-sm' + (view === 'mine' ? ' on' : '')} onClick={() => setView('mine')}>
+            My queue
+          </button>
+          <button
+            className={'btn btn-secondary btn-sm' + (view === 'unassigned' ? ' on' : '')}
+            onClick={() => setView('unassigned')}
+          >
+            Unassigned{unassignedCount ? ` (${unassignedCount})` : ''}
+          </button>
+          {others.map((n) => (
+            <button
+              key={n}
+              className={'btn btn-secondary btn-sm' + (sameName(view, n) ? ' on' : '')}
+              onClick={() => setView(n)}
+            >
+              {n}
+            </button>
+          ))}
+          <button className={'btn btn-secondary btn-sm' + (view === 'all' ? ' on' : '')} onClick={() => setView('all')}>
+            Everyone
+          </button>
+        </div>
+      )}
 
       {/* capture bar — hidden until "Add a task" is clicked */}
       {showAdd && (
@@ -189,8 +271,19 @@ function TasksView({ tasks, addTask, updateTask, removeTask }: Props) {
               <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
             </label>
             <label>
-              Waiting on you
+              Who's waiting on you?
               <input value={waitingOn} onChange={(e) => setWaitingOn(e.target.value)} placeholder="who? (optional)" />
+            </label>
+            <label>
+              Assign to
+              <select value={assignTo} onChange={(e) => setAssignTo(e.target.value)}>
+                <option value="">Unassigned</option>
+                {assigneeOptions.map((n) => (
+                  <option key={n} value={n}>
+                    {sameName(n, me) ? `${n} (me)` : n}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="ta-focus">
               <input type="checkbox" checked={focus} onChange={(e) => setFocus(e.target.checked)} />
@@ -240,7 +333,7 @@ function TasksView({ tasks, addTask, updateTask, removeTask }: Props) {
             <span className="tg-count">{starred.length}</span>
           </div>
           {starred.map((t) => (
-            <TaskRow key={t.id} t={t} updateTask={updateTask} removeTask={removeTask} showHat />
+            <TaskRow key={t.id} t={t} updateTask={updateTask} removeTask={removeTask} showHat me={me} assigneeOptions={assigneeOptions} />
           ))}
         </div>
       )}
@@ -257,7 +350,7 @@ function TasksView({ tasks, addTask, updateTask, removeTask }: Props) {
             </div>
             <div className="tcard">
               {items.map((t) => (
-                <TaskRow key={t.id} t={t} updateTask={updateTask} removeTask={removeTask} />
+                <TaskRow key={t.id} t={t} updateTask={updateTask} removeTask={removeTask} me={me} assigneeOptions={assigneeOptions} />
               ))}
             </div>
           </section>
@@ -274,7 +367,7 @@ function TasksView({ tasks, addTask, updateTask, removeTask }: Props) {
           {showDone && (
             <div className="tcard" style={{ marginTop: 10 }}>
               {done.map((t) => (
-                <TaskRow key={t.id} t={t} updateTask={updateTask} removeTask={removeTask} />
+                <TaskRow key={t.id} t={t} updateTask={updateTask} removeTask={removeTask} me={me} assigneeOptions={assigneeOptions} />
               ))}
             </div>
           )}
@@ -289,6 +382,10 @@ interface Props {
   addTask: (t: Omit<Task, 'id' | 'createdAt' | 'done' | 'doneAt'>) => void
   updateTask: (id: string, patch: Partial<Task>) => void
   removeTask: (id: string) => void
+  /** The signed-in person's name — default-filters to "My queue" and marks "(me)". */
+  me?: string
+  /** The internal team's names (admins fetch app_users; others fall back to names in use). */
+  people?: string[]
 }
 
 export default TasksView

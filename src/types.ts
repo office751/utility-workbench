@@ -210,6 +210,16 @@ export interface Task {
   company?: string // which company it's for (free text), optional
   dueDate?: string // YYYY-MM-DD, optional — drives urgency
   waitingOn?: string // who's blocked waiting on you, optional — also drives urgency
+  /**
+   * Which operator owns this to-do — a person's display name, matching their
+   * login name (app_users.display_name / myRole().name). Blank/undefined =
+   * UNASSIGNED, the shared pile: an unassigned task shows in EVERYONE's queue
+   * (fail-open) so nothing can vanish from both people's lists. Distinct from
+   * ProjectState.ownerName (the HOMEOWNER) and waitingOn (who's blocked on you).
+   * NOTE: stored as a name string to match waitingOn/ownerName — if a login is
+   * renamed in 👥 People, re-assign affected tasks (no id back-reference).
+   */
+  assignedTo?: string
   focus?: boolean // starred into "Today's Focus" (your daily Top few)
   done?: boolean
   doneAt?: string // ISO timestamp when completed

@@ -37,9 +37,19 @@ medium ≈ 1–2 sessions.
       ⚠ Open question that changes scope: **is Carey on Mac or Windows?** If
       Windows, the scanner can't move to her at all → this item is mandatory.
 
-- [ ] **2. Give Carey a real queue (multi-operator model)** *(medium — the
-      keystone)*. Today the app is Adam-hardcoded: `Today.tsx` greets "Good
-      morning, Adam", `buildActionCenter()` (`lib/actionCenter.ts`) merges ALL
+- [x] **2. Give Carey a real queue (multi-operator model)** *(medium — the
+      keystone)* — **DONE June 24 2026** (TASK-LEVEL): the signed-in name flows
+      Root→App (`me`), `Task.assignedTo` added (additive, no migrate), Tasks tab
+      gets a Show filter (My queue / Unassigned / per-person / Everyone) + an
+      assign-to picker per row and in the capture form (team pulled from
+      app_users), Today shows your tasks + the shared/unassigned pile with an
+      "N up for grabs" note, and the waitingOn label is clarified. Fail-open
+      verified (unassigned shows for everyone). NOTE: assignment is TASK-level;
+      whole-HOUSE assignment (`ProjectState.assignedTo` + filtering the Today
+      construction items) was deliberately deferred — see the deferred list at
+      the end of this sprint.
+      ORIGINAL SCOPE NOTES: Today the app is Adam-hardcoded: `Today.tsx` greets
+      "Good morning, Adam", `buildActionCenter()` (`lib/actionCenter.ts`) merges ALL
       work for one person, and `Task` (`types.ts`) has no `assignedTo`
       (only `waitingOn`, which means who's blocking *you*). Two operators on
       one merged list → either both act on a house (double-order / duplicate
@@ -93,11 +103,14 @@ medium ≈ 1–2 sessions.
       guides' buried prose warnings into an in-the-moment checklist exactly
       where the irreversible action happens.
 
-Not in this sprint (acknowledged, lower priority): server-side RLS for
-financial-field hiding (today it's frontend-gated — fine for a trusted
-operator, revisit if a less-trusted role appears); one-click in-app invite
-(Carey's login is still created in the Supabase dashboard, then role-assigned
-in 👥 People); per-stream/per-project scoping for the coworker role.
+Not in this sprint (acknowledged, lower priority): **whole-HOUSE assignment**
+(`ProjectState.assignedTo` so a whole house routes to Carey and the Today
+*construction* items — permit/electric/etc. — filter by operator too; #2
+shipped TASK-level only, which is what "her queue" needed for next week);
+server-side RLS for financial-field hiding (today it's frontend-gated — fine
+for a trusted operator, revisit if a less-trusted role appears); one-click
+in-app invite (Carey's login is still created in the Supabase dashboard, then
+role-assigned in 👥 People); per-stream scoping for the coworker role.
 
 - [x] **UI sizing — two parts** *(June 2026)*: draggable list/detail divider
       (`hooks/useResizableSidebar.ts`, persists width) + compact/comfortable
