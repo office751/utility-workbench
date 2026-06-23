@@ -39,9 +39,11 @@ import { publishInvestorSnapshots } from './lib/investorPublish'
 import { ROLES, type AppRole } from './data/roles'
 import PeopleView from './components/PeopleView'
 import VendorsView from './components/VendorsView'
+import GuideView from './components/GuideView'
 
-/** A top-level view. 'settings' (🛠), 'people' (👥), and 'vendors' (🚚) are header buttons, not tabs. */
-type View = 'today' | 'tasks' | 'projects' | 'models' | 'inspections' | 'settings' | 'people' | 'vendors'
+/** A top-level view. 'settings' (🛠), 'people' (👥), 'vendors' (🚚), and 'guide'
+ *  (📖) are header buttons, not tabs. */
+type View = 'today' | 'tasks' | 'projects' | 'models' | 'inspections' | 'settings' | 'people' | 'vendors' | 'guide'
 
 // The top nav tabs. Pure config. `label` is the pill text (no emoji — the
 // Calm Canvas header keeps the nav clean); `icon` is kept for reference.
@@ -277,6 +279,15 @@ function App({ role = 'admin' }: { role?: AppRole }) {
             >
               🚚 Vendors
             </button>
+            <button
+              className="menu-item"
+              onClick={() => {
+                setTab('guide')
+                setSelectedId(null)
+              }}
+            >
+              📖 Guide
+            </button>
             <button className="menu-item" onClick={toggleDensity}>
               {density === 'comfortable' ? '⊟ Compact spacing' : '⊞ Comfortable spacing'}
             </button>
@@ -335,6 +346,8 @@ function App({ role = 'admin' }: { role?: AppRole }) {
       {tab === 'people' && roleCfg.canManageUsers && <PeopleView roster={projects} />}
 
       {tab === 'vendors' && <VendorsView />}
+
+      {tab === 'guide' && <GuideView />}
 
       {tab === 'settings' && (
         <TemplatesView

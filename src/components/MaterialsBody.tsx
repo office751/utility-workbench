@@ -13,6 +13,7 @@ import { VENDORS, orderMailto, vendorCallHref, vendorMailto } from '../data/vend
 import { modelKey } from '../data/models'
 import { ordersOf } from '../lib/orders'
 import { missingTakeoffs, permitIssued } from '../lib/takeoffs'
+import GuideCallout from './GuideCallout'
 
 interface Props {
   project: Project
@@ -67,8 +68,10 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
         </div>
       )}
 
+      <GuideCallout id="order-materials" />
+
       {orders.length === 0 ? (
-        <p className="summary">🛒 No orders yet — add one below, or use the 🛒 Quick-Add bar on the Projects page.</p>
+        <p className="summary">🛒 No orders yet — add one below.</p>
       ) : (
         <div className="orders">
           {sorted.map((o) => (

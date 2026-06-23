@@ -65,6 +65,7 @@ import InvestorCuration from './InvestorCuration'
 import ProjectSettings from './ProjectSettings'
 import MaterialsBody from './MaterialsBody'
 import Icon from './Icon'
+import GuideCallout from './GuideCallout'
 
 /** The updater functions every body needs — grouped to avoid repetition. */
 interface Updaters {
@@ -483,6 +484,7 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField, templ
           </button>
         </div>
       )}
+      {u === 'DUKE' && <GuideCallout id="apply-duke" />}
 
       {/* The crucial bit the old button hid: opening the portal is only
           step one. The form gets filled by ASKING CLAUDE — spell that out
@@ -518,6 +520,7 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField, templ
         </div>
       )}
       {notifyNote && <p className={'shutoff' + (notifyNote.startsWith('⚠️') ? ' warn' : '')}>{notifyNote}</p>}
+      {(u === 'SECO' || u === 'DUKE') && <GuideCallout id="meter-ready" />}
 
       <p className="next-line">
         Next: <b>{next.label}</b>
@@ -788,6 +791,8 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, u
 
       {/* Feedback after drafting: ✓ links minted (plain) or ⚠️ fallback (warn). */}
       {draftNote && <p className={'shutoff' + (draftNote.startsWith('⚠️') ? ' warn' : '')}>{draftNote}</p>}
+
+      <GuideCallout id="permit-jennifer" />
 
       {/* Expiry reminder (only when a date is known), colored by urgency. */}
       {expiry && (
