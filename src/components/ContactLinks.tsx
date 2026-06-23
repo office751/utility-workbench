@@ -13,7 +13,8 @@
  */
 import type { Project, ProjectState, Stream } from '../types'
 import { septicSourceOf, utilityOf, waterSourceOf } from '../lib/nextAction'
-import { DUKE_EMAIL, GEORGES, MARION_PERMITTING, MCU, OFFICE_CC, SECO_EMAIL, UTILITY_PHONES } from '../data/contacts'
+import { GEORGES, MARION_PERMITTING, MCU, OFFICE_CC, SECO_EMAIL, UTILITY_PHONES } from '../data/contacts'
+import { dukeOfficeEmail } from '../lib/loadForm'
 
 interface Props {
   stream: Stream
@@ -56,9 +57,11 @@ function ContactLinks({ stream, p, ps }: Props) {
       })
     }
     if (u === 'DUKE') {
+      // Route to the project's EDA office (Ocala/Inverness, per ps.dukeOffice)
+      // via the same shared helper Batch Apply uses — never a hardcoded office.
       links.push({
         href: mailto(
-          DUKE_EMAIL,
+          dukeOfficeEmail(ps),
           (p.workOrder ? `WO#${p.workOrder} - ` : 'New Service - ') + addrFull,
           `Hi,\n\nAttached is the completed Residential Service Information Form and site plan for ${addrFull}${p.workOrder ? ` (WO#${p.workOrder})` : ''}.`,
         ),

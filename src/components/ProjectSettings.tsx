@@ -195,13 +195,21 @@ function ProjectSettings({ project: p, ps, setField, updateFacts, onClose }: Pro
         {utilityOf(p, ps) === 'DUKE' && (
           <label>
             Duke EDA office
+            {/* No silent default: the office decides where BOTH the load-form
+                reply and the meter-notify email go, so make it an explicit
+                choice and warn until one is picked. */}
             <select
-              value={ps.dukeOffice ?? 'Ocala'}
+              value={ps.dukeOffice ?? ''}
               onChange={(e) => setField(p.id, 'dukeOffice', e.target.value as 'Ocala' | 'Inverness')}
             >
+              <option value="">— choose office —</option>
               <option value="Ocala">Ocala (EDA-Ocala)</option>
               <option value="Inverness">Inverness (EDA-Inverness)</option>
             </select>
+            <small className="ps-hint muted">most Marion County → Ocala; western/Citrus → Inverness</small>
+            {!ps.dukeOffice && (
+              <small className="ps-hint warn">⚠ Pick an office — every Duke email for this house routes here.</small>
+            )}
           </label>
         )}
         <label>

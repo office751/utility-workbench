@@ -24,9 +24,16 @@ import {
   renderTemplate,
 } from './templates'
 
-/** The Duke EDA office this project's load form replies to (defaults to Ocala —
- *  the western/Citrus side is Inverness; set per project in ⚙️ Settings). */
-function dukeOfficeEmail(ps: ProjectState): string {
+/**
+ * The Duke EDA office this project's email goes to (defaults to Ocala — the
+ * western/Citrus side is Inverness; set per project in ⚙️ Settings).
+ *
+ * This is the ONE place that maps ps.dukeOffice → an address. Every Duke email
+ * the app builds (the Batch Apply load form + meter-notify here, and the
+ * quick ✉️ Email Duke button in ContactLinks) must route through this helper so
+ * they can never disagree about which office a house belongs to.
+ */
+export function dukeOfficeEmail(ps: ProjectState): string {
   return ps.dukeOffice === 'Inverness' ? DUKE_EMAIL_INVERNESS : DUKE_EMAIL_OCALA
 }
 

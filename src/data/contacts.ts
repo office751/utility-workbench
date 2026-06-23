@@ -36,8 +36,9 @@ export const SECO_ENGINEERING = {
  */
 export const DUKE_EMAIL_OCALA = 'EDA-Ocala@duke-energy.com'
 export const DUKE_EMAIL_INVERNESS = 'EDA-Inverness@duke-energy.com'
-/** Default Duke office (most jobs). Kept as DUKE_EMAIL for older imports. */
-export const DUKE_EMAIL = DUKE_EMAIL_OCALA
+// (No single DUKE_EMAIL constant on purpose: a hardcoded default once let the
+//  ✉️ Email Duke button silently misroute Inverness jobs to Ocala. Always pick
+//  the office from ps.dukeOffice via dukeOfficeEmail() in lib/loadForm.ts.)
 
 /** Marion County Utilities (city water + sewer). */
 export const MCU = {
