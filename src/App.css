@@ -4109,3 +4109,27 @@ a.map-btn {
   .sel-select { min-width: 0; }
   .sel-lock-field input { min-width: 0; width: 100%; }
 }
+
+/* ===== Selections setup editor (Settings) ===== */
+.selcat-editor { margin-top: 28px; }
+.selcat-modebar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 10px 0 6px; }
+.selcat-modepick { display: inline-flex; align-items: center; gap: 8px; font-size: var(--text-sm); color: var(--muted); }
+.selcat-modepick select { font: inherit; padding: 5px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--panel); color: var(--ink); }
+.selcat-spacer { flex: 1 1 auto; }
+.selcat-saved { font-size: var(--text-sm); color: var(--success); font-weight: var(--weight-semibold); }
+.selcat-modehint { margin: 0 0 10px; }
+.selcat-section { margin-top: 14px; }
+.selcat-sec-title { display: flex; align-items: center; gap: 8px; font-family: var(--font-display); font-size: var(--text-md); color: var(--ink); margin: 0 0 8px; }
+.selcat-cat { border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--panel); padding: 10px; margin-bottom: 8px; }
+.selcat-cat.is-hidden { opacity: 0.6; }
+.selcat-cat-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.selcat-label { flex: 1 1 auto; min-width: 0; font: inherit; font-weight: var(--weight-semibold); padding: 5px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink); }
+.selcat-label-ro { flex: 1 1 auto; font-weight: var(--weight-semibold); color: var(--ink); }
+.selcat-hide { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-xs); color: var(--muted); white-space: nowrap; }
+.selcat-options { width: 100%; font: inherit; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink); resize: vertical; }
+.selcat-link { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.selcat-link select, .selcat-url { font: inherit; padding: 5px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--panel); color: var(--ink); }
+.selcat-url { flex: 1 1 auto; min-width: 0; }
+.selcat-base-hint { display: block; margin-top: 4px; font-size: var(--text-xs); }
+.selcat-add { margin-top: 2px; }
+.selcat-foot { margin-top: 16px; }

@@ -8,8 +8,8 @@
  * a fixed template can't iterate them. We read labels straight from the catalog
  * so the export always matches what the tab shows.
  */
-import type { Project, ProjectState, SelectionChoice } from '../types'
-import { SELECTION_SECTIONS, defaultSelections } from '../data/selections'
+import type { Project, ProjectState, SelectionChoice, SelectionSection } from '../types'
+import { defaultSelections } from '../data/selections'
 
 export interface SelectionsReport {
   subject: string
@@ -35,8 +35,14 @@ function dateOf(iso?: string): string {
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString()
 }
 
-/** Build the selections package for one project. */
-export function buildSelectionsReport(p: Project, ps: ProjectState): SelectionsReport {
+/** Build the selections package for one project. `sections` is the EFFECTIVE
+ *  catalog for this project's model (resolveSelectionSections) so the export
+ *  matches exactly what the tab shows. */
+export function buildSelectionsReport(
+  p: Project,
+  ps: ProjectState,
+  sections: SelectionSection[],
+): SelectionsReport {
   const sel = ps.selections ?? defaultSelections()
   const lines: string[] = []
   lines.push(`Homeowner Selections — ${p.address}`)
@@ -46,7 +52,7 @@ export function buildSelectionsReport(p: Project, ps: ProjectState): SelectionsR
   )
 
   let count = 0
-  for (const section of SELECTION_SECTIONS) {
+  for (const section of sections) {
     const rows: string[] = []
     for (const cat of section.categories) {
       const v = valueOf(sel[section.id][cat.id] ?? {})

@@ -33,6 +33,7 @@ import TasksView from './components/TasksView'
 import ModelsView from './components/ModelsView'
 import InspectionsView from './components/InspectionsView'
 import TemplatesView from './components/TemplatesView'
+import SelectionsCatalogEditor from './components/SelectionsCatalogEditor'
 import ExportImport from './components/ExportImport'
 import AddProject from './components/AddProject'
 import InvestorInbox from './components/InvestorInbox'
@@ -120,6 +121,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
     updateProjectFacts,
     setTemplate,
     setAssignees,
+    setSelectionsCatalog,
     replaceState,
     saveState,
     saveNow,
@@ -357,14 +359,17 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
       {tab === 'guide' && <GuideView />}
 
       {tab === 'settings' && (
-        <TemplatesView
-          templates={state.templates}
-          setTemplate={setTemplate}
-          assignees={state.assignees ?? []}
-          setAssignees={setAssignees}
-          sampleProject={projects.find((p) => p.listStatus !== 'CO') ?? projects[0]}
-          getProjectState={getProjectState}
-        />
+        <>
+          <TemplatesView
+            templates={state.templates}
+            setTemplate={setTemplate}
+            assignees={state.assignees ?? []}
+            setAssignees={setAssignees}
+            sampleProject={projects.find((p) => p.listStatus !== 'CO') ?? projects[0]}
+            getProjectState={getProjectState}
+          />
+          <SelectionsCatalogEditor catalog={state.selectionsCatalog} onSave={setSelectionsCatalog} />
+        </>
       )}
 
       {tab === 'projects' &&
