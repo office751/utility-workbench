@@ -4133,3 +4133,29 @@ a.map-btn {
 .selcat-base-hint { display: block; margin-top: 4px; font-size: var(--text-xs); }
 .selcat-add { margin-top: 2px; }
 .selcat-foot { margin-top: 16px; }
+.selcat-uploaderr { font-size: var(--text-sm); color: var(--danger); }
+
+/* per-option photos */
+.selcat-photos { margin-top: 8px; }
+.selcat-photos-toggle {
+  display: inline-flex; align-items: center; gap: 4px;
+  font: inherit; font-size: var(--text-sm); color: var(--muted);
+  background: transparent; border: 0; cursor: pointer; padding: 2px 0;
+}
+.selcat-photos-toggle:hover { color: var(--rust); }
+.selcat-photo-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.selcat-photo-row { display: flex; align-items: center; gap: 8px; }
+.selcat-thumb {
+  width: 34px; height: 34px; flex: 0 0 auto;
+  object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface-2);
+}
+.selcat-thumb-empty { display: inline-flex; align-items: center; justify-content: center; color: var(--ink-3); }
+.selcat-photo-label { flex: 0 0 130px; font-size: var(--text-sm); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.selcat-photo-url {
+  flex: 1 1 auto; min-width: 0; font: inherit; padding: 5px 8px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--panel); color: var(--ink);
+}
+.selcat-upload { flex: 0 0 auto; cursor: pointer; }
+@media (max-width: 640px) {
+  .selcat-photo-label { flex-basis: 90px; }
+}

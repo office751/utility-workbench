@@ -18,6 +18,7 @@ import type { SelectionCategory, SelectionsCatalog } from '../types'
 import { defaultCatalog } from '../data/selections'
 import { MODELS_DEFAULT } from '../data/models'
 import { finishVendors } from '../data/vendors'
+import { uploadSelectionImage } from '../lib/files'
 import Icon from './Icon'
 
 const newId = () => 'c-' + (crypto.randomUUID?.() ?? `${performance.now()}`)
@@ -33,6 +34,9 @@ function SelectionsCatalogEditor({ catalog, onSave }: Props) {
   const [dirty, setDirty] = useState(false)
   const [saved, setSaved] = useState(false)
   const [modelK, setModelK] = useState('') // '' = base catalog; else a model key
+  const [photoOpen, setPhotoOpen] = useState<Set<string>>(new Set()) // category ids with the Photos panel expanded
+  const [uploading, setUploading] = useState<Set<string>>(new Set()) // "catId::label" rows mid-upload
+  const [uploadErr, setUploadErr] = useState<string | null>(null)
   const vendors = finishVendors()
   const modelKeys = Object.keys(MODELS_DEFAULT)
 
@@ -67,6 +71,53 @@ function SelectionsCatalogEditor({ catalog, onSave }: Props) {
       const sec = c.sections.find((s) => s.id === sid)
       if (sec) sec.categories = sec.categories.filter((x) => x.id !== cid)
     })
+
+  // --- per-option photos ---
+  const setOptionImage = (sid: string, cid: string, label: string, url: string) =>
+    mutate((c) => {
+      const cat = c.sections.find((s) => s.id === sid)?.categories.find((x) => x.id === cid)
+      if (!cat) return
+      cat.optionImages ??= {}
+      if (url) cat.optionImages[label] = url
+      else delete cat.optionImages[label]
+    })
+  const togglePhotos = (cid: string) =>
+    setPhotoOpen((prev) => {
+      const next = new Set(prev)
+      if (next.has(cid)) next.delete(cid)
+      else next.add(cid)
+      return next
+    })
+  async function uploadFor(sid: string, cid: string, label: string, file: File) {
+    const key = `${cid}::${label}`
+    setUploadErr(null)
+    setUploading((p) => new Set(p).add(key))
+    try {
+      const url = await uploadSelectionImage(file)
+      setOptionImage(sid, cid, label, url)
+    } catch {
+      setUploadErr('Upload failed — apply supabase/setup-selection-images.sql once, or paste an image URL instead.')
+      setTimeout(() => setUploadErr(null), 6000)
+    } finally {
+      setUploading((p) => {
+        const n = new Set(p)
+        n.delete(key)
+        return n
+      })
+    }
+  }
+  /** The distinct, non-blank option labels of a category (for the photo rows). */
+  const optionLabels = (opts: string[]) => {
+    const seen = new Set<string>()
+    const out: string[] = []
+    for (const o of opts.map((x) => x.trim())) {
+      if (o && !seen.has(o)) {
+        seen.add(o)
+        out.push(o)
+      }
+    }
+    return out
+  }
 
   // --- per-model edits ---
   function tweaksOf(c: SelectionsCatalog, mk: string) {
@@ -154,6 +205,7 @@ function SelectionsCatalogEditor({ catalog, onSave }: Props) {
         <span className="selcat-spacer" />
         {dirty && <span className="muted">Unsaved changes</span>}
         {saved && <span className="selcat-saved">Saved ✓</span>}
+        {uploadErr && <span className="selcat-uploaderr">{uploadErr}</span>}
         {dirty && (
           <button className="btn btn-ghost btn-sm" onClick={discard}>
             Discard
@@ -234,6 +286,70 @@ function SelectionsCatalogEditor({ catalog, onSave }: Props) {
                     onChange={(e) => editCat(sec.id, cat.id, { url: e.target.value || undefined })}
                   />
                 </div>
+
+                {optionLabels(cat.options).length > 0 && (
+                  <div className="selcat-photos">
+                    <button className="selcat-photos-toggle" onClick={() => togglePhotos(cat.id)}>
+                      <Icon name={photoOpen.has(cat.id) ? 'expand_more' : 'chevron_right'} size={16} />
+                      Photos
+                      {Object.keys(cat.optionImages ?? {}).length > 0 && ` (${Object.keys(cat.optionImages ?? {}).length})`}
+                    </button>
+                    {photoOpen.has(cat.id) && (
+                      <div className="selcat-photo-list">
+                        {optionLabels(cat.options).map((label) => {
+                          const url = cat.optionImages?.[label]
+                          const key = `${cat.id}::${label}`
+                          return (
+                            <div className="selcat-photo-row" key={label}>
+                              {url ? (
+                                <img className="selcat-thumb" src={url} alt="" />
+                              ) : (
+                                <span className="selcat-thumb selcat-thumb-empty">
+                                  <Icon name="image" size={16} />
+                                </span>
+                              )}
+                              <span className="selcat-photo-label">{label}</span>
+                              <input
+                                className="selcat-photo-url"
+                                value={url ?? ''}
+                                placeholder="Image URL, or upload →"
+                                onChange={(e) => setOptionImage(sec.id, cat.id, label, e.target.value)}
+                              />
+                              <label className="btn btn-secondary btn-sm selcat-upload">
+                                {uploading.has(key) ? (
+                                  '…'
+                                ) : (
+                                  <>
+                                    <Icon name="upload" size={14} /> Upload
+                                  </>
+                                )}
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  hidden
+                                  onChange={(e) => {
+                                    const f = e.target.files?.[0]
+                                    if (f) uploadFor(sec.id, cat.id, label, f)
+                                    e.target.value = ''
+                                  }}
+                                />
+                              </label>
+                              {url && (
+                                <button
+                                  className="se-del"
+                                  title="Remove photo"
+                                  onClick={() => setOptionImage(sec.id, cat.id, label, '')}
+                                >
+                                  <Icon name="close" size={14} />
+                                </button>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ) : (
               // ---- PER-MODEL ROW ----
