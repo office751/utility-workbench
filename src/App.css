@@ -427,6 +427,16 @@ textarea {
 .person-proj { display: flex; align-items: center; gap: 7px; font-size: 13px; padding: 6px 9px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); cursor: pointer; }
 .person-proj.on { border-color: var(--accent); background: var(--panel); }
 .people-add { padding: 14px; margin-top: 6px; }
+.invite-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+.invite-row input, .invite-row select {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: var(--text-base);
+}
+.invite-row .invite-email { flex: 2; min-width: 200px; }
+.invite-row .invite-name { flex: 1; min-width: 120px; }
+.invite-row input:focus, .invite-row select:focus { outline: none; border-color: var(--rust); }
 
 /* ---- header Save button / status indicator ---- */
 .save-btn {

@@ -54,6 +54,40 @@ export async function setUserName(userId: string, displayName: string): Promise<
   }
 }
 
+/**
+ * Invite a teammate by email. Calls the `invite-user` Edge Function, which does
+ * the privileged work server-side (the browser can't create auth users). The
+ * function verifies WE'RE an admin, emails the set-password link, and sets their
+ * role. Returns a friendly result; the real server message rides in error.context.
+ */
+export async function inviteUser(
+  email: string,
+  role: string,
+  displayName: string,
+): Promise<{ ok: boolean; error?: string }> {
+  if (!supabase) return { ok: false, error: 'No backend connection.' }
+  try {
+    const { data, error } = await supabase.functions.invoke('invite-user', {
+      body: { email, role, displayName },
+    })
+    if (error) {
+      // supabase-js puts non-2xx bodies on error.context — dig out our JSON message.
+      let msg = error.message
+      try {
+        const j = await (error as unknown as { context?: Response }).context?.json?.()
+        if (j?.error) msg = j.error
+      } catch {
+        /* fall back to error.message */
+      }
+      return { ok: false, error: msg }
+    }
+    if (data?.error) return { ok: false, error: data.error }
+    return { ok: true, error: data?.warning }
+  } catch (e) {
+    return { ok: false, error: String(e) }
+  }
+}
+
 /** All project assignments (admin reads every row). Map user_id → project ids. */
 export async function allProjectAccess(): Promise<Record<string, number[]>> {
   if (!supabase) return {}

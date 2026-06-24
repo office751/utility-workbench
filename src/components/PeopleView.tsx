@@ -14,13 +14,22 @@
 import { useEffect, useState } from 'react'
 import type { Project } from '../types'
 import { ROLES, ROLE_ORDER, normalizeRole } from '../data/roles'
-import { allProjectAccess, listAppUsers, setUserName, setUserProjects, setUserRole, type AppUserRow } from '../lib/admin'
+import { allProjectAccess, inviteUser, listAppUsers, setUserName, setUserProjects, setUserRole, type AppUserRow } from '../lib/admin'
+
+// Roles you can hand out via the invite form — never 'admin' (create those in
+// the Supabase dashboard) and never 'pending' (that's the auto holding state).
+const INVITABLE = ROLE_ORDER.filter((r) => r !== 'admin' && r !== 'pending')
 
 function PeopleView({ roster }: { roster: Project[] }) {
   const [users, setUsers] = useState<AppUserRow[]>([])
   const [access, setAccess] = useState<Record<string, number[]>>({})
   const [loading, setLoading] = useState(true)
   const [flash, setFlash] = useState('')
+  // Invite form state.
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteName, setInviteName] = useState('')
+  const [inviteRole, setInviteRole] = useState('coworker')
+  const [inviting, setInviting] = useState(false)
 
   async function reload() {
     const [u, a] = await Promise.all([listAppUsers(), allProjectAccess()])
@@ -35,6 +44,22 @@ function PeopleView({ roster }: { roster: Project[] }) {
   function note(msg: string) {
     setFlash(msg)
     setTimeout(() => setFlash((m) => (m === msg ? '' : m)), 2500)
+  }
+
+  async function sendInvite() {
+    const email = inviteEmail.trim()
+    if (!email) return
+    setInviting(true)
+    const res = await inviteUser(email, inviteRole, inviteName.trim())
+    setInviting(false)
+    if (res.ok) {
+      note(res.error ? `Invited ${email} — heads up: ${res.error}` : `Invite sent to ${email}.`)
+      setInviteEmail('')
+      setInviteName('')
+      reload()
+    } else {
+      note(res.error ?? 'Could not send the invite.')
+    }
   }
 
   async function changeName(u: AppUserRow, name: string) {
@@ -143,13 +168,40 @@ function PeopleView({ roster }: { roster: Project[] }) {
       )}
 
       <div className="people-add card">
-        <div className="tpl-preview-h">Add a person</div>
+        <div className="tpl-preview-h">Invite a teammate</div>
         <p className="meta">
-          1. In Supabase → Authentication → <b>Add user</b>, create their email + password.<br />
-          2. Add their <code>app_users</code> row (role + name) — or they'll appear here once seeded.<br />
-          3. Set their role and projects above.
+          Enter their email + role. They get an email with a link to set their own password, then appear in the
+          list above — promote or adjust them any time.
         </p>
-        <p className="muted">A one-click in-app invite is on the roadmap (needs a small server function).</p>
+        <div className="invite-row">
+          <input
+            type="email"
+            className="invite-email"
+            placeholder="name@ironshieldconstruction.com"
+            value={inviteEmail}
+            onChange={(e) => setInviteEmail(e.target.value)}
+          />
+          <input
+            className="invite-name"
+            placeholder="Name (optional)"
+            value={inviteName}
+            onChange={(e) => setInviteName(e.target.value)}
+          />
+          <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
+            {INVITABLE.map((r) => (
+              <option key={r} value={r}>
+                {ROLES[r].label}
+              </option>
+            ))}
+          </select>
+          <button className="btn btn-primary btn-sm" onClick={sendInvite} disabled={inviting || !inviteEmail.trim()}>
+            {inviting ? 'Sending…' : 'Send invite'}
+          </button>
+        </div>
+        <p className="muted">
+          Needs email set up in Supabase (custom SMTP) to actually send. Until then, create the login in the Supabase
+          dashboard — the new account still auto-appears here as “Pending.”
+        </p>
       </div>
     </section>
   )

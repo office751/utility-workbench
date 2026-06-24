@@ -19,9 +19,10 @@ import { normalizeRole, ROLES, type AppRole } from './data/roles'
 import App from './App'
 import Login from './components/Login'
 import InvestorView from './components/InvestorView'
+import SetPassword from './components/SetPassword'
 
 function Root() {
-  const { session, loading } = useAuth() // always called (Rules of Hooks)
+  const { session, loading, recovery, clearRecovery } = useAuth() // always called (Rules of Hooks)
   // null = still looking up the role; otherwise the resolved AppRole.
   const [role, setRole] = useState<AppRole | null>(null)
   // The signed-in person's display name (app_users via myRole). Personalizes the
@@ -55,6 +56,9 @@ function Root() {
     )
   }
   if (!session) return <Login />
+  // Arrived via an invite / password-reset link → choose a password first
+  // (regardless of role). Once set, clearRecovery() falls through to normal routing.
+  if (recovery) return <SetPassword onDone={clearRecovery} />
   // Past the guards above, role is resolved. External investors get their own
   // scoped portal; every internal role gets the workbench, gated by its config.
   const r = role as AppRole
