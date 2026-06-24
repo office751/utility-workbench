@@ -78,8 +78,15 @@ medium ≈ 1–2 sessions.
       subdivision hint ("most Marion → Ocala; western/Citrus → Inverness"),
       and add a `needsVerify`-style warning when utility=Duke and no office set.
 
-- [ ] **4. Water + Septic playbook guides + inline callouts** *(small)*.
-      Her two core streams have NO guide in `data/guides.ts` and NO inline
+- [x] **4. Water + Septic playbook guides + inline callouts** *(small)* —
+      **DONE June 24 2026**: added `manage-water` + `manage-septic` guides to
+      `data/guides.ts` and rendered them as inline `GuideCallout`s in WaterBody
+      & SepticBody (Detail.tsx), mirroring Electric/Permit. Step 1 of each =
+      "confirm the source in ⚙️ Settings first" (heads off the sewer-lot-DEP-
+      septic-permit mistake); contacts named (MCU for city water/sewer, Georges
+      Plumbing/Vicki Kirby for septic/INRB). They also show in the 📖 Guide
+      screen automatically. ORIGINAL NOTES:
+      Her two core streams had NO guide in `data/guides.ts` and NO inline
       `GuideCallout` in `WaterBody`/`SepticBody` — unlike Electric/Permit
       (your streams) which do. Worse: septic source defaults to "Septic", so
       `nextSepticAction` will walk her into a DEP septic-permit sequence even

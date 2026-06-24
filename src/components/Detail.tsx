@@ -581,6 +581,8 @@ function WaterBody({ project: p, ps, toggleStep, setStepNote }: Props) {
         <Icon name="water_drop" size={15} color="var(--info)" /> {WATER_LABEL[source]}
       </p>
 
+      <GuideCallout id="manage-water" />
+
       {source === 'CityWM' && (
         <div className="flag">
           <Icon name="construction" size={15} /> Water-main extension required — agreement, fees, and construction come
@@ -623,6 +625,8 @@ function SepticBody({ project: p, ps, toggleStep, setStepNote }: Props) {
         <Icon name="plumbing" size={15} color="var(--rust)" /> {source === 'Sewer' ? 'City Sewer' : 'Septic'}
         {source === 'Septic' && system && <> · {system}</>}
       </p>
+
+      <GuideCallout id="manage-septic" />
 
       {source === 'Septic' && (
         <p className="provider">
