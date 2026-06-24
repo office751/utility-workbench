@@ -21,6 +21,11 @@ import type { ProjectDoc } from '../types'
 /** The private bucket you create once in Supabase (see the setup SQL). */
 const BUCKET = 'project-files'
 
+/** PUBLIC bucket for Selections-catalog option photos (swatches/samples shown
+ *  to clients). Non-sensitive → public + stable URLs. See
+ *  supabase/setup-selection-images.sql. */
+const SELECTION_IMAGES_BUCKET = 'selection-images'
+
 /** How long a shared link stays valid: ~1 year, expressed in seconds. */
 const LINK_TTL_SECONDS = 60 * 60 * 24 * 365
 
@@ -64,6 +69,22 @@ export function uploadProjectFile(projectId: number, file: File): Promise<Projec
 /** A model's plan file (📐 Models library): `models/<modelKey>/…`. */
 export function uploadModelFile(modelKey: string, file: File): Promise<ProjectDoc> {
   return uploadTo(`models/${safeName(modelKey)}`, file)
+}
+
+/**
+ * Upload ONE Selections-catalog option photo and return its STABLE public URL
+ * (no signing/expiry — see the public bucket). Throws without a connection or
+ * if the bucket isn't set up yet (the editor then falls back to pasting a URL).
+ */
+export async function uploadSelectionImage(file: File): Promise<string> {
+  if (!supabase) throw new Error('No cloud connection — image uploads need the Supabase backend.')
+  const path = `options/${crypto.randomUUID()}/${safeName(file.name)}`
+  const { error } = await supabase.storage.from(SELECTION_IMAGES_BUCKET).upload(path, file, {
+    contentType: file.type || undefined,
+    upsert: false,
+  })
+  if (error) throw error
+  return supabase.storage.from(SELECTION_IMAGES_BUCKET).getPublicUrl(path).data.publicUrl
 }
 
 /** Delete a file from the locker. No-op without a connection. */

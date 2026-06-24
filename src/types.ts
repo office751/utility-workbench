@@ -201,6 +201,13 @@ export interface SelectionCategory {
   vendorId?: string
   /** Hidden everywhere (kept for history; not shown on the tab or required). */
   hidden?: boolean
+  /**
+   * Per-option photos, keyed by the option's label → an image URL. Each value
+   * is either an uploaded image's public URL (the 'selection-images' bucket) or
+   * a pasted link. When a category has any, the tab shows clickable swatches
+   * instead of a dropdown.
+   */
+  optionImages?: Record<string, string>
 }
 
 /** A section of the catalog (Interior / Exterior). */
