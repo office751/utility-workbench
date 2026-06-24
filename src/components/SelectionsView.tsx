@@ -14,6 +14,7 @@
 import { useState } from 'react'
 import type { Project, ProjectState, SelectionChoice } from '../types'
 import { SELECTION_SECTIONS, defaultSelections } from '../data/selections'
+import { buildSelectionsReport, openSelectionsPrint } from '../lib/selectionsReport'
 import Icon from './Icon'
 
 interface Props {
@@ -47,10 +48,22 @@ function SelectionsView({
 }: Props) {
   const sel = ps.selections ?? defaultSelections()
   const locked = sel.lock?.locked ?? false
+  const report = buildSelectionsReport(p, ps)
 
   // Local inputs for the sign-off line (only used while unlocked).
   const [sig, setSig] = useState('')
   const [printed, setPrinted] = useState('')
+  const [actionNote, setActionNote] = useState<string | null>(null)
+
+  async function copyReport() {
+    try {
+      await navigator.clipboard.writeText(report.fullText)
+      setActionNote('Copied ✓')
+    } catch {
+      setActionNote('Copy failed — select the printed page text instead')
+    }
+    setTimeout(() => setActionNote(null), 2500)
+  }
 
   function doLock() {
     if (!sig.trim()) return
@@ -75,6 +88,20 @@ function SelectionsView({
         <Icon name="checklist" size={15} color="var(--rust)" /> The client's final finish choices for
         this house. Pick a common option or type your own; lock it when they sign off.
       </p>
+
+      {/* Export / share the package. Print → "Save as PDF" for the laminated
+          job-site copy; Copy → paste anywhere; Email (below) → the finish trades. */}
+      <div className="sel-actions">
+        <button className="btn btn-secondary btn-sm" onClick={copyReport}>
+          <Icon name="content_copy" size={16} />
+          Copy
+        </button>
+        <button className="btn btn-secondary btn-sm" onClick={() => openSelectionsPrint(report, p)}>
+          <Icon name="print" size={16} />
+          Print / Save PDF
+        </button>
+        {actionNote && <span className="sel-action-note">{actionNote}</span>}
+      </div>
 
       {SELECTION_SECTIONS.map((section) => (
         <div className="sel-section" key={section.id}>

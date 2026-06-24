@@ -3982,6 +3982,8 @@ a.map-btn {
 .person-name-input:focus { outline: none; border-color: var(--rust); background: var(--surface); }
 
 /* ===== Selections tab (homeowner finish choices) ===== */
+.sel-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 10px 0 4px; }
+.sel-action-note { font-size: var(--text-sm); color: var(--muted); }
 .sel-section { margin-top: 18px; }
 .sel-section-title {
   display: flex;
