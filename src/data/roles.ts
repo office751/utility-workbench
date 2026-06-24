@@ -21,8 +21,9 @@
  * 'admin' (see normalizeRole below) so nothing breaks mid-rollout.
  */
 
-/** Every login is exactly one of these. */
-export type AppRole = 'admin' | 'business_owner' | 'project_manager' | 'coworker' | 'investor'
+/** Every login is exactly one of these. 'pending' is the no-power holding state
+ *  a brand-new login lands on until an admin assigns it a real role. */
+export type AppRole = 'admin' | 'business_owner' | 'project_manager' | 'coworker' | 'investor' | 'pending'
 
 /** The main workbench tabs (mirror of App's View keys, minus settings which
  *  is its own capability flag). Used to gate the top nav per role. */
@@ -102,20 +103,38 @@ export const ROLES: Record<AppRole, RoleConfig> = {
     canManageSettings: false,
     canManageUsers: false,
   },
+  pending: {
+    label: 'Pending',
+    description: 'New login awaiting setup — NO access to anything until you assign it a real role here.',
+    usesInvestorPortal: false, // routed to a no-access holding screen in Root, not the workbench
+    tabs: [],
+    scopedToAssignedProjects: false,
+    canSeeFinancials: false,
+    canManageSettings: false,
+    canManageUsers: false,
+  },
 }
 
-/** Order roles are offered in the "assign a role" UI (admin first, investor last). */
-export const ROLE_ORDER: AppRole[] = ['admin', 'business_owner', 'project_manager', 'coworker', 'investor']
+/** Order roles are offered in the "assign a role" UI (admin first, then down to
+ *  the no-power 'pending' holding state last). */
+export const ROLE_ORDER: AppRole[] = ['admin', 'business_owner', 'project_manager', 'coworker', 'investor', 'pending']
 
 /**
- * Normalize a raw DB role string to an AppRole. The legacy admin value
- * 'owner' maps to 'admin'; an unknown/missing role falls back to 'admin'
- * (back-compat — today's logins predate this system and are trusted).
+ * Normalize a raw DB role string to an AppRole.
+ *   • 'owner' → 'admin' (the legacy value office@ had before migration 0006).
+ *   • a known role → itself.
+ *   • anything else — null, '', or an unrecognized string → 'pending' (NO access).
+ *
+ * That last fallback is deliberate and security-critical: a login with no
+ * app_users row (or an unknown role) must land powerless, never as admin. (It
+ * used to default to 'admin' as back-compat for pre-RBAC logins; with the
+ * signup trigger now giving every login a real row, defaulting to no-access is
+ * the safe choice.)
  */
 export function normalizeRole(raw: string | null | undefined): AppRole {
-  if (raw === 'owner' || raw == null || raw === '') return 'admin'
-  if (raw in ROLES) return raw as AppRole
-  return 'admin'
+  if (raw === 'owner') return 'admin'
+  if (raw && raw in ROLES) return raw as AppRole
+  return 'pending'
 }
 
 /** Convenience: the config for a (possibly legacy) raw role string. */

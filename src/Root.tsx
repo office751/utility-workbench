@@ -58,7 +58,27 @@ function Root() {
   // Past the guards above, role is resolved. External investors get their own
   // scoped portal; every internal role gets the workbench, gated by its config.
   const r = role as AppRole
+  // A 'pending' login (new, or never assigned a role) gets a no-access holding
+  // screen that loads ZERO data — until an admin promotes it in 👥 People.
+  if (r === 'pending') return <PendingScreen />
   return ROLES[r].usesInvestorPortal ? <InvestorView /> : <App role={r} me={me} />
+}
+
+/** Holding screen for a 'pending' login — created but not yet granted a role.
+ *  Renders nothing sensitive: it never mounts <App> or <InvestorView>, so no
+ *  workbench or project data is loaded. */
+function PendingScreen() {
+  return (
+    <div className="login-wrap">
+      <div className="login-card">
+        <h1>Almost there 👋</h1>
+        <p className="meta">
+          Your account is set up, but it hasn't been given access yet. Ask your admin to assign your
+          role, then refresh this page.
+        </p>
+      </div>
+    </div>
+  )
 }
 
 export default Root
