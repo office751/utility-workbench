@@ -21,6 +21,7 @@ import type {
   OrderItem,
   Project,
   ProjectState,
+  SelectionChoice,
   StepState,
   Stream,
   Task,
@@ -653,6 +654,86 @@ export function useProjects() {
     updateProject(id, { orders: (ps.orders ?? []).filter((o) => o.id !== orderId) })
   }
 
+  /* --------------------------- SELECTIONS --------------------------- */
+  /* The homeowner's design-finish choices for one house (paint, flooring,
+     tile, fixtures, exterior colors…), an "additional requests" note, and a
+     sign-off lock. Each updater is ONE setState(prev => …) so two edits made in
+     the same action can't clobber each other (same lesson as addOrder). */
+
+  /** Record ONE category's choice (an option pick and/or a write-in). Pass an
+   *  empty choice ({}) to clear it. `area` is 'interior' or 'exterior'. */
+  function setSelection(
+    id: number,
+    area: 'interior' | 'exterior',
+    categoryId: string,
+    choice: SelectionChoice,
+  ) {
+    setState((prev) => {
+      const cur = prev.projects[id] ?? emptyProjectState()
+      const sel = cur.selections ?? defaultSelections()
+      return {
+        ...prev,
+        projects: {
+          ...prev.projects,
+          [id]: { ...cur, selections: { ...sel, [area]: { ...sel[area], [categoryId]: choice } } },
+        },
+      }
+    })
+  }
+
+  /** Save the free-text "Additional Requests" box. */
+  function setAdditionalRequests(id: number, text: string) {
+    setState((prev) => {
+      const cur = prev.projects[id] ?? emptyProjectState()
+      const sel = cur.selections ?? defaultSelections()
+      return {
+        ...prev,
+        projects: {
+          ...prev.projects,
+          [id]: { ...cur, selections: { ...sel, additionalRequests: text } },
+        },
+      }
+    })
+  }
+
+  /** Lock the selections: stamp the client's signature, printed name, and the
+   *  exact moment signed. The Selections tab goes read-only until unlocked. */
+  function lockSelections(id: number, signature: string, printedName: string) {
+    setState((prev) => {
+      const cur = prev.projects[id] ?? emptyProjectState()
+      const sel = cur.selections ?? defaultSelections()
+      return {
+        ...prev,
+        projects: {
+          ...prev.projects,
+          [id]: {
+            ...cur,
+            selections: {
+              ...sel,
+              lock: { locked: true, signature, printedName, lockedAt: new Date().toISOString() },
+            },
+          },
+        },
+      }
+    })
+  }
+
+  /** Unlock (admin) — reopen selections for editing. Keeps the old signature/
+   *  date so re-locking can show the history; just flips `locked` off. */
+  function unlockSelections(id: number) {
+    setState((prev) => {
+      const cur = prev.projects[id] ?? emptyProjectState()
+      const sel = cur.selections ?? defaultSelections()
+      return {
+        ...prev,
+        projects: {
+          ...prev.projects,
+          [id]: { ...cur, selections: { ...sel, lock: { ...sel.lock, locked: false } } },
+        },
+      }
+    })
+  }
+
   /** Mark one takeoff gathered (or not) for a house MODEL — shared across all
    *  projects of that model. */
   /** Upload plan files into a MODEL's library (📐 Models tab). Mirrors
@@ -832,6 +913,10 @@ export function useProjects() {
     addOrder,
     updateOrder,
     removeOrder,
+    setSelection,
+    setAdditionalRequests,
+    lockSelections,
+    unlockSelections,
     addTask,
     updateTask,
     removeTask,
