@@ -194,6 +194,10 @@ function SelectionsView({
             {section.categories.map((cat) => {
               const choice = sel[section.id][cat.id] ?? {}
               const fieldId = `sel-${section.id}-${cat.id}`
+              // Show a clickable swatch grid when any option has a photo;
+              // otherwise the plain dropdown.
+              const hasSwatches =
+                cat.options.length > 0 && !!cat.optionImages && cat.options.some((o) => !!cat.optionImages![o])
               return (
                 <div className="sel-row" key={cat.id}>
                   <div className="sel-label">
@@ -210,28 +214,61 @@ function SelectionsView({
                       </a>
                     )}
                   </div>
-                  <div className="sel-controls">
-                    {cat.options.length > 0 && (
-                      <select
-                        id={fieldId}
-                        className="sel-select"
-                        value={choice.option ?? ''}
-                        disabled={locked}
-                        onChange={(e) =>
-                          setSelection(p.id, section.id, cat.id, {
-                            ...choice,
-                            option: e.target.value || undefined,
-                          })
-                        }
-                      >
-                        <option value="">— choose —</option>
-                        {cat.options.map((o) => (
-                          <option key={o} value={o}>
-                            {o}
-                          </option>
-                        ))}
-                      </select>
-                    )}
+                  <div className={'sel-controls' + (hasSwatches ? ' has-swatches' : '')}>
+                    {cat.options.length > 0 &&
+                      (hasSwatches ? (
+                        <div className="sel-swatches" role="radiogroup" aria-label={cat.label}>
+                          {cat.options.map((o) => {
+                            const img = cat.optionImages?.[o]
+                            const isSel = choice.option === o
+                            return (
+                              <button
+                                type="button"
+                                key={o}
+                                className={'sel-swatch' + (isSel ? ' selected' : '')}
+                                disabled={locked}
+                                aria-pressed={isSel}
+                                title={o}
+                                onClick={() =>
+                                  setSelection(p.id, section.id, cat.id, {
+                                    ...choice,
+                                    option: isSel ? undefined : o,
+                                  })
+                                }
+                              >
+                                {img ? (
+                                  <img className="sel-swatch-img" src={img} alt="" />
+                                ) : (
+                                  <span className="sel-swatch-img sel-swatch-noimg">
+                                    <Icon name="image" size={18} />
+                                  </span>
+                                )}
+                                <span className="sel-swatch-label">{o}</span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      ) : (
+                        <select
+                          id={fieldId}
+                          className="sel-select"
+                          value={choice.option ?? ''}
+                          disabled={locked}
+                          onChange={(e) =>
+                            setSelection(p.id, section.id, cat.id, {
+                              ...choice,
+                              option: e.target.value || undefined,
+                            })
+                          }
+                        >
+                          <option value="">— choose —</option>
+                          {cat.options.map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
+                        </select>
+                      ))}
                     <input
                       // when there's no option list this input gets the field id
                       id={cat.options.length === 0 ? fieldId : undefined}
