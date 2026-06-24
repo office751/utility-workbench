@@ -14,7 +14,9 @@
 import { useState } from 'react'
 import type { Project, ProjectState, SelectionChoice } from '../types'
 import { SELECTION_SECTIONS, defaultSelections } from '../data/selections'
-import { buildSelectionsReport, openSelectionsPrint } from '../lib/selectionsReport'
+import { buildSelectionsReport, openSelectionsPrint, selectionsMailto } from '../lib/selectionsReport'
+import { finishVendors } from '../data/vendors'
+import { OFFICE_CC } from '../data/contacts'
 import Icon from './Icon'
 
 interface Props {
@@ -65,6 +67,35 @@ function SelectionsView({
     setTimeout(() => setActionNote(null), 2500)
   }
 
+  // Email recipients: the finish-trade vendors (data/vendors.ts). Default-check
+  // the ones that have an email on file.
+  const finVendors = finishVendors()
+  const [recipients, setRecipients] = useState<Set<string>>(
+    () => new Set(finVendors.filter((v) => v.email).map((v) => v.id)),
+  )
+  function toggleRecipient(id: string) {
+    setRecipients((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+  const canEmail = finVendors.some((v) => v.email && recipients.has(v.id))
+
+  function emailVendors() {
+    const chosen = finVendors.filter((v) => v.email && recipients.has(v.id))
+    if (!chosen.length) return
+    const to = chosen.flatMap((v) => (v.cc ? [v.email, v.cc] : [v.email]))
+    const mailto = selectionsMailto(report, to, [OFFICE_CC])
+    // A very long selections list can overflow some mail clients' mailto limit.
+    if (mailto.length > 1900) {
+      setActionNote('Long list — if the draft looks cut off, use Copy and paste it in instead.')
+      setTimeout(() => setActionNote(null), 4500)
+    }
+    window.location.href = mailto
+  }
+
   function doLock() {
     if (!sig.trim()) return
     if (
@@ -100,7 +131,41 @@ function SelectionsView({
           <Icon name="print" size={16} />
           Print / Save PDF
         </button>
+        <button className="btn btn-primary btn-sm" disabled={!canEmail} onClick={emailVendors}>
+          <Icon name="mail" size={16} />
+          Email finish trades
+        </button>
         {actionNote && <span className="sel-action-note">{actionNote}</span>}
+      </div>
+
+      <div className="sel-recipients">
+        {finVendors.length === 0 ? (
+          <span className="sel-action-note">
+            No finish-trade vendors yet — add cabinet / flooring / tile / paint / lighting vendors in
+            the Vendors directory (mark each as a finish trade) and they'll appear here.
+          </span>
+        ) : (
+          <>
+            <span className="sel-recip-label">To:</span>
+            {finVendors.map((v) => (
+              <label
+                key={v.id}
+                className={'sel-recip' + (v.email ? '' : ' no-email')}
+                title={v.email || 'No email on file yet — add it in the Vendors directory'}
+              >
+                <input
+                  type="checkbox"
+                  disabled={!v.email}
+                  checked={recipients.has(v.id)}
+                  onChange={() => toggleRecipient(v.id)}
+                />
+                {v.name}
+                {!v.email && ' — no email yet'}
+              </label>
+            ))}
+            <span className="sel-recip-cc">cc {OFFICE_CC}</span>
+          </>
+        )}
       </div>
 
       {SELECTION_SECTIONS.map((section) => (

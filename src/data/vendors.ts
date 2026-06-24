@@ -33,6 +33,11 @@ export interface Vendor {
    *  project's matching "to order" items in the draft AND to pick the right
    *  vendor for an order row's one-click ✉️ Order button. */
   categories?: string[]
+  /** True for FINISH trades (cabinets, flooring, tile, countertops, paint,
+   *  lighting…). The homeowner Selections tab emails the locked selections
+   *  package to these vendors. Mark each finish vendor as you add it here, and
+   *  it shows up automatically as a Selections email recipient. */
+  finish?: boolean
   /** Optional vendor-specific default wording (overrides the generic vendor
    *  template). Lets e.g. Florida Express say "schedule" instead of "deliver"
    *  so removals/swaps read right. Still user-editable on the Templates page. */
@@ -80,6 +85,7 @@ export const VENDORS: Vendor[] = [
     icon: '🗄️',
     supplies: 'Cabinets',
     categories: ['Cabinets'],
+    finish: true, // cabinets are a finish trade → gets the Selections package
   },
   {
     // One vendor covers both site services — Adam orders "a dumpster & porta
@@ -216,4 +222,12 @@ export function vendorCallHref(v: Vendor): string | null {
 export function vendorPlainMailto(v: Vendor): string | null {
   if (!v.email) return null
   return `mailto:${v.email}${v.cc ? `?cc=${encodeURIComponent(v.cc)}` : ''}`
+}
+
+/** The finish-trade vendors (cabinets, flooring, tile, paint, lighting…) — the
+ *  recipients for a project's homeowner Selections package. Includes vendors
+ *  without an email yet so the Selections tab can show them as "add an
+ *  address"; filter on `.email` before actually addressing a draft. */
+export function finishVendors(): Vendor[] {
+  return VENDORS.filter((v) => v.finish)
 }
