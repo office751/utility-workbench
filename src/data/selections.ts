@@ -31,10 +31,12 @@ export interface SelectionCategory {
 }
 
 /** A section of the form (Interior / Exterior) — id is used as the storage key
- *  on ProjectSelections, label is what the tab shows. */
+ *  on ProjectSelections, label is what the tab shows, icon is a Material
+ *  Symbols name for the section heading. */
 export interface SelectionSection {
   id: 'interior' | 'exterior'
   label: string
+  icon: string
   categories: SelectionCategory[]
 }
 
@@ -117,8 +119,8 @@ const EXTERIOR: SelectionCategory[] = [
 
 /** The whole catalog — two sections, each with its categories. */
 export const SELECTION_SECTIONS: SelectionSection[] = [
-  { id: 'interior', label: 'Interior Selections', categories: INTERIOR },
-  { id: 'exterior', label: 'Exterior Selections', categories: EXTERIOR },
+  { id: 'interior', label: 'Interior Selections', icon: 'palette', categories: INTERIOR },
+  { id: 'exterior', label: 'Exterior Selections', icon: 'home', categories: EXTERIOR },
 ]
 
 /** A blank, safe default — used as the fallback everywhere a project might not
