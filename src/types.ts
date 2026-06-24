@@ -136,6 +136,51 @@ export interface InspectionItem {
 }
 
 /**
+ * One homeowner finish choice for a single category (paint color, flooring,
+ * roof shingle…). Mirrors the printed Selections form: the client either picks
+ * a common `option` OR writes their own under `writeIn` (or both — e.g. pick
+ * "Quartz" and write the exact color). Both optional: an untouched category
+ * just has no entry at all.
+ */
+export interface SelectionChoice {
+  /** The picked option from the category's list (see data/selections.ts). */
+  option?: string
+  /** The client's own write-in, for anything not in the option list. */
+  writeIn?: string
+}
+
+/**
+ * The sign-off that LOCKS a project's selections. Once `locked` is true the
+ * Selections tab goes read-only (an admin can unlock). Captures who signed and
+ * when, mirroring the form's signature + date line.
+ */
+export interface SelectionLock {
+  locked: boolean
+  /** The client's typed signature. */
+  signature?: string
+  /** Printed name (the form has both a signature and a printed-name line). */
+  printedName?: string
+  /** ISO timestamp stamped the moment it was locked (new Date().toISOString()). */
+  lockedAt?: string
+}
+
+/**
+ * A project's full set of design-finish selections — the in-app version of the
+ * printed Selections form. `interior` and `exterior` are keyed by the category
+ * ids in data/selections.ts (e.g. interior['wallPaint'] = { option: '…' }).
+ */
+export interface ProjectSelections {
+  /** Interior choices, keyed by SELECTION_CATEGORIES.interior[].id */
+  interior: Record<string, SelectionChoice>
+  /** Exterior choices, keyed by SELECTION_CATEGORIES.exterior[].id */
+  exterior: Record<string, SelectionChoice>
+  /** The form's free-text "Additional Requests" box. */
+  additionalRequests?: string
+  /** The sign-off lock (absent/unlocked until the client signs). */
+  lock?: SelectionLock
+}
+
+/**
  * Everything that CHANGES for one project — this is what localStorage holds.
  * Fields marked `?` are optional overrides: e.g. if `electricCo` is set here,
  * it wins over the roster value (you verified/changed the utility).
@@ -189,6 +234,11 @@ export interface ProjectState {
 
   /** Material orders for this project (trusses, slab, cabinets, …). */
   orders?: OrderItem[]
+
+  /** Homeowner design-finish selections (Interior/Exterior/Additional + sign-off
+   *  lock). Optional: most houses predate this, so always read with a fallback
+   *  (`ps.selections ?? defaultSelections()`). */
+  selections?: ProjectSelections
 
   /** Checked-off steps, per stream, keyed by step id (e.g. "meter", "snrb"). */
   steps: Record<Stream, Record<string, StepState>>

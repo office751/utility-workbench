@@ -28,6 +28,7 @@ import type {
   WorkbenchState,
 } from '../types'
 import { buildInitialState, emptyProjectState, inferPermitSteps, seedStateFor } from '../data/seed'
+import { defaultSelections } from '../data/selections'
 import { ESTABLISHED_MODELS, TAKEOFF_TYPES } from '../data/takeoffs'
 import { PROJECTS } from '../data/projects'
 import { supabase } from '../lib/supabase'
@@ -95,7 +96,12 @@ function normalize(ps: ProjectState): ProjectState {
     : Array.isArray(ps.permitDocs)
       ? ps.permitDocs
       : []
-  return { ...ps, steps, notes, orders, docs }
+  // Homeowner selections arrived after most houses were saved — default it, and
+  // make sure both sub-buckets exist so the tab can read them without guards.
+  const selections = ps.selections
+    ? { ...ps.selections, interior: ps.selections.interior ?? {}, exterior: ps.selections.exterior ?? {} }
+    : defaultSelections()
+  return { ...ps, steps, notes, orders, docs, selections }
 }
 
 /**

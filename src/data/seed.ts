@@ -13,6 +13,7 @@
  */
 import type { Project, ProjectState, StepState, WorkbenchState } from '../types'
 import { PROJECTS, WELL_INSTALLED } from './projects'
+import { defaultSelections } from './selections'
 import { PERMIT_DATES } from './permitDates'
 import {
   ELECTRIC_STEPS,
@@ -26,6 +27,7 @@ import {
 export function emptyProjectState(): ProjectState {
   return {
     orders: [],
+    selections: defaultSelections(),
     steps: { electric: {}, water: {}, septic: {}, permit: {}, materials: {} },
     notes: { electric: '', water: '', septic: '', permit: '', materials: '' },
   }
