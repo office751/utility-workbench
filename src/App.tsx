@@ -108,6 +108,10 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
     addOrder,
     updateOrder,
     removeOrder,
+    setSelection,
+    setAdditionalRequests,
+    lockSelections,
+    unlockSelections,
     addTask,
     updateTask,
     removeTask,
@@ -415,6 +419,10 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
             addOrder={addOrder}
             updateOrder={updateOrder}
             removeOrder={removeOrder}
+            setSelection={setSelection}
+            setAdditionalRequests={setAdditionalRequests}
+            lockSelections={lockSelections}
+            unlockSelections={unlockSelections}
             addTask={addTask}
             updateTask={updateTask}
             removeTask={removeTask}

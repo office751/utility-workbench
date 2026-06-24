@@ -12,7 +12,7 @@
  * stay hidden until you open settings.
  */
 import { useEffect, useState } from 'react'
-import type { OrderItem, OrderStatus, Project, ProjectState, Stream, Task } from '../types'
+import type { OrderItem, OrderStatus, Project, ProjectState, SelectionChoice, Stream, Task } from '../types'
 import {
   type StepDef,
   electricSteps,
@@ -64,6 +64,7 @@ import PermitNotifications from './PermitNotifications'
 import InvestorCuration from './InvestorCuration'
 import ProjectSettings from './ProjectSettings'
 import MaterialsBody from './MaterialsBody'
+import SelectionsView from './SelectionsView'
 import Icon from './Icon'
 import GuideCallout from './GuideCallout'
 
@@ -78,6 +79,10 @@ interface Updaters {
   addOrder: (id: number, order: { category: string; status: OrderStatus }) => void
   updateOrder: (id: number, orderId: string, patch: Partial<OrderItem>) => void
   removeOrder: (id: number, orderId: string) => void
+  setSelection: (id: number, area: 'interior' | 'exterior', categoryId: string, choice: SelectionChoice) => void
+  setAdditionalRequests: (id: number, text: string) => void
+  lockSelections: (id: number, signature: string, printedName: string) => void
+  unlockSelections: (id: number) => void
   addTask: (t: Omit<Task, 'id' | 'createdAt' | 'done' | 'doneAt'>) => void
   updateTask: (id: string, patch: Partial<Task>) => void
   removeTask: (id: string) => void
@@ -89,8 +94,10 @@ interface Updaters {
   updateProjectFacts: (id: number, patch: Partial<Project>) => void
 }
 
-/** A tab in the project workspace: the Overview summary, or one stream. */
-type DetailTab = 'overview' | Stream
+/** A tab in the project workspace: Overview, the homeowner Selections, or one
+ *  stream. 'selections' is deliberately NOT a Stream (it has no checklist /
+ *  notes bucket), so it's rendered in its own branch below. */
+type DetailTab = 'overview' | 'selections' | Stream
 
 interface Props extends Updaters {
   project: Project
@@ -249,6 +256,12 @@ function Detail(props: Props) {
             {name}
           </button>
         ))}
+        <button
+          className={'pd-tab' + (activeTab === 'selections' ? ' active' : '')}
+          onClick={() => setActiveTab('selections')}
+        >
+          Selections
+        </button>
       </div>
 
       {/* The gear panel: all editable config for the whole project. */}
@@ -326,8 +339,21 @@ function Detail(props: Props) {
         </div>
       )}
 
+      {/* ---- SELECTIONS: homeowner finish choices. Its OWN branch — NOT a
+              Stream, so it skips the ContactLinks / step-editor / notes block. ---- */}
+      {activeTab === 'selections' && (
+        <SelectionsView
+          project={p}
+          ps={ps}
+          setSelection={props.setSelection}
+          setAdditionalRequests={props.setAdditionalRequests}
+          lockSelections={props.lockSelections}
+          unlockSelections={props.unlockSelections}
+        />
+      )}
+
       {/* ---- STREAM tabs: contacts + the stream body + that stream's notes ---- */}
-      {activeTab !== 'overview' && (
+      {activeTab !== 'overview' && activeTab !== 'selections' && (
         <>
           <ContactLinks stream={activeTab} p={p} ps={ps} />
 
