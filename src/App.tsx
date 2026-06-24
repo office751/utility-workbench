@@ -409,6 +409,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
             templates={state.templates}
             modelTakeoffs={state.modelTakeoffs}
             modelOrderLists={state.modelOrderLists}
+            selectionsCatalog={state.selectionsCatalog}
             initialStream={openStream}
             toggleStep={toggleStep}
             setStepNote={setStepNote}

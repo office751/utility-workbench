@@ -12,7 +12,7 @@
  * stay hidden until you open settings.
  */
 import { useEffect, useState } from 'react'
-import type { OrderItem, OrderStatus, Project, ProjectState, SelectionChoice, Stream, Task } from '../types'
+import type { OrderItem, OrderStatus, Project, ProjectState, SelectionChoice, SelectionsCatalog, Stream, Task } from '../types'
 import {
   type StepDef,
   electricSteps,
@@ -108,6 +108,8 @@ interface Props extends Updaters {
   /** Per-model takeoff status + order lists (⚙️ Settings → Takeoffs). */
   modelTakeoffs?: import('../types').WorkbenchState['modelTakeoffs']
   modelOrderLists?: import('../types').WorkbenchState['modelOrderLists']
+  /** Owner-editable Selections catalog (Settings → Selections setup). */
+  selectionsCatalog?: SelectionsCatalog
   /** Stream tab to open on (from a Today/Tasks deep-link). Default: Overview. */
   initialStream?: Stream
   onBack: () => void
@@ -349,6 +351,7 @@ function Detail(props: Props) {
           setAdditionalRequests={props.setAdditionalRequests}
           lockSelections={props.lockSelections}
           unlockSelections={props.unlockSelections}
+          catalog={props.selectionsCatalog}
         />
       )}
 

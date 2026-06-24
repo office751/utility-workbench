@@ -16,29 +16,17 @@
  * project's selections. Rename a LABEL freely, but DON'T change an `id` once
  * clients have saved choices under it, or those saved choices orphan.
  */
-import type { ProjectSelections } from '../types'
+import type {
+  ModelSelectionTweaks,
+  ProjectSelections,
+  SelectionCategory,
+  SelectionSection,
+  SelectionsCatalog,
+} from '../types'
 
-/** One selectable category: a label, the common options, and an optional
- *  placeholder that hints what to type in the write-in box. An empty
- *  `options` list means "write-in only" (no dropdown) — for things that are
- *  always custom, like the exact tile or paint color. */
-export interface SelectionCategory {
-  id: string
-  label: string
-  options: string[]
-  /** Placeholder for the write-in box (e.g. "Brand, color, size"). */
-  hint?: string
-}
-
-/** A section of the form (Interior / Exterior) — id is used as the storage key
- *  on ProjectSelections, label is what the tab shows, icon is a Material
- *  Symbols name for the section heading. */
-export interface SelectionSection {
-  id: 'interior' | 'exterior'
-  label: string
-  icon: string
-  categories: SelectionCategory[]
-}
+// The catalog/section/category types now live in types.ts (so WorkbenchState can
+// reference them). Re-export for convenience — existing imports keep working.
+export type { SelectionCategory, SelectionSection } from '../types'
 
 /* ------------------------------------------------------------------ */
 /* INTERIOR — mirrors Section 1 of the printed form                    */
@@ -127,4 +115,37 @@ export const SELECTION_SECTIONS: SelectionSection[] = [
  *  have selections yet (the hundreds of houses saved before this feature). */
 export function defaultSelections(): ProjectSelections {
   return { interior: {}, exterior: {} }
+}
+
+/** A fresh copy of the default catalog (deep-cloned so edits never mutate the
+ *  module constant). Seeded into the cloud blob on first run; after that the
+ *  blob owns it (edited in Settings → Selections setup). */
+export function defaultCatalog(): SelectionsCatalog {
+  return {
+    sections: JSON.parse(JSON.stringify(SELECTION_SECTIONS)) as SelectionSection[],
+    perModel: {},
+  }
+}
+
+/**
+ * The EFFECTIVE sections for one project's model — what the Selections tab and
+ * the export actually render. Drops globally-hidden and per-model-hidden
+ * categories, and swaps in any per-model option-list overrides.
+ */
+export function resolveSelectionSections(
+  catalog: SelectionsCatalog | undefined,
+  modelK: string,
+): SelectionSection[] {
+  const cat = catalog ?? defaultCatalog()
+  const tweaks: ModelSelectionTweaks | undefined = cat.perModel?.[modelK]
+  const hidden = new Set(tweaks?.hidden ?? [])
+  return cat.sections.map((sec) => ({
+    ...sec,
+    categories: sec.categories
+      .filter((c) => !c.hidden && !hidden.has(c.id))
+      .map((c) => {
+        const ov = tweaks?.options?.[c.id]
+        return ov && ov.length ? { ...c, options: ov } : c
+      }),
+  }))
 }

@@ -181,6 +181,53 @@ export interface ProjectSelections {
 }
 
 /**
+ * THE SELECTIONS CATALOG (what choices exist) — distinct from a project's
+ * chosen values above. This is owner-editable in Settings and stored in the
+ * cloud blob (WorkbenchState.selectionsCatalog), seeded from the code defaults
+ * in data/selections.ts on first run.
+ */
+
+/** One selectable category. `id` is the STABLE storage key for saved choices —
+ *  rename the label freely, but don't change an id once choices are saved. */
+export interface SelectionCategory {
+  id: string
+  label: string
+  options: string[]
+  /** Placeholder for the write-in box (e.g. "Brand, color, size"). */
+  hint?: string
+  /** A direct "browse options online" link; overrides the vendor's website. */
+  url?: string
+  /** A finish-vendor id (data/vendors.ts) whose website is the default link. */
+  vendorId?: string
+  /** Hidden everywhere (kept for history; not shown on the tab or required). */
+  hidden?: boolean
+}
+
+/** A section of the catalog (Interior / Exterior). */
+export interface SelectionSection {
+  id: 'interior' | 'exterior'
+  label: string
+  icon: string
+  categories: SelectionCategory[]
+}
+
+/** Per-model tweaks to the shared catalog (the "per-model" part of
+ *  shared-base-plus-tweaks). */
+export interface ModelSelectionTweaks {
+  /** Category ids hidden for this model. */
+  hidden?: string[]
+  /** Per-category option-list overrides for this model (replaces the base list). */
+  options?: Record<string, string[]>
+}
+
+/** The whole owner-editable catalog: a shared base + per-model tweaks. */
+export interface SelectionsCatalog {
+  sections: SelectionSection[]
+  /** Per-model tweaks, keyed by model key (data/models.ts modelKey). */
+  perModel?: Record<string, ModelSelectionTweaks>
+}
+
+/**
  * Everything that CHANGES for one project — this is what localStorage holds.
  * Fields marked `?` are optional overrides: e.g. if `electricCo` is set here,
  * it wins over the roster value (you verified/changed the utility).
@@ -326,6 +373,12 @@ export interface WorkbenchState {
    * ones like the load form), keyed by template id — editable in ⚙️ Settings.
    */
   templates?: Record<string, TemplateOverride>
+  /**
+   * The owner-editable Selections catalog (what finish choices exist), with
+   * per-model tweaks. Seeded from data/selections.ts defaults on first run;
+   * after that the blob owns it (edited in Settings → Selections setup).
+   */
+  selectionsCatalog?: SelectionsCatalog
   /**
    * Which takeoffs have been GATHERED per house model (truss engineering,
    * framing package, …), keyed by model key → takeoff id. A model missing

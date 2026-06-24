@@ -22,6 +22,7 @@ import type {
   Project,
   ProjectState,
   SelectionChoice,
+  SelectionsCatalog,
   StepState,
   Stream,
   Task,
@@ -29,7 +30,7 @@ import type {
   WorkbenchState,
 } from '../types'
 import { buildInitialState, emptyProjectState, inferPermitSteps, seedStateFor } from '../data/seed'
-import { defaultSelections } from '../data/selections'
+import { defaultCatalog, defaultSelections } from '../data/selections'
 import { ESTABLISHED_MODELS, TAKEOFF_TYPES } from '../data/takeoffs'
 import { PROJECTS } from '../data/projects'
 import { supabase } from '../lib/supabase'
@@ -159,6 +160,9 @@ function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
     extrasSeeded: parsed.extrasSeeded === true,
     inspectionsMigrated: parsed.inspectionsMigrated === true,
     templates: parsed.templates ?? {},
+    // Seed the Selections catalog from code defaults on first run; after that
+    // the saved blob owns it (editable in Settings → Selections setup).
+    selectionsCatalog: parsed.selectionsCatalog ?? defaultCatalog(),
     modelTakeoffs,
     modelOrderLists: parsed.modelOrderLists ?? {},
     // Model library: seed once with what we know (E2 is master-filed); after
@@ -833,6 +837,12 @@ export function useProjects() {
     setState((prev) => ({ ...prev, assignees: names }))
   }
 
+  /** Replace the whole Selections catalog (Settings → Selections setup). The
+   *  editor holds a working copy and saves it here in one shot. */
+  function setSelectionsCatalog(catalog: SelectionsCatalog) {
+    setState((prev) => ({ ...prev, selectionsCatalog: catalog }))
+  }
+
   /** Dismiss a permit portal notification — kept in history, just marked read. */
   function dismissNotification(id: number, sourceKey: string) {
     const ps = getProjectState(id)
@@ -905,6 +915,7 @@ export function useProjects() {
     dismissNotification,
     setTemplate,
     setAssignees,
+    setSelectionsCatalog,
     setModelTakeoff,
     setModelOrderList,
     addModelFiles,

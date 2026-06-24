@@ -12,10 +12,11 @@
  * data/selections.ts, so adding a choice is a config edit, not a code change.
  */
 import { useState } from 'react'
-import type { Project, ProjectState, SelectionChoice } from '../types'
-import { SELECTION_SECTIONS, defaultSelections } from '../data/selections'
+import type { Project, ProjectState, SelectionCategory, SelectionChoice, SelectionsCatalog } from '../types'
+import { defaultSelections, resolveSelectionSections } from '../data/selections'
 import { buildSelectionsReport, openSelectionsPrint, selectionsMailto } from '../lib/selectionsReport'
-import { finishVendors } from '../data/vendors'
+import { VENDORS, finishVendors } from '../data/vendors'
+import { modelKey } from '../data/models'
 import { OFFICE_CC } from '../data/contacts'
 import Icon from './Icon'
 
@@ -31,6 +32,18 @@ interface Props {
   setAdditionalRequests: (id: number, text: string) => void
   lockSelections: (id: number, signature: string, printedName: string) => void
   unlockSelections: (id: number) => void
+  /** The owner-editable catalog (Settings → Selections setup). Resolved per
+   *  model here; falls back to code defaults when absent. */
+  catalog?: SelectionsCatalog
+}
+
+/** The client's "browse options online" link for a category: its own url wins,
+ *  else the linked vendor's website (data/vendors.ts), else none. */
+function browseUrl(cat: SelectionCategory): string | undefined {
+  const direct = cat.url?.trim()
+  if (direct) return direct
+  if (cat.vendorId) return VENDORS.find((v) => v.id === cat.vendorId)?.website || undefined
+  return undefined
 }
 
 /** Format an ISO timestamp as a friendly local date+time, blank-safe. */
@@ -47,10 +60,13 @@ function SelectionsView({
   setAdditionalRequests,
   lockSelections,
   unlockSelections,
+  catalog,
 }: Props) {
   const sel = ps.selections ?? defaultSelections()
   const locked = sel.lock?.locked ?? false
-  const report = buildSelectionsReport(p, ps)
+  // The effective catalog for THIS house's model (per-model hides/overrides).
+  const sections = resolveSelectionSections(catalog, modelKey(p.model))
+  const report = buildSelectionsReport(p, ps, sections)
 
   // Local inputs for the sign-off line (only used while unlocked).
   const [sig, setSig] = useState('')
@@ -168,7 +184,7 @@ function SelectionsView({
         )}
       </div>
 
-      {SELECTION_SECTIONS.map((section) => (
+      {sections.map((section) => (
         <div className="sel-section" key={section.id}>
           <h3 className="sel-section-title">
             <Icon name={section.icon} size={18} color="var(--rust)" />
@@ -180,9 +196,20 @@ function SelectionsView({
               const fieldId = `sel-${section.id}-${cat.id}`
               return (
                 <div className="sel-row" key={cat.id}>
-                  <label className="sel-label" htmlFor={fieldId}>
-                    {cat.label}
-                  </label>
+                  <div className="sel-label">
+                    <label htmlFor={fieldId}>{cat.label}</label>
+                    {browseUrl(cat) && (
+                      <a
+                        className="sel-browse"
+                        href={browseUrl(cat)}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Browse options online"
+                      >
+                        Browse ↗
+                      </a>
+                    )}
+                  </div>
                   <div className="sel-controls">
                     {cat.options.length > 0 && (
                       <select

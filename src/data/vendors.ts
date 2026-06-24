@@ -27,6 +27,10 @@ export interface Vendor {
   phone?: string
   /** First name for the greeting ("Hi Tina,") — falls back to the company name. */
   contact?: string
+  /** Public catalog / showroom URL. When a Selections category points at this
+   *  vendor (category.vendorId), this becomes the client's default "Browse
+   *  options" link — unless the category sets its own url, which wins. */
+  website?: string
   icon: string
   supplies: string // shown in the button's tooltip
   /** Order categories (see data/orders.ts) this vendor covers. Used to list the
