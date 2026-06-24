@@ -103,18 +103,28 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
  *  before window.open) or the pop-up gets blocked. */
 export function openSelectionsPrint(report: SelectionsReport, p: Project) {
   const today = new Date().toLocaleDateString()
+  // The print window is about:blank, so root-relative URLs won't resolve —
+  // use an absolute URL to the public/ logo asset (served at the app origin).
+  const logoUrl = `${window.location.origin}/iron-shield-logo.png`
   const html = `<!doctype html>
 <html><head><meta charset="utf-8"><title>${esc(report.subject)}</title>
 <style>
   body { font: 13px/1.5 -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; color: #222; margin: 32px; }
+  .hdr { display: flex; align-items: center; gap: 14px; margin: 0 0 18px; }
+  .logo { height: 54px; width: auto; }
   h1 { font-size: 17px; margin: 0 0 2px; color: #b3541e; }
-  .sub { color: #666; font-size: 11.5px; margin: 0 0 18px; }
+  .sub { color: #666; font-size: 11.5px; margin: 0; }
   pre { font: inherit; white-space: pre-wrap; margin: 0; }
   @page { margin: 14mm; }
   @media print { body { margin: 0; } }
 </style></head><body>
-<h1>Iron Shield Construction — Client Selections</h1>
-<div class="sub">${esc(p.address)}, ${esc(p.city)}, FL ${esc(p.zip)} · ${esc(today)}</div>
+<div class="hdr">
+  <img class="logo" src="${esc(logoUrl)}" alt="" onerror="this.style.display='none'">
+  <div>
+    <h1>Iron Shield Construction — Client Selections</h1>
+    <div class="sub">${esc(p.address)}, ${esc(p.city)}, FL ${esc(p.zip)} · ${esc(today)}</div>
+  </div>
+</div>
 <pre>${esc(report.body)}</pre>
 <script>window.onload = () => setTimeout(() => window.print(), 150)</script>
 </body></html>`
