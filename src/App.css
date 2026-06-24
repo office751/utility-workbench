@@ -2114,6 +2114,40 @@ button.danger:hover {
 .trow-assign.unassigned { color: var(--ink-3); border-style: dashed; }
 .trow-assign:focus { outline: none; border-color: var(--accent); }
 
+/* ⚙️ Settings → Team editor (the assignable-names list) */
+.tpl-section-h { margin-top: 28px; }
+.team-names { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+.team-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-sm);
+  background: var(--surface-2, var(--surface));
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 6px 3px 11px;
+}
+.team-x {
+  border: none;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 2px;
+  border-radius: 50%;
+}
+.team-x:hover { color: var(--danger); }
+.team-add { display: flex; gap: 8px; align-items: center; max-width: 360px; }
+.team-add input {
+  flex: 1;
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: var(--text-base);
+}
+.team-add input:focus { outline: none; border-color: var(--accent); }
+
 /* task rows */
 .task-list { display: flex; flex-direction: column; }
 .task-row {

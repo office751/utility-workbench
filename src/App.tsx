@@ -38,7 +38,6 @@ import AddProject from './components/AddProject'
 import InvestorInbox from './components/InvestorInbox'
 import { publishInvestorSnapshots } from './lib/investorPublish'
 import { ROLES, type AppRole } from './data/roles'
-import { listAppUsers } from './lib/admin'
 import PeopleView from './components/PeopleView'
 import VendorsView from './components/VendorsView'
 import GuideView from './components/GuideView'
@@ -116,6 +115,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
     resetStepList,
     updateProjectFacts,
     setTemplate,
+    setAssignees,
     replaceState,
     saveState,
     saveNow,
@@ -129,21 +129,6 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
   const { theme, toggle: toggleTheme } = useTheme()
   // Compact/comfortable spacing (same pattern as dark mode).
   const { density, toggle: toggleDensity } = useDensity()
-
-  // The internal team's names, for the task "assign to" picker. Admins can read
-  // app_users; non-admins get [] back (RLS) and the Tasks view falls back to
-  // you + whoever's already on a task. Investors are filtered out (not operators).
-  const [people, setPeople] = useState<string[]>([])
-  useEffect(() => {
-    let alive = true
-    listAppUsers().then((rows) => {
-      if (!alive) return
-      setPeople(rows.filter((r) => r.role !== 'investor').map((r) => r.display_name).filter(Boolean))
-    })
-    return () => {
-      alive = false
-    }
-  }, [])
 
   // Shared UI state, lifted up to App:
   const [tab, setTab] = useState<View>('today') // default = the command center
@@ -337,7 +322,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
       )}
 
       {tab === 'tasks' && (
-        <TasksView tasks={state.tasks} addTask={addTask} updateTask={updateTask} removeTask={removeTask} me={me} people={people} />
+        <TasksView tasks={state.tasks} addTask={addTask} updateTask={updateTask} removeTask={removeTask} me={me} assignees={state.assignees ?? []} />
       )}
 
       {tab === 'models' && (
@@ -371,6 +356,8 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
         <TemplatesView
           templates={state.templates}
           setTemplate={setTemplate}
+          assignees={state.assignees ?? []}
+          setAssignees={setAssignees}
           sampleProject={projects.find((p) => p.listStatus !== 'CO') ?? projects[0]}
           getProjectState={getProjectState}
         />

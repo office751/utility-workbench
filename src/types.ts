@@ -303,6 +303,13 @@ export interface WorkbenchState {
    * import cycle).
    */
   stepOverrides?: Record<string, { id: string; label: string; wmOnly?: boolean }[]>
+  /**
+   * The team's names you can assign tasks to — edited in ⚙️ Settings, feeds the
+   * "Assign to" dropdown on the Tasks tab. Just labels (matched to a person by
+   * name); a name need not have a login. Your greeting + "my queue" still come
+   * from your login's display_name (set in 👥 People), not from this list.
+   */
+  assignees?: string[]
 }
 
 /** One model's library page: its plan files + editable facts. */

@@ -741,6 +741,11 @@ export function useProjects() {
     })
   }
 
+  /** Replace the editable team list (names you can assign tasks to). */
+  function setAssignees(names: string[]) {
+    setState((prev) => ({ ...prev, assignees: names }))
+  }
+
   /** Dismiss a permit portal notification — kept in history, just marked read. */
   function dismissNotification(id: number, sourceKey: string) {
     const ps = getProjectState(id)
@@ -812,6 +817,7 @@ export function useProjects() {
     removeProjectFile,
     dismissNotification,
     setTemplate,
+    setAssignees,
     setModelTakeoff,
     setModelOrderList,
     addModelFiles,

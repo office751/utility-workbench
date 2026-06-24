@@ -22,9 +22,65 @@ import { projectStatusVars } from '../lib/statusReport'
 interface Props {
   templates: Record<string, TemplateOverride> | undefined
   setTemplate: (id: string, patch: Partial<TemplateOverride> | null) => void
+  /** The editable team list — names you can assign tasks to (Tasks tab dropdown). */
+  assignees: string[]
+  setAssignees: (names: string[]) => void
   /** A real project to feed the live preview. */
   sampleProject?: Project
   getProjectState: (id: number) => ProjectState
+}
+
+/**
+ * TeamEditor — manage the names you can assign tasks to. Just labels stored in
+ * the blob (WorkbenchState.assignees); they fill the "Assign to" dropdown on the
+ * Tasks tab. Add yourself, Carey, anyone — a name doesn't need a login.
+ */
+function TeamEditor({ assignees, setAssignees }: { assignees: string[]; setAssignees: (n: string[]) => void }) {
+  const [name, setName] = useState('')
+  function add() {
+    const n = name.trim()
+    if (!n) return
+    // Case-insensitive de-dupe so "Carey" and "carey" don't both land.
+    if (assignees.some((a) => a.toLowerCase() === n.toLowerCase())) {
+      setName('')
+      return
+    }
+    setAssignees([...assignees, n])
+    setName('')
+  }
+  return (
+    <div className="tpl-group">
+      <h3>Team — who you can assign tasks to</h3>
+      <p className="muted">
+        These names fill the <b>Assign to</b> dropdown on the ✓ Tasks tab. Add yourself, Carey, anyone — a name
+        doesn't need a login. (Your greeting and "my queue" come from your own login name — set that in 👥 People.)
+      </p>
+      <div className="team-names">
+        {assignees.length === 0 && <span className="muted">No names yet — add one below.</span>}
+        {assignees.map((n) => (
+          <span key={n} className="team-chip">
+            {n}
+            <button className="team-x" title={`Remove ${n}`} onClick={() => setAssignees(assignees.filter((a) => a !== n))}>
+              ✕
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="team-add">
+        <input
+          value={name}
+          placeholder="Add a name (e.g. Carey)"
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') add()
+          }}
+        />
+        <button className="mini" onClick={add} disabled={!name.trim()}>
+          ＋ Add
+        </button>
+      </div>
+    </div>
+  )
 }
 
 /** Preview variables for a template, using a real project when we have one. */
@@ -197,13 +253,18 @@ function TemplateCard({
   )
 }
 
-function TemplatesView({ templates, setTemplate, sampleProject, getProjectState }: Props) {
+function TemplatesView({ templates, setTemplate, assignees, setAssignees, sampleProject, getProjectState }: Props) {
   const specs = templateSpecs()
   const groups = [...new Set(specs.map((s) => s.group))]
 
   return (
     <section className="templates-view">
-      <h2>🛠 Templates</h2>
+      <h2>🛠 Settings</h2>
+
+      {/* Team / assignees — feeds the Tasks "Assign to" dropdown. */}
+      <TeamEditor assignees={assignees} setAssignees={setAssignees} />
+
+      <h3 className="tpl-section-h">Templates</h3>
       <p className="muted">
         The wording behind every automated workflow — edit it here once and every button that uses it
         updates everywhere. Use the <code>{'{{placeholders}}'}</code> shown under each editor; they fill in

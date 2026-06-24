@@ -89,7 +89,7 @@ function TaskRow({
   )
 }
 
-function TasksView({ tasks, addTask, updateTask, removeTask, me = '', people = [] }: Props) {
+function TasksView({ tasks, addTask, updateTask, removeTask, me = '', assignees = [] }: Props) {
   // Capture-form state (local to this view).
   const [text, setText] = useState('')
   const [category, setCategory] = useState('it')
@@ -157,7 +157,7 @@ function TasksView({ tasks, addTask, updateTask, removeTask, me = '', people = [
   const assigneeOptions: string[] = (() => {
     const seen = new Set<string>()
     const out: string[] = []
-    for (const n of [me, ...people, ...assigneesInUse(tasks)]) {
+    for (const n of [me, ...assignees, ...assigneesInUse(tasks)]) {
       const name = (n ?? '').trim()
       if (name && !seen.has(name.toLowerCase())) {
         seen.add(name.toLowerCase())
@@ -384,8 +384,8 @@ interface Props {
   removeTask: (id: string) => void
   /** The signed-in person's name — default-filters to "My queue" and marks "(me)". */
   me?: string
-  /** The internal team's names (admins fetch app_users; others fall back to names in use). */
-  people?: string[]
+  /** The editable team list (⚙️ Settings) — names offered in the "Assign to" dropdown. */
+  assignees?: string[]
 }
 
 export default TasksView
