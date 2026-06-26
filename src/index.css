@@ -61,8 +61,12 @@
   --text-md: 16px;  --text-lg: 18px; --text-xl: 20px; --text-2xl: 24px;
   --weight-normal: 400; --weight-semibold: 600; --weight-bold: 700;
   --lh-tight: 1; --lh-normal: 1.5; --ls-label: 0.04em;
-  --font-sans: 'Schibsted Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-display: 'Bodoni Moda', Georgia, 'Times New Roman', serif; /* greeting/brand */
+  /* Whole-site font is Times New Roman (a system font — no web-font download).
+     Both roles point at it: --font-sans = all body/UI text, --font-display =
+     titles. Titles stay a separate variable so their always-bold rule still has
+     a single home; see the weight: 700 declarations on the *-title classes. */
+  --font-sans: 'Times New Roman', Times, Georgia, serif;
+  --font-display: 'Times New Roman', Times, Georgia, serif; /* titles — always bold */
   --font-mono: ui-monospace, Menlo, Consolas, monospace;
 
   /* Spacing scale (px) + role aliases (compact density reassigns the roles). */

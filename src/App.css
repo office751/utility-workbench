@@ -3996,7 +3996,7 @@ a.map-btn {
   gap: 8px;
   font-family: var(--font-display);
   font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
+  font-weight: var(--weight-bold); /* titles are bold site-wide */
   color: var(--ink);
   margin: 0 0 10px;
   padding-bottom: 6px;
@@ -4133,7 +4133,7 @@ a.map-btn {
 .selcat-saved { font-size: var(--text-sm); color: var(--success); font-weight: var(--weight-semibold); }
 .selcat-modehint { margin: 0 0 10px; }
 .selcat-section { margin-top: 14px; }
-.selcat-sec-title { display: flex; align-items: center; gap: 8px; font-family: var(--font-display); font-size: var(--text-md); color: var(--ink); margin: 0 0 8px; }
+.selcat-sec-title { display: flex; align-items: center; gap: 8px; font-family: var(--font-display); font-size: var(--text-md); font-weight: var(--weight-bold); color: var(--ink); margin: 0 0 8px; }
 .selcat-cat { border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--panel); padding: 10px; margin-bottom: 8px; }
 .selcat-cat.is-hidden { opacity: 0.6; }
 .selcat-cat-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
