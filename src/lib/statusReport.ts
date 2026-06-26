@@ -153,8 +153,8 @@ export function openStatusPrint(report: StatusReport) {
   const html = `<!doctype html>
 <html><head><meta charset="utf-8"><title>${esc(report.subject)}</title>
 <style>
-  body { font: 13px/1.5 -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; color: #222; margin: 32px; }
-  h1 { font-size: 17px; margin: 0 0 2px; color: #b3541e; }
+  body { font: 13px/1.5 'Times New Roman', Times, Georgia, serif; color: #222; margin: 32px; }
+  h1 { font-size: 17px; font-weight: 700; margin: 0 0 2px; color: #b3541e; }
   .sub { color: #666; font-size: 11.5px; margin: 0 0 18px; }
   pre { font: inherit; white-space: pre-wrap; margin: 0; }
   @page { margin: 14mm; }

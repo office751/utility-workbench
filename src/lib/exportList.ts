@@ -140,8 +140,8 @@ export function openPrintView(
 <html><head><meta charset="utf-8"><title>Iron Shield — Project List</title>
 <style>
   * { box-sizing: border-box; }
-  body { font: 12px/1.45 -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; color: #222; margin: 28px; }
-  h1 { font-size: 17px; margin: 0; }
+  body { font: 12px/1.45 'Times New Roman', Times, Georgia, serif; color: #222; margin: 28px; }
+  h1 { font-size: 17px; font-weight: 700; margin: 0; }
   .sub { color: #666; font-size: 11.5px; margin: 3px 0 14px; }
   table { width: 100%; border-collapse: collapse; }
   th { text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em;
