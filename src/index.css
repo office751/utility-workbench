@@ -56,9 +56,15 @@
   --shadow-md: 0 6px 20px rgba(40, 30, 20, 0.10);
   --shadow-lg: 0 14px 44px rgba(40, 30, 20, 0.13);
 
-  /* Type scale (px). One title size, one body size, etc. */
-  --text-2xs: 10px; --text-xs: 11px; --text-sm: 13px; --text-base: 14px;
-  --text-md: 16px;  --text-lg: 18px; --text-xl: 20px; --text-2xl: 24px;
+  /* Font-size knob — multiplies EVERY font-size on the site: the type tokens
+     below, the hardcoded px sizes in App.css, and the Material Symbols icons.
+     Bump this ONE number to scale all of the UI's text up/down. 1 = original
+     sizes; 1.15 = 15% larger everywhere. */
+  --font-scale: 1.15;
+
+  /* Type scale (base px, each ×--font-scale). One title size, one body size. */
+  --text-2xs: calc(10px * var(--font-scale)); --text-xs: calc(11px * var(--font-scale)); --text-sm: calc(13px * var(--font-scale)); --text-base: calc(14px * var(--font-scale));
+  --text-md: calc(16px * var(--font-scale));  --text-lg: calc(18px * var(--font-scale)); --text-xl: calc(20px * var(--font-scale)); --text-2xl: calc(24px * var(--font-scale));
   --weight-normal: 400; --weight-semibold: 600; --weight-bold: 700;
   --lh-tight: 1; --lh-normal: 1.5; --ls-label: 0.04em;
   /* Whole-site font is Times New Roman (a system font — no web-font download).
@@ -78,7 +84,7 @@
   /* Radii + touch/responsive floors. */
   --radius-sm: 6px; --radius: 8px; --radius-md: 10px; --radius-lg: 12px; --radius-xl: 16px; --radius-pill: 999px;
   --tap-min: 44px;   /* min touch target on phones */
-  --fs-input: 16px;  /* min input font on touch — stops iOS focus-zoom */
+  --fs-input: calc(16px * var(--font-scale));  /* min input font on touch — stops iOS focus-zoom */
   --bp-sm: 640px;    /* phone breakpoint (documented; media queries use the px) */
 
   /* ── CLAUDE DESIGN aliases ────────────────────────────────────────────────
@@ -147,7 +153,7 @@
 body {
   margin: 0;
   font-family: var(--font-sans);
-  font-size: 16px;
+  font-size: calc(16px * var(--font-scale));
   line-height: 1.5;
   color: var(--text);
   background: var(--bg);

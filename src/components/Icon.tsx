@@ -42,7 +42,7 @@ function Icon({ name, size = 20, fill = false, weight = 400, color = 'currentCol
         fontFeatureSettings: "'liga'",
         WebkitFontFeatureSettings: "'liga'",
         fontVariationSettings: `'FILL' ${fill ? 1 : 0}, 'wght' ${weight}, 'opsz' ${size}`,
-        fontSize: typeof size === 'number' ? `${size}px` : size,
+        fontSize: typeof size === 'number' ? `calc(${size}px * var(--font-scale))` : size,
         lineHeight: 1,
         color,
         display: 'inline-flex',
