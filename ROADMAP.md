@@ -7,18 +7,39 @@ this file is the to-do list, the code is the truth.
 > Tip: in a future session, just say "let's do the next roadmap item"
 > (or name one) and Claude Code will pick it up from here.
 
-## UI / mobile audit follow-ups *(audited June 27 2026)*
+## Audit pass follow-ups *(4-audit review, June 27 2026)*
 
-A full UI + functionality audit ran June 27. **Shipped & deployed** in three
-passes: the Materials order-row redesign (the overflow/overlap bug), a CRITICAL
-`migrate()` data-loss fix (it was dropping the Settings→Team `assignees` list on
-every sync), `--ink-3` + nav-tab contrast to AA, the whole mobile-structure pass
-(header, project list, Batch Apply, Share/More pop-ups, People invite, Status
-Report all now stack on phones), `actionCenter` step-key fixes (Sewer lots'
-next move now reaches Today; dead `wpermit` key removed), aria-labels on icon-only
-controls, and the status-dropdown affordance. These are **done** — list below is
-only the remaining **low / polish** tail.
+A full review ran June 27 across **UI/mobile, security, data-integrity, and
+usability/flow/perf** — all shipped & deployed. Highlights: Materials order-row
+redesign + the whole mobile-structure pass; a CRITICAL `migrate()` data-loss fix
+(was dropping the Team `assignees` list every sync) + first Vitest suite incl. a
+migrate round-trip guard; a 3-way concurrent-edit merge (`lib/mergeState.ts`) so
+two operators no longer silently clobber each other; Vendors made owner-editable
+(Settings → Vendor setup); contrast/aria-label a11y; `actionCenter` sewer-key fix;
+and the pre-send confirmation gate (Carey-readiness #5). Memory + commits record
+the details.
 
+**⚠ Needs YOUR action / a decision (can't be done in-app):**
+- [ ] **VERIFY the live RLS** (security audit). Confirm the `workbench` blob is
+      locked to staff. In Supabase SQL editor: `select tablename,policyname,cmd,qual
+      from pg_policies where tablename in ('workbench','objects');` — the workbench
+      policies should use `is_internal()`. (The deployment record says this was
+      applied June 12 + JWT-verified; this is just a belt-and-suspenders check.)
+- [ ] **Apply the backups SQL** — paste `supabase/setup-workbench-backups.sql`
+      into the SQL editor once → automatic every-save blob snapshots (last 100).
+- [ ] **Financials = Decision A→B?** (security HIGH). Internal roles (incl.
+      coworker = Carey) can fetch job-cost fields from the blob via the API even
+      though the UI hides them. If that's not acceptable, move financials to their
+      own RLS table. Decide before/when Carey is in daily.
+
+**Open dev items (I can do these — not yet done):**
+- [ ] **Focus indicator (a11y)** — add a global `:focus-visible` ring; custom
+      buttons/tabs/links have none today (keyboard users can't see focus).
+- [ ] **Code-splitting** — `React.lazy` the rare/heavy screens (Investor portal,
+      Settings editors, Batch Apply, Status Report) to shrink the 655KB upfront
+      bundle; helps first load on phones.
+
+**Low / polish tail:**
 - [ ] **Dark twin + full coverage for status tints** — `.s-toOrder` (#b06b00) is
       light-mode only and only 2 of 4 statuses are tinted (App.css ~1466).
 - [ ] **Materials empty state** — add an "add your first order" call-to-action
@@ -127,18 +148,17 @@ medium ≈ 1–2 sessions.
       for city water/sewer, Georges Plumbing for septic/INRB, which Vicki
       notices matter) so she can't pick wrong.
 
-- [ ] **5. Pre-send confirmation gate on irreversible actions** *(medium —
-      the safety net)*. Every workflow (Batch Apply, Jennifer permit package,
-      vendor orders, meter-notify) ends by firing a real `mailto:` draft with
-      no preview, no second pair of eyes, no undo. Add a one-dialog gate that
-      restates the load-bearing facts before the draft opens — e.g. "Emailing
-      SECO for [address] (subdivision [X]) — right utility? Attach: signed load
-      form + site plan." and for Jennifer "Did you paste the file links over
-      [PASTE HERE]?" and for meter-notify "This email only LISTS the photos —
-      attach them yourself." Also block ✓ Mark applied whenever the row still
-      shows a yellow ⚠ warning (e.g. legal-description-needs-lookup). Turns the
-      guides' buried prose warnings into an in-the-moment checklist exactly
-      where the irreversible action happens.
+- [x] **5. Pre-send confirmation gate on irreversible actions** *(medium —
+      the safety net)* — **DONE June 27 2026** (audit pass 4). `src/lib/confirmSend.ts`
+      shows a one-dialog checklist before the irreversible drafts fire:
+      Batch Apply SECO/Duke ("right utility/office? attach signed load form +
+      site plan"; Duke keeps WO# in subject), Jennifer handoff ("paste the file
+      links over [PASTE HERE]"), meter-notify ("this email only LISTS the photos —
+      attach them yourself"). Plus ✓ Mark applied is now gated behind a confirm
+      when the row still shows a ⚠ warning. DELIBERATELY NOT gated: routine
+      vendor-order emails (fire many times a day; a mis-sent order is easily
+      recovered → a confirm there is friction without safety). Add it later if
+      wanted by wrapping the `.order-send` / vendor-btn sends with `confirmSend`.
 
 Not in this sprint (acknowledged, lower priority): **whole-HOUSE assignment**
 (`ProjectState.assignedTo` so a whole house routes to Carey and the Today
