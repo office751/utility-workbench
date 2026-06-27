@@ -102,7 +102,7 @@ export function selectionsMailto(report: SelectionsReport, to: string[], cc: str
   return `mailto:${toList}?${ccPart}subject=${encodeURIComponent(report.subject)}&body=${encodeURIComponent(report.body)}`
 }
 
-const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 
 /** 🖨 Open a clean, print-ready page of the selections and print it. Mirrors
  *  openStatusPrint — call it SYNCHRONOUSLY from the click handler (no await

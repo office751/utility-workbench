@@ -125,7 +125,7 @@ export async function copyAsText(projects: Project[], getPS: (id: number) => Pro
 }
 
 const esc = (s: string) =>
-  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 
 /** 🖨 Open a clean, print-ready page with just the chosen columns and print it. */
 export function openPrintView(

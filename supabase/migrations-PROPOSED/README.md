@@ -1,20 +1,31 @@
-# PROPOSED migrations — investor portal · ⚠️ NOT YET RUN ANYWHERE
+# PROPOSED migrations — ⚠️ STALE PLANNING ARTIFACT · DO NOT RUN VERBATIM
 
-These are REVIEW FILES for the external-investor feature (first pairing:
-GTA Holdings ↔ #53 24028 SW North Beach Rd). Nothing here has touched any
-database. Do not run against production until:
+These were the original review files for the investor portal. **The live
+database was later configured BY HAND in the Supabase dashboard and has since
+moved to the 5-role model** (admin · business_owner · project_manager ·
+coworker · investor — see `0006_roles_rbac.sql` and the `invite-user` edge
+function, which gates on `role = 'admin'`). So:
 
-1. Adam approves the plan,
-2. they've been exercised against a NON-production Supabase (local
-   `supabase start` — requires Docker Desktop — or a free second Supabase
-   project used as staging),
-3. `0002` is reconciled against the dashboard's ACTUAL current policy names
-   (the existing policies were created by hand in the dashboard and are not
-   in this repo, so the DROP statements use IF EXISTS guesses).
+- These files are **out of date and internally inconsistent** with production:
+  `0001`/`0002` describe a 2-role `owner`/`investor` model where
+  `is_owner()` = `role = 'owner'`. That role no longer exists. **Re-running
+  `0002` verbatim would lock the admin out of the blob.**
+- The repo does NOT contain the actual live policies (they were hand-created).
+  There is no source-of-truth schema dump here.
 
-Run order matters. `0002` (locking the blob + storage down to owners) MUST
-be applied before any investor account is created — until then, ANY
-authenticated user can read the whole workbench blob.
+**Before trusting or touching anything in this folder, confirm the live state:**
+
+```sql
+select tablename, policyname, cmd, qual
+from pg_policies
+where tablename in ('workbench','objects');
+```
+
+The `workbench` policies SHOULD use `is_internal()` (staff-only; investors
+excluded). If they still read `authenticated` / `authed_all`, the blob is NOT
+isolated and any investor/coworker login can read+write everything — fix that
+first. Once confirmed, dump the live schema to a committed file and delete this
+folder so the next person isn't misled.
 
 | file | what |
 |---|---|

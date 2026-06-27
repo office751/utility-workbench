@@ -145,7 +145,7 @@ export function buildStatusReport(
   return { subject, body, fullText, mailto, count: projects.length }
 }
 
-const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 
 /** 🖨 Open a clean, print-ready page of the report and print it. */
 export function openStatusPrint(report: StatusReport) {
