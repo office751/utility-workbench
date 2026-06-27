@@ -36,6 +36,7 @@ import { ESTABLISHED_MODELS, TAKEOFF_TYPES } from '../data/takeoffs'
 import { PROJECTS } from '../data/projects'
 import { supabase } from '../lib/supabase'
 import { deleteProjectFile, uploadModelFile, uploadProjectFile } from '../lib/files'
+import { mergeWorkbench } from '../lib/mergeState'
 
 /** The key our data is filed under in the browser's localStorage. */
 const STORAGE_KEY = 'isc_workbench_v1'
@@ -265,6 +266,12 @@ export function useProjects() {
   // never waits on the network. These two effects layer the cloud on top.
   const cloudReady = useRef(false) // have we reconciled with the cloud yet?
   const skipNextSave = useRef(false) // don't echo a fresh cloud-load back up
+  // For the 3-way concurrent-edit merge: `baseRef` is the last state we synced
+  // FROM (the common ancestor); `dirtyRef` is true while we hold an unsaved
+  // local edit. When a remote write lands while dirty, we merge instead of
+  // clobbering our edit (see the realtime handler + lib/mergeState.ts).
+  const baseRef = useRef<WorkbenchState | null>(null)
+  const dirtyRef = useRef(false)
   // A unique id for THIS browser tab. We stamp every cloud write with it so
   // that when Supabase Realtime echoes our own write back, we recognize and
   // ignore it. (We used to compare JSON strings — but Postgres `jsonb`
@@ -293,8 +300,15 @@ export function useProjects() {
     const { error } = await supabase
       .from('workbench')
       .upsert({ id: 'main', data: { ...stateRef.current, __origin: clientId.current }, updated_at: new Date().toISOString() })
-    setSaveState(error ? 'error' : 'saved')
-    if (error) console.warn('[workbench] cloud save failed', error)
+    if (error) {
+      setSaveState('error')
+      console.warn('[workbench] cloud save failed', error)
+    } else {
+      setSaveState('saved')
+      // What we just saved is now the common ancestor for future 3-way merges.
+      baseRef.current = JSON.parse(JSON.stringify(stateRef.current))
+      dirtyRef.current = false
+    }
   }
 
   /** The header Save button: flush any pending debounced write immediately. */
@@ -331,7 +345,9 @@ export function useProjects() {
           // WANT that written back — so only skip when NO migration applies.
           if (cloudData.extrasSeeded && cloudData.inspectionsMigrated) skipNextSave.current = true
           cloudReady.current = true // ✅ reconciled — saves may now go up
-          setState(migrate(cloudData))
+          const migrated = migrate(cloudData)
+          baseRef.current = migrated // the common ancestor for 3-way merges
+          setState(migrated)
         } else {
           // The row is GENUINELY absent (an authenticated read returned no row),
           // i.e. first-ever run for the org → seed it from this browser. This is
@@ -339,7 +355,10 @@ export function useProjects() {
           await sb
             .from('workbench')
             .upsert({ id: 'main', data: { ...stateRef.current, __origin: clientId.current }, updated_at: new Date().toISOString() })
-          if (!cancelled) cloudReady.current = true
+          if (!cancelled) {
+            cloudReady.current = true
+            baseRef.current = JSON.parse(JSON.stringify(stateRef.current)) // ancestor = what we just seeded
+          }
         }
       } catch (e) {
         // CRITICAL (data-loss guard): a failed/transient reconcile must NOT
@@ -382,6 +401,7 @@ export function useProjects() {
       setSaveState('saved') // we just applied the cloud's own data — already saved
       return
     }
+    dirtyRef.current = true // an unsaved local edit exists — drives merge-on-remote
     setSaveState('dirty') // a change is waiting to go up
     const timer = setTimeout(() => {
       void doSave()
@@ -408,8 +428,21 @@ export function useProjects() {
           const next = (payload.new as { data?: WorkbenchState & { __origin?: string } } | null)?.data
           if (!next) return
           if (next.__origin === clientId.current) return // our own write echoed back — ignore it
-          skipNextSave.current = true // remote change — apply it, don't bounce it back up
-          setState(migrate(next as Partial<WorkbenchState>))
+          const remoteState = migrate(next as Partial<WorkbenchState>)
+          if (dirtyRef.current && baseRef.current) {
+            // We have UNSAVED local edits. Don't clobber them: 3-way merge the
+            // remote write into ours against the last-synced ancestor (edits to
+            // different houses both survive; a same-entity clash converges on the
+            // committed remote). Leave it 'dirty' so the merged union saves up.
+            const merged = mergeWorkbench(baseRef.current, stateRef.current, remoteState)
+            baseRef.current = remoteState // remote is the new common ancestor
+            setState(merged)
+          } else {
+            // Nothing unsaved locally → just adopt the remote state as-is.
+            skipNextSave.current = true // applying remote — don't bounce it back up
+            baseRef.current = remoteState
+            setState(remoteState)
+          }
         },
       )
       .subscribe()
