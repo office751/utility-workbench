@@ -49,6 +49,7 @@ import {
 import { shutoffFor } from '../lib/shutoff'
 import { permitExpiryFor } from '../lib/permitExpiry'
 import { permitHandoffDraft, permitHandoffDraftWithLinks, type HandoffDraft } from '../lib/permitHandoff'
+import { confirmSend } from '../lib/confirmSend'
 import { DUKE_PORTAL_URL, dukeWebPayloadText, dukeWebPayloadTextWithDirections } from '../lib/dukeWebApply'
 import { meterNotifyDraft } from '../lib/loadForm'
 import { getShareUrl } from '../lib/files'
@@ -476,6 +477,13 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField, templ
       setNotifyNote('⚠️ Set the utility (SECO or Duke) first.')
       return
     }
+    if (
+      !confirmSend(`Notify ${draft.to} that ${p.address} is ready for the meter?`, [
+        'This email only LISTS the photos (green tag · downpipe · sweep · straps · clear path).',
+        'You must ATTACH the actual photos yourself before sending.',
+      ])
+    )
+      return
     setNotifying(true)
     setNotifyNote(`Drafting to ${draft.to}…`)
     window.location.href = draft.mailto
@@ -702,6 +710,13 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, u
   const [draftNote, setDraftNote] = useState<string | null>(null)
 
   async function emailJennifer() {
+    if (
+      !confirmSend(`Hand off the permit for ${p.address} to Jennifer?`, [
+        'The draft has a [PASTE HERE] line — paste the file links (copied to your clipboard) over it before sending.',
+        'Job cost + financing are filled in by hand.',
+      ])
+    )
+      return
     setDrafting(true)
     setDraftNote(null)
 

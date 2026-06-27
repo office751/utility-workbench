@@ -12,6 +12,7 @@
 import { useState } from 'react'
 import type { Project, ProjectState, TemplateOverride } from '../types'
 import { needsVerify, utilityOf } from '../lib/nextAction'
+import { confirmSend } from '../lib/confirmSend'
 import { applicationDraft } from '../lib/loadForm'
 import { SECO_BLANK_FORM_URL, fillSecoLoadForm } from '../lib/secoForm'
 import Icon from './Icon'
@@ -110,7 +111,18 @@ function BatchApply({ projects, getProjectState, templates, markApplied, onClose
           const appliedBtn = (
             <button
               className="doc-btn applied"
-              onClick={() => markApplied(p.id)}
+              onClick={() => {
+                // Don't let a row be marked applied while it still shows a ⚠ warning
+                // (e.g. legal-description-needs-lookup) without a deliberate override.
+                if (
+                  d.warnings.length > 0 &&
+                  !window.confirm(
+                    `⚠ ${p.address} still has a warning:\n\n${d.warnings.map((w) => '• ' + w).join('\n')}\n\nMark it applied anyway?`,
+                  )
+                )
+                  return
+                markApplied(p.id)
+              }}
               title="Check this house's 'verified' + 'application submitted' steps"
             >
               ✓ Mark applied
@@ -158,7 +170,20 @@ function BatchApply({ projects, getProjectState, templates, markApplied, onClose
                     <span className="ba-step-label">Step 2</span>
                     {p.workOrder ? (
                       <>
-                        <a className="doc-btn" href={d.mailto} title={`Reply to ${d.to} with the load form (WO#${p.workOrder})`}>
+                        <a
+                          className="doc-btn"
+                          href={d.mailto}
+                          onClick={(e) => {
+                            if (
+                              !confirmSend(`Reply to ${d.to} with the load form for ${p.address}?`, [
+                                `Keep “WO#${p.workOrder}” in the subject.`,
+                                'Attach the completed load form + site plan.',
+                              ])
+                            )
+                              e.preventDefault()
+                          }}
+                          title={`Reply to ${d.to} with the load form (WO#${p.workOrder})`}
+                        >
                           ✉️ Send load form
                         </a>
                         {copyBtn}
@@ -181,7 +206,20 @@ function BatchApply({ projects, getProjectState, templates, markApplied, onClose
               ) : (
                 <div className="ba-actions">
                   {previewBtn}
-                  <a className="doc-btn" href={d.mailto} title={`Draft to ${d.to} (CC office)`}>
+                  <a
+                    className="doc-btn"
+                    href={d.mailto}
+                    onClick={(e) => {
+                      if (
+                        !confirmSend(`Email ${d.to} to apply for ${utility} power at ${p.address}?`, [
+                          'Right utility / office for this subdivision?',
+                          'Attach the signed load form + site plan.',
+                        ])
+                      )
+                        e.preventDefault()
+                    }}
+                    title={`Draft to ${d.to} (CC office)`}
+                  >
                     ✉️ Draft email
                   </a>
                   {secoFormBtn}
