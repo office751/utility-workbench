@@ -13,7 +13,7 @@
  * "LIFTING STATE UP": which project is selected matters across the UI, so it
  * lives here and flows down.
  */
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
 import './App.css'
 import type { Stream } from './types'
 import { useProjects } from './hooks/useProjects'
@@ -25,25 +25,28 @@ import { useTheme } from './hooks/useTheme'
 import { useDensity } from './hooks/useDensity'
 import ProjectList from './components/ProjectList'
 import QuickAdd from './components/QuickAdd'
-import BatchApply from './components/BatchApply'
-import StatusReport from './components/StatusReport'
-import Detail from './components/Detail'
+// Code-splitting: the rare / heavy screens load on demand (their own chunks)
+// instead of bloating the first paint. Today/Tasks/ProjectList stay eager (the
+// landing surfaces). Each lazy() screen renders inside the <Suspense> below.
+const BatchApply = lazy(() => import('./components/BatchApply'))
+const StatusReport = lazy(() => import('./components/StatusReport'))
+const Detail = lazy(() => import('./components/Detail'))
 import Today from './components/Today'
 import TasksView from './components/TasksView'
-import ModelsView from './components/ModelsView'
-import InspectionsView from './components/InspectionsView'
-import TemplatesView from './components/TemplatesView'
-import SelectionsCatalogEditor from './components/SelectionsCatalogEditor'
+const ModelsView = lazy(() => import('./components/ModelsView'))
+const InspectionsView = lazy(() => import('./components/InspectionsView'))
+const TemplatesView = lazy(() => import('./components/TemplatesView'))
+const SelectionsCatalogEditor = lazy(() => import('./components/SelectionsCatalogEditor'))
 import ExportImport from './components/ExportImport'
-import AddProject from './components/AddProject'
+const AddProject = lazy(() => import('./components/AddProject'))
 import InvestorInbox from './components/InvestorInbox'
 import { publishInvestorSnapshots } from './lib/investorPublish'
 import { ROLES, type AppRole } from './data/roles'
-import PeopleView from './components/PeopleView'
-import VendorsView from './components/VendorsView'
-import VendorsEditor from './components/VendorsEditor'
+const PeopleView = lazy(() => import('./components/PeopleView'))
+const VendorsView = lazy(() => import('./components/VendorsView'))
+const VendorsEditor = lazy(() => import('./components/VendorsEditor'))
 import { VENDORS } from './data/vendors'
-import GuideView from './components/GuideView'
+const GuideView = lazy(() => import('./components/GuideView'))
 
 /** A top-level view. 'settings' (🛠), 'people' (👥), 'vendors' (🚚), and 'guide'
  *  (📖) are header buttons, not tabs. */
@@ -319,6 +322,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
         </div>
       </header>
 
+      <Suspense fallback={<div className="lazy-load">Loading…</div>}>
       {tab === 'today' && (
         <>
           {/* Unread investor messages float to the top of the day. */}
@@ -485,6 +489,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
             />
           </div>
         ))}
+      </Suspense>
     </div>
   )
 }

@@ -11,14 +11,16 @@
  * Without a backend (no keys, e.g. a bare local checkout): just run the app
  * — so development never gets locked out.
  */
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { hasSupabase } from './lib/supabase'
 import { useAuth } from './hooks/useAuth'
 import { myRole } from './lib/investor'
 import { normalizeRole, ROLES, type AppRole } from './data/roles'
 import App from './App'
 import Login from './components/Login'
-import InvestorView from './components/InvestorView'
+// Investor portal is its own world, only ever shown to external investor
+// logins — code-split so internal staff never download it.
+const InvestorView = lazy(() => import('./components/InvestorView'))
 import SetPassword from './components/SetPassword'
 
 function Root() {
@@ -65,7 +67,13 @@ function Root() {
   // A 'pending' login (new, or never assigned a role) gets a no-access holding
   // screen that loads ZERO data — until an admin promotes it in 👥 People.
   if (r === 'pending') return <PendingScreen />
-  return ROLES[r].usesInvestorPortal ? <InvestorView /> : <App role={r} me={me} />
+  return ROLES[r].usesInvestorPortal ? (
+    <Suspense fallback={<div className="lazy-load">Loading…</div>}>
+      <InvestorView />
+    </Suspense>
+  ) : (
+    <App role={r} me={me} />
+  )
 }
 
 /** Holding screen for a 'pending' login — created but not yet granted a role.
