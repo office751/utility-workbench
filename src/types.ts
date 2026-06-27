@@ -420,6 +420,13 @@ export interface WorkbenchState {
    * from your login's display_name (set in 👥 People), not from this list.
    */
   assignees?: string[]
+  /**
+   * The owner-editable Vendors directory (suppliers + their order-email info).
+   * Seeded from data/vendors.ts defaults on first run; after that the blob owns
+   * it (edited in 🛠 Settings → Vendor setup). Same pattern as selectionsCatalog.
+   * Typed via an inline import so types.ts stays free of a runtime import cycle.
+   */
+  vendors?: import('./data/vendors').Vendor[]
 }
 
 /** One model's library page: its plan files + editable facts. */

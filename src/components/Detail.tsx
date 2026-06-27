@@ -110,6 +110,8 @@ interface Props extends Updaters {
   modelOrderLists?: import('../types').WorkbenchState['modelOrderLists']
   /** Owner-editable Selections catalog (Settings → Selections setup). */
   selectionsCatalog?: SelectionsCatalog
+  /** Owner-editable vendors directory (Settings → Vendor setup). */
+  vendors: import('../data/vendors').Vendor[]
   /** Stream tab to open on (from a Today/Tasks deep-link). Default: Overview. */
   initialStream?: Stream
   onBack: () => void
@@ -352,6 +354,7 @@ function Detail(props: Props) {
           lockSelections={props.lockSelections}
           unlockSelections={props.unlockSelections}
           catalog={props.selectionsCatalog}
+          vendors={props.vendors}
         />
       )}
 
@@ -371,6 +374,7 @@ function Detail(props: Props) {
               templates={props.templates}
               modelTakeoffs={props.modelTakeoffs}
               modelOrderLists={props.modelOrderLists}
+              vendors={props.vendors}
               addOrder={props.addOrder}
               updateOrder={props.updateOrder}
               removeOrder={props.removeOrder}

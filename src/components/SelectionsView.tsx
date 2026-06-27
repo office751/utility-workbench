@@ -15,7 +15,7 @@ import { useState } from 'react'
 import type { Project, ProjectState, SelectionCategory, SelectionChoice, SelectionsCatalog } from '../types'
 import { defaultSelections, resolveSelectionSections } from '../data/selections'
 import { buildSelectionsReport, openSelectionsPrint, selectionsMailto } from '../lib/selectionsReport'
-import { VENDORS, finishVendors } from '../data/vendors'
+import { finishVendors, type Vendor } from '../data/vendors'
 import { modelKey } from '../data/models'
 import { OFFICE_CC } from '../data/contacts'
 import Icon from './Icon'
@@ -35,14 +35,16 @@ interface Props {
   /** The owner-editable catalog (Settings → Selections setup). Resolved per
    *  model here; falls back to code defaults when absent. */
   catalog?: SelectionsCatalog
+  /** The effective vendors directory — finish-trade recipients + browse links. */
+  vendors: Vendor[]
 }
 
 /** The client's "browse options online" link for a category: its own url wins,
  *  else the linked vendor's website (data/vendors.ts), else none. */
-function browseUrl(cat: SelectionCategory): string | undefined {
+function browseUrl(cat: SelectionCategory, vendors: Vendor[]): string | undefined {
   const direct = cat.url?.trim()
   if (direct) return direct
-  if (cat.vendorId) return VENDORS.find((v) => v.id === cat.vendorId)?.website || undefined
+  if (cat.vendorId) return vendors.find((v) => v.id === cat.vendorId)?.website || undefined
   return undefined
 }
 
@@ -61,6 +63,7 @@ function SelectionsView({
   lockSelections,
   unlockSelections,
   catalog,
+  vendors,
 }: Props) {
   const sel = ps.selections ?? defaultSelections()
   const locked = sel.lock?.locked ?? false
@@ -85,7 +88,7 @@ function SelectionsView({
 
   // Email recipients: the finish-trade vendors (data/vendors.ts). Default-check
   // the ones that have an email on file.
-  const finVendors = finishVendors()
+  const finVendors = finishVendors(vendors)
   const [recipients, setRecipients] = useState<Set<string>>(
     () => new Set(finVendors.filter((v) => v.email).map((v) => v.id)),
   )
@@ -202,10 +205,10 @@ function SelectionsView({
                 <div className="sel-row" key={cat.id}>
                   <div className="sel-label">
                     <label htmlFor={fieldId}>{cat.label}</label>
-                    {browseUrl(cat) && (
+                    {browseUrl(cat, vendors) && (
                       <a
                         className="sel-browse"
-                        href={browseUrl(cat)}
+                        href={browseUrl(cat, vendors)}
                         target="_blank"
                         rel="noreferrer"
                         title="Browse options online"

@@ -17,7 +17,7 @@ import { useState } from 'react'
 import type { SelectionCategory, SelectionsCatalog } from '../types'
 import { defaultCatalog } from '../data/selections'
 import { MODELS_DEFAULT } from '../data/models'
-import { finishVendors } from '../data/vendors'
+import { finishVendors, type Vendor } from '../data/vendors'
 import { uploadSelectionImage } from '../lib/files'
 import Icon from './Icon'
 
@@ -27,9 +27,11 @@ const clone = (c: SelectionsCatalog): SelectionsCatalog => JSON.parse(JSON.strin
 interface Props {
   catalog?: SelectionsCatalog
   onSave: (catalog: SelectionsCatalog) => void
+  /** The effective vendors directory — finish vendors fill the browse-link picker. */
+  vendors: Vendor[]
 }
 
-function SelectionsCatalogEditor({ catalog, onSave }: Props) {
+function SelectionsCatalogEditor({ catalog, onSave, vendors }: Props) {
   const [work, setWork] = useState<SelectionsCatalog>(() => clone(catalog ?? defaultCatalog()))
   const [dirty, setDirty] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -37,7 +39,7 @@ function SelectionsCatalogEditor({ catalog, onSave }: Props) {
   const [photoOpen, setPhotoOpen] = useState<Set<string>>(new Set()) // category ids with the Photos panel expanded
   const [uploading, setUploading] = useState<Set<string>>(new Set()) // "catId::label" rows mid-upload
   const [uploadErr, setUploadErr] = useState<string | null>(null)
-  const vendors = finishVendors()
+  const finVendors = finishVendors(vendors)
   const modelKeys = Object.keys(MODELS_DEFAULT)
 
   /** Apply an immutable edit to the working copy. */
@@ -273,7 +275,7 @@ function SelectionsCatalogEditor({ catalog, onSave }: Props) {
                     onChange={(e) => editCat(sec.id, cat.id, { vendorId: e.target.value || undefined })}
                   >
                     <option value="">No vendor link</option>
-                    {vendors.map((v) => (
+                    {finVendors.map((v) => (
                       <option key={v.id} value={v.id}>
                         {v.name}
                         {v.website ? '' : ' (no website set)'}

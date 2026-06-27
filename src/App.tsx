@@ -41,6 +41,8 @@ import { publishInvestorSnapshots } from './lib/investorPublish'
 import { ROLES, type AppRole } from './data/roles'
 import PeopleView from './components/PeopleView'
 import VendorsView from './components/VendorsView'
+import VendorsEditor from './components/VendorsEditor'
+import { VENDORS } from './data/vendors'
 import GuideView from './components/GuideView'
 
 /** A top-level view. 'settings' (🛠), 'people' (👥), 'vendors' (🚚), and 'guide'
@@ -122,10 +124,15 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
     setTemplate,
     setAssignees,
     setSelectionsCatalog,
+    setVendors,
     replaceState,
     saveState,
     saveNow,
   } = useProjects()
+
+  // Effective vendors directory: the owner-edited list from the blob, or the
+  // code defaults until first save (migrate seeds it; the ?? is defensive).
+  const vendors = state.vendors ?? VENDORS
 
   // Sync the global step-list overrides into the lifecycles resolver BEFORE any
   // child computes a next-action / checklist (pure step getters read this).
@@ -354,7 +361,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
 
       {tab === 'people' && roleCfg.canManageUsers && <PeopleView roster={projects} />}
 
-      {tab === 'vendors' && <VendorsView />}
+      {tab === 'vendors' && <VendorsView vendors={vendors} />}
 
       {tab === 'guide' && <GuideView />}
 
@@ -368,7 +375,8 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
             sampleProject={projects.find((p) => p.listStatus !== 'CO') ?? projects[0]}
             getProjectState={getProjectState}
           />
-          <SelectionsCatalogEditor catalog={state.selectionsCatalog} onSave={setSelectionsCatalog} />
+          <SelectionsCatalogEditor catalog={state.selectionsCatalog} onSave={setSelectionsCatalog} vendors={vendors} />
+          <VendorsEditor vendors={vendors} onSave={setVendors} />
         </>
       )}
 
@@ -415,6 +423,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
             modelTakeoffs={state.modelTakeoffs}
             modelOrderLists={state.modelOrderLists}
             selectionsCatalog={state.selectionsCatalog}
+            vendors={vendors}
             initialStream={openStream}
             toggleStep={toggleStep}
             setStepNote={setStepNote}

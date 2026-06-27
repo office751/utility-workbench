@@ -195,13 +195,14 @@ export function vendorMailto(
  * button (add the category to a vendor in VENDORS above to light it up).
  */
 export function orderMailto(
+  vendors: Vendor[],
   category: string,
   p: Project,
   ps: ProjectState,
   overrides?: Record<string, TemplateOverride>,
   modelLists?: Record<string, string>,
 ): { href: string; vendor: Vendor } | null {
-  const v = VENDORS.find((x) => x.categories?.includes(category))
+  const v = vendors.find((x) => x.categories?.includes(category))
   if (!v) return null
   const t = effectiveTemplate(overrides, `vendor:${v.id}`, {
     subject: v.subjectDefault ?? DEFAULT_VENDOR_SUBJECT,
@@ -232,6 +233,6 @@ export function vendorPlainMailto(v: Vendor): string | null {
  *  recipients for a project's homeowner Selections package. Includes vendors
  *  without an email yet so the Selections tab can show them as "add an
  *  address"; filter on `.email` before actually addressing a draft. */
-export function finishVendors(): Vendor[] {
-  return VENDORS.filter((v) => v.finish)
+export function finishVendors(vendors: Vendor[]): Vendor[] {
+  return vendors.filter((v) => v.finish)
 }

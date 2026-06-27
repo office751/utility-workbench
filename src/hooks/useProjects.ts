@@ -31,6 +31,7 @@ import type {
 } from '../types'
 import { buildInitialState, emptyProjectState, inferPermitSteps, seedStateFor } from '../data/seed'
 import { defaultCatalog, defaultSelections } from '../data/selections'
+import { VENDORS, type Vendor } from '../data/vendors'
 import { ESTABLISHED_MODELS, TAKEOFF_TYPES } from '../data/takeoffs'
 import { PROJECTS } from '../data/projects'
 import { supabase } from '../lib/supabase'
@@ -174,6 +175,9 @@ function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
     // carried through migrate or it gets stripped on every cloud load/realtime
     // sync and written back empty — the blob-clobber failure mode. Array-guarded.
     assignees: Array.isArray(parsed.assignees) ? parsed.assignees : [],
+    // Vendors directory — seed from code defaults on first run, then the blob
+    // owns it (edited in Settings -> Vendor setup). Array-guarded like the rest.
+    vendors: Array.isArray(parsed.vendors) ? parsed.vendors : VENDORS,
   }
 
   // ONE-TIME (June 2026): the scanner used to turn inspection RESULTS into
@@ -847,6 +851,12 @@ export function useProjects() {
     setState((prev) => ({ ...prev, selectionsCatalog: catalog }))
   }
 
+  /** Replace the whole Vendors directory (Settings → Vendor setup). Same
+   *  working-copy-then-save-in-one-shot shape as the Selections catalog. */
+  function setVendors(vendors: Vendor[]) {
+    setState((prev) => ({ ...prev, vendors }))
+  }
+
   /** Dismiss a permit portal notification — kept in history, just marked read. */
   function dismissNotification(id: number, sourceKey: string) {
     const ps = getProjectState(id)
@@ -920,6 +930,7 @@ export function useProjects() {
     setTemplate,
     setAssignees,
     setSelectionsCatalog,
+    setVendors,
     setModelTakeoff,
     setModelOrderList,
     addModelFiles,

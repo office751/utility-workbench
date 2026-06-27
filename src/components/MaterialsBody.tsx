@@ -9,7 +9,7 @@
 import { Fragment, useState } from 'react'
 import type { OrderItem, OrderStatus, Project, ProjectState, TemplateOverride, WorkbenchState } from '../types'
 import { MATERIAL_CATEGORIES, ORDER_STATUSES, SITE_SERVICES } from '../data/orders'
-import { VENDORS, orderMailto, vendorCallHref, vendorMailto } from '../data/vendors'
+import { orderMailto, vendorCallHref, vendorMailto, type Vendor } from '../data/vendors'
 import { modelKey } from '../data/models'
 import { ordersOf } from '../lib/orders'
 import { missingTakeoffs, permitIssued } from '../lib/takeoffs'
@@ -23,6 +23,8 @@ interface Props {
   /** Per-model takeoff status + order lists (⚙️ Settings → Takeoffs). */
   modelTakeoffs?: WorkbenchState['modelTakeoffs']
   modelOrderLists?: WorkbenchState['modelOrderLists']
+  /** The effective vendors directory (owner-editable; from the blob, defaults seeded). */
+  vendors: Vendor[]
   addOrder: (id: number, order: { category: string; status: OrderStatus; orderedOn?: string }) => void
   updateOrder: (id: number, orderId: string, patch: Partial<OrderItem>) => void
   removeOrder: (id: number, orderId: string) => void
@@ -34,7 +36,7 @@ function today(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLists, addOrder, updateOrder, removeOrder }: Props) {
+function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLists, vendors, addOrder, updateOrder, removeOrder }: Props) {
   const orders = ordersOf(ps)
   const [newCategory, setNewCategory] = useState(MATERIAL_CATEGORIES[0])
   const [newDate, setNewDate] = useState(today())
@@ -52,10 +54,10 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
   const coveredVendorIds = new Set(
     orders
       .filter((o) => o.status === 'toOrder')
-      .map((o) => VENDORS.find((v) => v.categories?.includes(o.category))?.id)
+      .map((o) => vendors.find((v) => v.categories?.includes(o.category))?.id)
       .filter(Boolean),
   )
-  const otherVendors = VENDORS.filter((v) => !coveredVendorIds.has(v.id))
+  const otherVendors = vendors.filter((v) => !coveredVendorIds.has(v.id))
 
   return (
     <>
@@ -78,7 +80,7 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
             // Draft the one-click order email up front — only for a to-order row
             // whose category maps to a known vendor — so we can render it on its
             // own full-width line below the controls.
-            const draft = o.status === 'toOrder' ? orderMailto(o.category, p, ps, templates, lists) : null
+            const draft = o.status === 'toOrder' ? orderMailto(vendors, o.category, p, ps, templates, lists) : null
             const who = draft ? draft.vendor.contact || draft.vendor.name : ''
             const call = draft ? vendorCallHref(draft.vendor) : null
             return (
