@@ -115,7 +115,7 @@ function normalize(ps: ProjectState): ProjectState {
  * (Every app that stores data needs a story for "what about data saved by an
  * older version?" — this is ours.)
  */
-function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
+export function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
   const savedRoster = Array.isArray(parsed.roster) ? parsed.roster : PROJECTS
   // FACT CORRECTIONS: the saved roster wins over PROJECTS, so typos found in
   // the original import have to be patched here too (idempotent).
