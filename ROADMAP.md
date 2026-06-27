@@ -32,12 +32,15 @@ the details.
       though the UI hides them. If that's not acceptable, move financials to their
       own RLS table. Decide before/when Carey is in daily.
 
-**Open dev items (I can do these — not yet done):**
-- [ ] **Focus indicator (a11y)** — add a global `:focus-visible` ring; custom
-      buttons/tabs/links have none today (keyboard users can't see focus).
-- [ ] **Code-splitting** — `React.lazy` the rare/heavy screens (Investor portal,
-      Settings editors, Batch Apply, Status Report) to shrink the 655KB upfront
-      bundle; helps first load on phones.
+**Dev items — DONE June 27 2026 (audit pass 4):**
+- [x] **Focus indicator (a11y)** — global `:focus-visible` 2px accent ring on
+      every button/tab/link/nav (was none); inputs keep their border-colour
+      focus. `src/index.css`.
+- [x] **Code-splitting** — `React.lazy` + `<Suspense>` for the rare/heavy screens
+      (Detail, BatchApply, StatusReport, ModelsView, InspectionsView, the Settings
+      editors, PeopleView, VendorsView, GuideView, AddProject) + InvestorView in
+      Root. Main bundle 660KB → 496KB (gzip 190 → 142KB). Today/Tasks/ProjectList
+      stay eager.
 
 **Low / polish tail:**
 - [ ] **Dark twin + full coverage for status tints** — `.s-toOrder` (#b06b00) is
