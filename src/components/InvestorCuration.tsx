@@ -118,6 +118,7 @@ function InvestorCuration({ projectId, refreshKey }: Props) {
                 <button
                   className="doc-btn x"
                   title="Remove this comment"
+                  aria-label="Remove this comment"
                   onClick={async () => {
                     if (!confirm('Remove this comment? The investor will no longer see it.')) return
                     if (await deleteComment(c.id)) setComments(await commentsFor(projectId))

@@ -76,7 +76,7 @@ interface Updaters {
   setField: <K extends keyof ProjectState>(id: number, field: K, value: ProjectState[K]) => void
   addProjectFiles: (id: number, files: File[]) => Promise<{ ok: number; failed: string[] }>
   removeProjectFile: (id: number, index: number) => void
-  addOrder: (id: number, order: { category: string; status: OrderStatus }) => void
+  addOrder: (id: number, order: { category: string; status: OrderStatus; orderedOn?: string }) => void
   updateOrder: (id: number, orderId: string, patch: Partial<OrderItem>) => void
   removeOrder: (id: number, orderId: string) => void
   setSelection: (id: number, area: 'interior' | 'exterior', categoryId: string, choice: SelectionChoice) => void

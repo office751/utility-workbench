@@ -201,7 +201,7 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
                   ✉️ {v.icon} {v.name}
                 </a>
                 {call && (
-                  <a className="vendor-btn" href={call} title={`Call ${v.name} — ${v.phone}`}>
+                  <a className="vendor-btn" href={call} aria-label={`Call ${v.name}`} title={`Call ${v.name} — ${v.phone}`}>
                     📞
                   </a>
                 )}

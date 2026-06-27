@@ -55,8 +55,15 @@ export interface ActionCenter {
  */
 const OUR_COURT: Record<Stream, Set<string>> = {
   electric: new Set(['verify', 'apply', 'addr', 'deposit', 'rough', 'meternotify']),
-  water: new Set(['wsrc', 'cavail', 'capply', 'wpermit']),
-  septic: new Set(['seval', 'sapplied', 'scounty', 'snrb']),
+  // water: set the source, confirm availability, apply, and the main-extension
+  // agreement are ours; the tap/connect/well-drill are the utility/driller.
+  // ('wpermit' was a dead key — no such step — and 'cwmagree' was missing.)
+  water: new Set(['wsrc', 'cavail', 'capply', 'cwmagree']),
+  // septic AND sewer (a Sewer lot resolves to SEWER_STEPS): eval/apply/county/
+  // INRB-notice for septic, and confirm-availability/apply/pay-fees for sewer
+  // are ours; final approval and the physical connection are not. (Sewer keys
+  // were missing entirely, so a Sewer lot's next move never reached Today.)
+  septic: new Set(['seval', 'sapplied', 'scounty', 'snrb', 'sweravail', 'swerapply', 'swertap']),
   permit: new Set(['submitted', 'approved']), // submit it / go pick it up
   materials: new Set(), // handled via the order count instead
 }

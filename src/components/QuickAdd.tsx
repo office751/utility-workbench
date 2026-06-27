@@ -3,8 +3,8 @@
  *
  * Two ways to use it:
  *   • Type one shorthand ("almond slab") and Enter.
- *   • Paste a whole BLOCK from scripts/read-josh-orders.mjs — one project per
- *     line — and it processes every line at once.
+ *   • Paste a whole BLOCK (one project per line) — e.g. items a sub texted
+ *     over — and it processes every line at once.
  *
  * Two guards make it trustworthy:
  *   • Per-line project + item matching (parseQuickAdd), with a picker when a

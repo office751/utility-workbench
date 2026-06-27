@@ -252,6 +252,7 @@ function SelectionsCatalogEditor({ catalog, onSave }: Props) {
                   <button
                     className="se-del"
                     title="Remove category"
+                    aria-label="Remove category"
                     onClick={() => {
                       if (confirm(`Remove "${cat.label || 'this category'}"? (Past choices saved under it stay in the data but won't show.)`)) removeCat(sec.id, cat.id)
                     }}
@@ -338,6 +339,7 @@ function SelectionsCatalogEditor({ catalog, onSave }: Props) {
                                 <button
                                   className="se-del"
                                   title="Remove photo"
+                                  aria-label="Remove photo"
                                   onClick={() => setOptionImage(sec.id, cat.id, label, '')}
                                 >
                                   <Icon name="close" size={14} />

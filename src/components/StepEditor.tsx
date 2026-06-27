@@ -63,7 +63,7 @@ function StepEditor({ streamLabel, current, isCustomized, onSave, onReset, onClo
       <div className="se-head">
         <Icon name="edit" size={16} color="var(--rust)" />
         <span className="se-title">Edit the standard {streamLabel} checklist</span>
-        <button className="icon-btn" onClick={onClose} title="Close">
+        <button className="icon-btn" onClick={onClose} title="Close" aria-label="Close editor">
           <Icon name="close" size={18} />
         </button>
       </div>
@@ -75,10 +75,10 @@ function StepEditor({ streamLabel, current, isCustomized, onSave, onReset, onClo
         {rows.map((row, i) => (
           <div className="se-row" key={row.id}>
             <div className="se-reorder">
-              <button className="se-move" disabled={i === 0} onClick={() => move(i, -1)} title="Move up">
+              <button className="se-move" disabled={i === 0} onClick={() => move(i, -1)} title="Move up" aria-label="Move step up">
                 <Icon name="keyboard_arrow_up" size={16} />
               </button>
-              <button className="se-move" disabled={i === rows.length - 1} onClick={() => move(i, 1)} title="Move down">
+              <button className="se-move" disabled={i === rows.length - 1} onClick={() => move(i, 1)} title="Move down" aria-label="Move step down">
                 <Icon name="keyboard_arrow_down" size={16} />
               </button>
             </div>
@@ -88,7 +88,7 @@ function StepEditor({ streamLabel, current, isCustomized, onSave, onReset, onClo
               placeholder="Step description…"
               onChange={(e) => patch(i, e.target.value)}
             />
-            <button className="se-del" onClick={() => remove(i)} title="Remove step">
+            <button className="se-del" onClick={() => remove(i)} title="Remove step" aria-label="Remove step">
               <Icon name="delete" size={16} />
             </button>
           </div>

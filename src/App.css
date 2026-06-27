@@ -59,7 +59,7 @@
   border: 0;
   border-radius: var(--radius-pill);
   background: transparent;
-  color: var(--muted);
+  color: var(--nav-idle);
   font: inherit;
   font-size: var(--text-sm);
   font-weight: 600;
@@ -1446,7 +1446,9 @@ button.primary.on {
   border-radius: var(--radius-sm);
   padding: 5px 8px;
 }
-.order-status { flex: 0 0 auto; min-width: 130px; cursor: pointer; }
+/* The status dropdown is the row's main verb (advance the order), so give it a
+   subtle raised fill + weight so it reads as a control, not the plain vendor box. */
+.order-status { flex: 0 0 auto; min-width: 130px; cursor: pointer; background: var(--surface-2); font-weight: 600; }
 .order-date { flex: 0 0 auto; }
 .order-vendor { flex: 1 1 150px; min-width: 120px; }
 /* ✕ remove, pinned to the right end of the top line. */

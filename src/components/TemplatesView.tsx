@@ -60,7 +60,7 @@ function TeamEditor({ assignees, setAssignees }: { assignees: string[]; setAssig
         {assignees.map((n) => (
           <span key={n} className="team-chip">
             {n}
-            <button className="team-x" title={`Remove ${n}`} onClick={() => setAssignees(assignees.filter((a) => a !== n))}>
+            <button className="team-x" title={`Remove ${n}`} aria-label={`Remove ${n}`} onClick={() => setAssignees(assignees.filter((a) => a !== n))}>
               ✕
             </button>
           </span>

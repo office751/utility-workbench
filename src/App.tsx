@@ -243,7 +243,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
 
         {/* Right cluster: theme toggle · More overflow · avatar */}
         <div className="hdr-actions">
-          <button className="icon-btn" onClick={toggleTheme} title="Toggle dark mode">
+          <button className="icon-btn" onClick={toggleTheme} title="Toggle dark mode" aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}>
             {theme === 'light' ? '🌙' : '☀️'}
           </button>
           <MoreMenu dirty={saveState === 'dirty'}>

@@ -82,7 +82,7 @@ function TaskRow({
         ))}
       </select>
       {due && <span className={'trow-due' + (overdue ? ' over' : '')}>{due}</span>}
-      <button className="trow-x" title="Delete" onClick={() => removeTask(t.id)}>
+      <button className="trow-x" title="Delete" aria-label="Delete task" onClick={() => removeTask(t.id)}>
         <Icon name="close" size={15} />
       </button>
     </div>
@@ -300,8 +300,8 @@ function TasksView({ tasks, addTask, updateTask, removeTask, me = '', assignees 
       {showPaste && (
         <div className="task-paste tp-body">
           <p className="meta">
-            Run <code>node scripts/read-josh-orders.mjs</code>, copy its <strong>Tasks</strong> block, and paste below
-            — one task per line. Trim any you don’t want first.
+            Paste tasks below, one per line — trim any you don’t want first. Each line can carry
+            <code> | waiting:Name | due:today | hat:office</code> tags (see the example).
           </p>
           <textarea
             className="tp-text"

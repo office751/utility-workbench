@@ -238,6 +238,7 @@ function DocumentsBox({ docs, onAddFiles, onRemove, onShareInvestor }: Props) {
                 <button
                   className="doc-btn x"
                   title="Remove file"
+                  aria-label="Remove file"
                   onClick={() => {
                     if (confirm(`Remove "${d.name}"? This deletes the file from the locker.`)) {
                       if (menu?.index === i) setMenu(null)
@@ -266,7 +267,7 @@ function DocumentsBox({ docs, onAddFiles, onRemove, onShareInvestor }: Props) {
                   <a className="doc-btn" href={`sms:?&body=${encodeURIComponent(`${d.name} ${menu.url}`)}`}>
                     💬 Text
                   </a>
-                  <button className="doc-btn x" title="Close" onClick={() => setMenu(null)}>
+                  <button className="doc-btn x" title="Close" aria-label="Close menu" onClick={() => setMenu(null)}>
                     ✕
                   </button>
                 </div>

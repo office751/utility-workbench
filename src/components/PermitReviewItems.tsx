@@ -58,7 +58,7 @@ function PermitReviewItems({ projectId, tasks, addTask, updateTask, removeTask }
                 />
                 <span className="review-text">{t.text}</span>
               </label>
-              <button className="doc-btn x" title="Remove" onClick={() => removeTask(t.id)}>
+              <button className="doc-btn x" title="Remove" aria-label="Remove review item" onClick={() => removeTask(t.id)}>
                 ✕
               </button>
             </li>
