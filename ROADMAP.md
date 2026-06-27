@@ -7,6 +7,36 @@ this file is the to-do list, the code is the truth.
 > Tip: in a future session, just say "let's do the next roadmap item"
 > (or name one) and Claude Code will pick it up from here.
 
+## UI / mobile audit follow-ups *(audited June 27 2026)*
+
+A full UI + functionality audit ran June 27. **Shipped & deployed** in three
+passes: the Materials order-row redesign (the overflow/overlap bug), a CRITICAL
+`migrate()` data-loss fix (it was dropping the Settings→Team `assignees` list on
+every sync), `--ink-3` + nav-tab contrast to AA, the whole mobile-structure pass
+(header, project list, Batch Apply, Share/More pop-ups, People invite, Status
+Report all now stack on phones), `actionCenter` step-key fixes (Sewer lots'
+next move now reaches Today; dead `wpermit` key removed), aria-labels on icon-only
+controls, and the status-dropdown affordance. These are **done** — list below is
+only the remaining **low / polish** tail.
+
+- [ ] **Dark twin + full coverage for status tints** — `.s-toOrder` (#b06b00) is
+      light-mode only and only 2 of 4 statuses are tinted (App.css ~1466).
+- [ ] **Materials empty state** — add an "add your first order" call-to-action
+      (MaterialsBody.tsx ~73) and a separator/heading above the add-order row.
+- [ ] **Redundant vendor affordance** — a row shows BOTH a free-text "vendor…"
+      box and a one-click ✉️; show the text box only when no known vendor matches.
+- [ ] **Investor stream label** sits in a fixed 84px column — "PERMITTING" can
+      wrap after the font bump (App.css ~3813 / InvestorView.tsx).
+- [ ] **Touch targets** — small checkboxes / remove buttons (`.trow-check`,
+      `.trow-x`, `.focus-check`) are under the 44px floor on phones.
+- [ ] **Models / Selections cards** read dense on a single mobile column.
+- [ ] **Tooltip-only labels** on the brand lockup + guide "who" pills (a11y).
+- [ ] **Dead code**: remove unused `isUrgentTask` (lib/tasks.ts:45) and the
+      legacy `.today-hero/.stat` CSS (App.css ~1803); `:focus-visible` rings on
+      custom buttons would round out keyboard a11y.
+- [ ] **Emoji → `<Icon>`** for interactive controls (✉️/📞/✕) so they theme
+      consistently and read better to screen readers (aria-labels already added).
+
 ## Up next — Carey-readiness sprint *(scoped June 23 2026)*
 
 Carey starts next week and takes over everything **except permitting**. The
