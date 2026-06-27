@@ -74,23 +74,64 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
         <p className="summary">🛒 No orders yet — add one below.</p>
       ) : (
         <div className="orders">
-          {sorted.map((o) => (
-            <div key={o.id} className={'order' + (o.status === 'toOrder' ? ' to-order' : '')}>
-              <span className="order-cat">{o.category}</span>
+          {sorted.map((o) => {
+            // Draft the one-click order email up front — only for a to-order row
+            // whose category maps to a known vendor — so we can render it on its
+            // own full-width line below the controls.
+            const draft = o.status === 'toOrder' ? orderMailto(o.category, p, ps, templates, lists) : null
+            const who = draft ? draft.vendor.contact || draft.vendor.name : ''
+            const call = draft ? vendorCallHref(draft.vendor) : null
+            return (
+              <div key={o.id} className={'order' + (o.status === 'toOrder' ? ' to-order' : '')}>
+                {/* Top line: category + the order's controls. Wraps if the row
+                    is narrow; stacks full-width on phones (mobile block in App.css). */}
+                <div className="order-top">
+                  <span className="order-cat">{o.category}</span>
 
-              {/* One-click order: a fully drafted, fully addressed email for
-                  THIS material (TO + CC + body w/ the model's order list) —
-                  the only thing left is Send. Shows only while it still needs
-                  ordering and a vendor in VENDORS covers the category. */}
-              {o.status === 'toOrder' && (() => {
-                const draft = orderMailto(o.category, p, ps, templates, lists)
-                if (!draft) return null
-                const who = draft.vendor.contact || draft.vendor.name
-                const call = vendorCallHref(draft.vendor)
-                return (
-                  // One grid cell for both actions, so adding 📞 doesn't reflow
-                  // the order row's column layout.
-                  <span className="order-actions">
+                  <select
+                    className={`order-status s-${o.status}`}
+                    value={o.status}
+                    onChange={(e) => updateOrder(p.id, o.id, { status: e.target.value as OrderStatus })}
+                  >
+                    {ORDER_STATUSES.map((s) => (
+                      <option key={s.key} value={s.key}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+
+                  <input
+                    className="order-date"
+                    type="date"
+                    value={o.orderedOn ?? ''}
+                    onChange={(e) => updateOrder(p.id, o.id, { orderedOn: e.target.value || undefined })}
+                    title="Date ordered"
+                  />
+
+                  <input
+                    className="order-vendor"
+                    value={o.vendor ?? ''}
+                    onChange={(e) => updateOrder(p.id, o.id, { vendor: e.target.value })}
+                    placeholder="vendor…"
+                  />
+
+                  <button
+                    className="task-x"
+                    title="Remove order"
+                    aria-label={`Remove ${o.category} order`}
+                    onClick={() => removeOrder(p.id, o.id)}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* One-click order email on its OWN full-width line: a fully
+                    drafted, fully addressed email for THIS material (TO + CC +
+                    body w/ the model's order list) — the only thing left is Send.
+                    Its own line means the vendor name is never clipped (it used
+                    to overflow a narrow grid column into the status dropdown). */}
+                {draft && (
+                  <div className="order-actions">
                     <a
                       className="mini order-send"
                       href={draft.href}
@@ -99,50 +140,20 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
                       ✉️ Order from {draft.vendor.name}
                     </a>
                     {call && (
-                      <a className="mini order-call" href={call} title={`Call ${draft.vendor.name} — ${draft.vendor.phone}`}>
-                        📞
+                      <a
+                        className="mini order-call"
+                        href={call}
+                        aria-label={`Call ${draft.vendor.name}`}
+                        title={`Call ${draft.vendor.name} — ${draft.vendor.phone}`}
+                      >
+                        📞 Call
                       </a>
                     )}
-                  </span>
-                )
-              })()}
-
-              <select
-                className={`order-status s-${o.status}`}
-                value={o.status}
-                onChange={(e) => updateOrder(p.id, o.id, { status: e.target.value as OrderStatus })}
-              >
-                {ORDER_STATUSES.map((s) => (
-                  <option key={s.key} value={s.key}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-
-              <input
-                className="order-date"
-                type="date"
-                value={o.orderedOn ?? ''}
-                onChange={(e) => updateOrder(p.id, o.id, { orderedOn: e.target.value || undefined })}
-                title="Date ordered"
-              />
-
-              <input
-                className="order-vendor"
-                value={o.vendor ?? ''}
-                onChange={(e) => updateOrder(p.id, o.id, { vendor: e.target.value })}
-                placeholder="vendor…"
-              />
-
-              <button
-                className="task-x"
-                title="Remove order"
-                onClick={() => removeOrder(p.id, o.id)}
-              >
-                ✕
-              </button>
-            </div>
-          ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
 

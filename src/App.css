@@ -1406,11 +1406,10 @@ button.primary.on {
   margin-bottom: 12px;
 }
 .order {
-  display: grid;
-  grid-template-columns: 1fr 130px 160px auto;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
-  align-items: center;
-  padding: 6px 8px;
+  padding: 10px 12px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
 }
@@ -1418,7 +1417,19 @@ button.primary.on {
   border-color: var(--accent);
   background: var(--accent-bg, rgba(179, 84, 30, 0.06));
 }
+/* Top line of an order: category + its controls. Wraps when the row is narrow;
+   the mobile block stacks it full-width. (This was a rigid 4-column grid that
+   couldn't fit the 6 cells a to-order row renders, so the email box overflowed
+   the status dropdown. Flex lets the cell count vary without reshuffling columns.) */
+.order-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
 .order-cat {
+  flex: 1 1 140px;
+  min-width: 120px;
   font-weight: 600;
   font-size: calc(14px * var(--font-scale));
 }
@@ -1435,15 +1446,22 @@ button.primary.on {
   border-radius: var(--radius-sm);
   padding: 5px 8px;
 }
-.order-date {
-  max-width: 140px;
-}
-/* ✉️ + 📞 share one grid cell so the 📞 doesn't push the row's columns around. */
+.order-status { flex: 0 0 auto; min-width: 130px; cursor: pointer; }
+.order-date { flex: 0 0 auto; }
+.order-vendor { flex: 1 1 150px; min-width: 120px; }
+/* ✕ remove, pinned to the right end of the top line. */
+.order-top .task-x { flex: 0 0 auto; margin-left: auto; }
+/* The ✉️ / 📞 order actions sit on their OWN full-width line below the controls,
+   so the (variable-length) vendor label always has room and is never clipped. */
 .order-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.order-send {
+  white-space: normal;
+  text-align: left;
+  max-width: 100%;
 }
 .order-add {
   display: flex;
@@ -3287,9 +3305,39 @@ a.map-btn {
     width: 100%;
     box-sizing: border-box;
   }
-  .order {
-    grid-template-columns: 1fr;
-    gap: 6px;
+  /* Orders: top-line controls stack full-width; the ✉️ email line is already its
+     own row. Bigger tap targets; the add-order controls go full-width too. */
+  .order-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .order-top .order-cat,
+  .order-top .order-status,
+  .order-top .order-date,
+  .order-top .order-vendor {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    flex: 0 0 auto; /* the column is vertical now — don't let cat/vendor grow tall */
+  }
+  .order-top .task-x {
+    margin-left: 0;
+    align-self: flex-end;
+  }
+  .order-send,
+  .order-call,
+  .order-top .task-x {
+    min-height: var(--tap-min);
+  }
+  .order-add {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .order-add select,
+  .order-add-date,
+  .order-add .mini {
+    width: 100%;
+    box-sizing: border-box;
   }
   .form-grid {
     grid-template-columns: 1fr;
@@ -3320,7 +3368,13 @@ a.map-btn {
   .ta-fields select,
   .tp-text,
   .search,
-  .login-card input {
+  .login-card input,
+  .order-status,
+  .order-date,
+  .order-vendor,
+  .order-add select,
+  .order-add-date input,
+  .sr-note {
     font-size: calc(16px * var(--font-scale));
   }
 

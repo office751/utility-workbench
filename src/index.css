@@ -46,7 +46,7 @@
      surfaces, a tertiary ink, rust tints, and elevation. */
   --surface-2: #faf8f4;       /* subtle raised */
   --surface-3: #efe9e0;       /* neutral chip / count pill / track */
-  --ink-3: #a59c8f;           /* tertiary text — meta, hints */
+  --ink-3: #6f685c;           /* tertiary text — meta, hints (AA: ~5.5:1 on white) */
   --divider: #efe9e0;         /* hairline list dividers */
   --rust-strong: #9a4518;     /* accent hover / pressed */
   --rust-tint: #f3e3d6;       /* soft accent fill (accent badges, active pill) */
@@ -135,7 +135,7 @@
   --info: #9cc0ff;    --info-bg: #22304d;
   --accent-2: #c3aef0; --accent-2-bg: #312647; --accent-2-border: #4a3a6b;
   --surface-2: #2b2b29; --surface-3: #3a3a36;
-  --ink-3: #7f796f; --divider: #3a3a37;
+  --ink-3: #9e988e; --divider: #3a3a37;  /* lightened for AA (~4.6:1 on dark panel) */
   --rust-strong: #c95e1f; --rust-tint: #3a2a1e; --rust-tint-ink: #f0a463;
   --ready-icon: #d68a4f;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.40);

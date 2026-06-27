@@ -170,6 +170,10 @@ function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
     models: parsed.models ?? { E2: { masterFiled: true } },
     // Owner-edited checklist step lists (empty = use the code defaults).
     stepOverrides: parsed.stepOverrides ?? {},
+    // Team list (Settings → Team), feeds the Tasks "Assign to" dropdown. MUST be
+    // carried through migrate or it gets stripped on every cloud load/realtime
+    // sync and written back empty — the blob-clobber failure mode. Array-guarded.
+    assignees: Array.isArray(parsed.assignees) ? parsed.assignees : [],
   }
 
   // ONE-TIME (June 2026): the scanner used to turn inspection RESULTS into
