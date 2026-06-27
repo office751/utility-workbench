@@ -3244,25 +3244,19 @@ a.map-btn {
     padding: 12px 14px;
   }
 
-  /* Header: title on top, the full nav wraps below so NOTHING gets cut off. */
+  /* Header: brand + actions share the top line, the pill nav wraps full-width
+     below so nothing is cut off. (Replaces stale h1/.tabs rules left from the
+     old header markup — the bar is .brand-lockup + .nav-pills + .hdr-actions now.) */
   .app-header {
-    gap: 10px;
+    margin: -12px -14px 16px; /* match the mobile .app padding so the bar stays flush */
+    padding: 8px 14px;
+    gap: 8px 10px;
   }
-  .app-header h1 {
-    font-size: calc(19px * var(--font-scale));
-  }
-  .app-header .tagline {
-    font-size: calc(12px * var(--font-scale));
-  }
-  .tabs {
-    width: 100%;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-  .tabs button {
-    padding: 8px 12px;
-    font-size: calc(14px * var(--font-scale));
-  }
+  .brand-lockup { order: 1; }
+  .hdr-actions { order: 2; margin-left: auto; }
+  .nav-pills { order: 3; width: 100%; gap: 4px; }
+  .nav-pill { padding: 7px 11px; }
+  .icon-btn { height: 40px; min-width: 40px; } /* roomier touch target */
 
   /* Today hero: stack the greeting over an even 4-up stat strip. */
   .today-hero {
@@ -3551,8 +3545,46 @@ a.map-btn {
 .sstrip-na { font-size: calc(13px * var(--font-scale)); line-height: 1; color: var(--ink-3); width: 9px; text-align: center; }
 
 @media (max-width: 640px) {
-  .prow { gap: 10px; }
-  .sstrip { width: 100%; }
+  /* Project rows stack: address + next-action on top (address wraps instead of
+     truncating), the 5-stream status strip full-width below with cells spread. */
+  .prow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 12px 14px;
+  }
+  .prow-main { flex: 1 1 auto; width: 100%; } /* definite width so the nowrap sub-line clips instead of widening the row */
+  .prow-addr { white-space: normal; }
+  .sstrip { width: 100%; justify-content: space-between; }
+  .sstrip-cell { flex: 1 1 auto; justify-content: center; }
+}
+
+/* ── Mobile structure pass (batch 2): screens that had no phone layout ── */
+@media (max-width: 640px) {
+  /* Batch Apply: each row's info goes full-width and the action buttons drop to
+     their own full-width line and share it, instead of overflowing sideways. */
+  .ba-info { flex: 1 1 100%; min-width: 0; }
+  .ba-actions,
+  .ba-steps { flex: 1 1 100%; }
+  .ba-actions .doc-btn { flex: 1 1 auto; }
+
+  /* Share / More pop-ups: clamp so they can't run past the screen edge. */
+  .share-pop { min-width: 0; width: min(280px, 92vw); }
+  .hdr-menu-panel { min-width: 0; width: min(220px, 90vw); }
+
+  /* People → invite: the two side-by-side inputs stack full-width. */
+  .invite-row { flex-direction: column; align-items: stretch; }
+  .invite-row input,
+  .invite-row select,
+  .invite-row .invite-email,
+  .invite-row .invite-name { width: 100%; min-width: 0; }
+
+  /* Status-report controls: label over a full-width control, nothing squeezed. */
+  .sr-row { flex-direction: column; align-items: stretch; gap: 8px; }
+  .sr-lbl { width: auto; }
+  .seg { width: 100%; }
+  .seg button { flex: 1; }
+  .sr-note { min-width: 0; width: 100%; box-sizing: border-box; }
 }
 
 /* ============================================================================
