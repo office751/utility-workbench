@@ -120,6 +120,16 @@ When a house sells, the electric account should be shut off / transferred
 **2 business days after closing**. The Today screen flags this in 🔥 Needs
 attention so it doesn't get missed.
 
+### 11. 📧 Office email & bookkeeping intake
+Maintain the office inbox (`office@ironshieldconstruction.com`) day-to-day, and
+forward **invoices and receipts** to **`data@ironshieldconstruction.com`** so
+they reach bookkeeping.
+- **Invoices**: forward as-is.
+- **Receipts**: when forwarding, the email must specify **(1) what it was for**
+  if it isn't obvious from the receipt, and **(2) which card was used** for the
+  purchase. A receipt with no purpose and no card can't be reconciled, so this
+  is required, not optional.
+
 ---
 
 ## Quick reference — who to call
@@ -133,6 +143,7 @@ attention so it doesn't get missed.
 | City of Ocala / other electric | That utility directly; note it & flag to Adam |
 | City water / sewer availability | Marion County Utilities (MCU) |
 | Septic | Georges Plumbing & Excavating — Vicki Kirby |
+| Invoices & receipts → bookkeeping | data@ironshieldconstruction.com (receipts: note what for + which card) |
 | Permits | **Adam** (and Jennifer's permitting service via Adam) |
 
 ---
