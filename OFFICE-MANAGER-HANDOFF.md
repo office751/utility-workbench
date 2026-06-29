@@ -28,30 +28,56 @@ in on — phone, Windows laptop, anywhere.
 
 ## What Carey takes over
 
-### 1. ⚡ Electric — new service applications
-Getting power applied for on each new house, in either utility's territory.
+### 1. ⚡ Electric — determine the utility provider for each lot
+Before any application can go out, Carey figures out **which electric utility
+serves the lot** based on its location / service territory, and records it on
+the house. She sets it in the project's **⚙️ gear** (the gear in the house
+header → "Utility" field) — this drives everything downstream, including which
+application flow and contacts the app shows.
+
+The providers we run into:
+- **SECO** — built-in application flow (see below). Phone 352-569-9594.
+- **Duke Energy** — built-in flow; also set the **EDA office** (Ocala or
+  Inverness) once Duke replies. Phone 352-239-5698.
+- **Clay Electric** — **phone-based**, no built-in application flow in the app.
+  Apply by phone: 1-800-224-4917. Record the utility as Clay so the house
+  doesn't show a SECO/Duke flow that doesn't apply.
+- **City of Ocala Electric (or any other provider)** — not yet modeled in the
+  app. Handle it directly with that utility (phone/their process) and leave a
+  note on the project so it's tracked. Flag these to Adam so we can decide
+  whether to build a flow for them.
+
+> ⚠️ Getting the provider right is the whole game — a wrong utility means the
+> wrong application, wrong contacts, and a silent stall. When in doubt, confirm
+> with the utility by phone before applying.
+
+### 2. ⚡ Electric — new service applications
+Once the provider is known, get power applied for. Both built-in flows run from
+**⚡ Batch Apply** on the Projects screen.
 - **SECO houses** (email-first): download the pre-filled load form, tick the
   three boxes + sign, draft the email, attach the load form + site plan, send,
   then ✓ Mark applied. → Guide: **"Apply for SECO electric."**
 - **Duke houses** (portal-first): apply on the Duke Builder Portal, wait for the
   Work Order # email, fill the load form Duke sends, then send it back through
   Batch Apply. → Guide: **"Apply for Duke electric."**
-- Both run from **⚡ Batch Apply** on the Projects screen.
+- **Clay / City of Ocala / other**: handle by phone / that utility's own
+  process (no app flow), as noted above.
 
-### 2. 📸 Electric — notify the utility the home is ready for the meter
+### 3. 📸 Electric — notify the utility the home is ready for the meter
 When a house passes its electrical inspection (green tag), email the power
 company to set the meter, with the photo checklist (green tag, downpipe, sweep,
 straps, clear path). → Guide: **"Tell the utility a home is ready for the meter."**
 - ⚠️ The email *lists* the photos — Carey must attach the actual pictures.
 
-### 3. 💧 Water — set up water on each house
+### 4. 💧 Water — set up water on each house
 Well, city water, or city water needing a main extension.
-- **First** set the Water source in ⚙️ Settings (Adam can do the initial setup;
-  Carey works the checklist). Well = check it off once drilled. City = confirm
-  availability with **Marion County Utilities (MCU)** and apply. City + main
-  extension = the main gets extended first. → Guide: **"Set up water for a house."**
+- **First** set the Water source in the project's **⚙️ gear** (Well / City /
+  City + main extension) — Carey can set this herself. Well = check it off once
+  drilled. City = confirm availability with **Marion County Utilities (MCU)**
+  and apply. City + main extension = the main gets extended first.
+  → Guide: **"Set up water for a house."**
 
-### 4. 🚽 Septic / Sewer — set up waste handling
+### 5. 🚽 Septic / Sewer — set up waste handling
 - **Septic**: our provider is **Georges Plumbing & Excavating (Vicki Kirby)** —
   site/soil eval → DEP construction permit → installed → notify Vicki when the
   water line is hooked up and sod is laid.
@@ -60,7 +86,7 @@ Well, city water, or city water needing a main extension.
   permit you don't need — confirm the source first. → Guide: **"Set up septic
   (or sewer) for a house."**
 
-### 5. 🛒 Materials & Orders — the flagship job
+### 6. 🛒 Materials & Orders — the flagship job
 Capturing what the field needs and getting it ordered.
 - **Capture from Josh's texts**: type or paste his lines into the **Quick add**
   bar at the top of the Projects tab — it matches each line to the right house +
@@ -73,23 +99,23 @@ Capturing what the field needs and getting it ordered.
 - **Vendors directory** (More menu → 🚚 Vendors) for any supplier's number or a
   blank email.
 
-### 6. 🏠 Run the day — the Today screen
+### 7. 🏠 Run the day — the Today screen
 First thing each morning and whenever she sits back down.
 - Work it **top-down**: ⭐ Today's focus → 🔥 Needs attention (real deadlines:
   due-soon tasks, **electric shut-offs**) → ⚠ Gone quiet (houses stalled at a
   stage) → ⏳ Waiting on you → ✅ Ready for your move. → Guide: **"Run your day."**
 
-### 7. ✅ Cross-project tasks
+### 8. ✅ Cross-project tasks
 The Tasks tab — capturing, assigning, starring, and clearing the day-to-day
 to-dos that aren't tied to one checklist step. Tasks can be assigned to a
 person (her queue / unassigned / per-person filters).
 
-### 8. 🔍 Inspections
+### 9. 🔍 Inspections
 Tracking inspection results per house (the 🔍 Inspections tab). Note this is
 separate from permits — inspection *results* live here, not in the Permit
 stream.
 
-### 9. ⚡ Electric shut-offs after a sale
+### 10. ⚡ Electric shut-offs after a sale
 When a house sells, the electric account should be shut off / transferred
 **2 business days after closing**. The Today screen flags this in 🔥 Needs
 attention so it doesn't get missed.
@@ -100,10 +126,13 @@ attention so it doesn't get missed.
 
 | Need | Contact |
 |------|---------|
+| Determine the electric provider | Confirm by service territory / by phone, record in the ⚙️ gear |
+| SECO electric | 352-569-9594 — SECO New Construction (email-first) |
+| Duke electric | Duke Builder Portal → EDA-Ocala or EDA-Inverness |
+| Clay Electric | 1-800-224-4917 (phone-based, no app flow) |
+| City of Ocala / other electric | That utility directly; note it & flag to Adam |
 | City water / sewer availability | Marion County Utilities (MCU) |
 | Septic | Georges Plumbing & Excavating — Vicki Kirby |
-| SECO electric | SECO New Construction (email-first) |
-| Duke electric | Duke Builder Portal, then EDA-Ocala or EDA-Inverness |
 | Permits | **Adam** (and Jennifer's permitting service via Adam) |
 
 ---
