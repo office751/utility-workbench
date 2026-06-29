@@ -130,6 +130,11 @@ they reach bookkeeping.
   purchase. A receipt with no purpose and no card can't be reconciled, so this
   is required, not optional.
 
+### 12. 📦 Office supplies & inventory
+Keep an eye on office stock and reorder before it runs out — both **regular
+office supplies** (paper, ink, pens, etc.) and **coffee / food / kitchen**
+items. Restock proactively so nothing runs dry.
+
 ---
 
 ## Quick reference — who to call
