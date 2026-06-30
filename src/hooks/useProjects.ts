@@ -911,6 +911,22 @@ export function useProjects() {
     })
   }
 
+  /** Dismiss a flagged inspection result — exactly analogous to dismissNotification.
+   *  We TOMBSTONE (set dismissed:true) rather than delete, because the nightly
+   *  scanner re-reconciles inspections by sourceKey: a hard delete would just be
+   *  re-added on the next run, but a dismissed:true row is preserved (the scanner
+   *  only refreshes desc/status/date on an existing key). The UI filters out
+   *  dismissed:true rows so a dismissed result disappears from both the Permit
+   *  tab and the cross-project 🔍 feed. */
+  function dismissInspection(id: number, sourceKey: string) {
+    const ps = getProjectState(id)
+    updateProject(id, {
+      inspections: (ps.inspections ?? []).map((i) =>
+        i.sourceKey === sourceKey ? { ...i, dismissed: true } : i,
+      ),
+    })
+  }
+
   /* ----------------------------- TASKS ------------------------------ */
   /* Free-form cross-role tasks (IT / office / supplies / …) live at the TOP
      level of state — they aren't tied to any one project. Each updater reads
@@ -971,6 +987,7 @@ export function useProjects() {
     addProjectFiles,
     removeProjectFile,
     dismissNotification,
+    dismissInspection,
     setTemplate,
     setAssignees,
     setSelectionsCatalog,

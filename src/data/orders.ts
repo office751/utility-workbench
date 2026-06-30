@@ -14,8 +14,7 @@ export const ORDER_CATEGORIES: string[] = [
   'Framing package',
   'Slab package',
   'Block',
-  'Lintels',
-  'Sand',
+  'Lintels', // sand ships bundled IN the lintels package — no separate Sand order
   'Flooring',
   'Cabinets',
   'Lighting package',
@@ -69,7 +68,7 @@ export const CATEGORY_KEYWORDS: Record<string, string> = {
   block: 'Block',
   lintel: 'Lintels',
   lentil: 'Lintels', // common spelling
-  sand: 'Sand',
+  sand: 'Lintels', // sand ships WITH the lintels package, so map it there (no standalone Sand category)
   floor: 'Flooring',
   cabinet: 'Cabinets',
   light: 'Lighting package',

@@ -91,6 +91,8 @@ interface Updaters {
   updateTask: (id: string, patch: Partial<Task>) => void
   removeTask: (id: string) => void
   dismissNotification: (id: number, sourceKey: string) => void
+  /** Hide one flagged inspection result (tombstone, not delete — see useProjects). */
+  dismissInspection: (id: number, sourceKey: string) => void
   /** Save / clear the GLOBAL step list for a stream-variant key (the step editor). */
   setStepList: (key: string, steps: StepDef[]) => void
   resetStepList: (key: string) => void
@@ -143,6 +145,33 @@ const WATER_LABEL: Record<string, string> = {
   '': 'source?',
 }
 
+/** The Marion County Property Appraiser "Map It+" 2D Parcel Viewer (GIS). */
+const MARION_PARCEL_VIEWER =
+  'https://experience.arcgis.com/experience/fdebe26ee2fb40758e399cc5447c5809/page/2D-Parcel-Viewer'
+
+/**
+ * Build the Map-button link: open this house's PARCEL on the county GIS, zoomed
+ * in — not Google Maps driving directions (which kept nagging to open the Maps
+ * app and only showed a pin, not parcel/zoning info).
+ *
+ * How it works: the Map It+ app reads a "selection" off the URL fragment — it
+ * filters the parcel layer to `WHERE PARCEL='<id>'` and zooms to the match.
+ * The widget + dataSource ids below are fixed for this published app (they came
+ * straight from a real selection URL); only the parcel value changes per house.
+ * `encodeURIComponent` turns the `where:…:PARCEL='…'` clause into the exact
+ * percent-encoded form the app expects (`:`→`%3A`, `=`→`%3D`, leaving `~` and
+ * `'` as-is — matching the captured example byte-for-byte).
+ *
+ * If a house has no parcel yet (e.g. a TBD lot), we just open the viewer
+ * un-zoomed rather than feeding it an empty `PARCEL=''` that matches nothing.
+ */
+function marionParcelMapUrl(parcel: string): string {
+  const pid = parcel.trim()
+  if (!pid) return MARION_PARCEL_VIEWER
+  const selection = `where:widget_28_output_45699390791734507~dataSource_5-192a100c52f-layer-122:PARCEL='${pid}'`
+  return `${MARION_PARCEL_VIEWER}#data_s=${encodeURIComponent(selection)}&zoom_to_selection=true`
+}
+
 /** The five streams, for the per-project overview strip at the top of Detail.
  *  Icons are Material Symbols ligature names (the design's single icon set). */
 const STREAM_TABS: { key: Stream; icon: string; name: string }[] = [
@@ -185,9 +214,12 @@ function Detail(props: Props) {
     ? `${stageStream.name} — ${streamStatus(stageStream.key, p, ps).label}`
     : 'All streams complete'
 
-  const mapQuery = /^tbd\b/i.test(p.address)
-    ? `${p.subdivision}, ${p.city}, FL ${p.zip}`
-    : `${p.address}, ${p.city}, FL ${p.zip}`
+  // Quick-open links for the header (reachable from ANY tab now, not just
+  // Permit). Both can be empty — we only render the button when there's a URL.
+  // sharepointFolderOf = the project's SharePoint document folder;
+  // permitPortalOf = the Marion County permit-record portal link.
+  const folder = sharepointFolderOf(p, ps)
+  const permitUrl = permitPortalOf(p, ps)
 
   return (
     <section className="detail">
@@ -226,18 +258,48 @@ function Detail(props: Props) {
             </div>
           </div>
           <div className="pd-header-actions">
-            {/* jump to the site on Google Maps (TBD addresses fall back to the
-                subdivision, which at least lands you in the right neighborhood) */}
+            {/* Map → the Marion County GIS 2D Parcel Viewer, zoomed to this
+                parcel (see marionParcelMapUrl up top) — replaces Google Maps,
+                which nagged to open the app and only gave directions, not
+                parcel info. */}
             <a
               className="btn btn-secondary"
-              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`}
+              href={marionParcelMapUrl(p.parcel)}
               target="_blank"
               rel="noreferrer"
-              title="Open this site in Google Maps"
+              title="Open this parcel on the Marion County GIS parcel viewer"
             >
               <Icon name="map" size={18} />
               Map
             </a>
+            {/* Project Documents (was the Permit tab's "Open project folder") and
+                Permit Portal (was "Open permit record") — moved up here so they're
+                reachable from any tab, not just the Permit tab. Each renders only
+                when its URL exists. Styled like the Map/Settings header buttons. */}
+            {folder && (
+              <a
+                className="btn btn-secondary"
+                href={encodeURI(folder)}
+                target="_blank"
+                rel="noreferrer"
+                title="Open this project's SharePoint document folder"
+              >
+                <Icon name="folder" size={18} />
+                Project Documents
+              </a>
+            )}
+            {permitUrl && (
+              <a
+                className="btn btn-secondary"
+                href={permitUrl}
+                target="_blank"
+                rel="noreferrer"
+                title="Open the Marion County permit record"
+              >
+                <Icon name="link" size={18} />
+                Permit Portal
+              </a>
+            )}
             <button
               className={'btn btn-secondary' + (showSettings ? ' on' : '')}
               onClick={() => setShowSettings((s) => !s)}
@@ -751,7 +813,7 @@ function SepticBody({ project: p, ps, toggleStep, setStepNote }: Props) {
 
 /* ===================== PERMITTING ===================== */
 
-function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, updateTask, removeTask, dismissNotification, templates }: Props) {
+function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, updateTask, removeTask, dismissNotification, dismissInspection, templates }: Props) {
   // 📨 Email Jennifer needs a moment to mint download links for the project's
   // files (a cloud call per file), so it's a button with a busy state rather
   // than a plain link.
@@ -825,8 +887,8 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, u
   }
 
   const next = nextPermitAction(ps)
-  const folder = sharepointFolderOf(p, ps) // hidden link — opened via the button below
-  const permitUrl = permitPortalOf(p, ps)
+  // (folder + permitUrl moved to the main Detail() header — see "Project
+  //  Documents" / "Permit Portal" buttons there. Not needed in PermitBody now.)
   const expiry = permitExpiryFor(p, ps)
   const countyStatus = permitCountyStatusOf(p)
   const issued = permitIssuedOf(p, ps)
@@ -842,20 +904,37 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, u
       />
 
       {/* 🔍 This project's flagged inspection results (reference info from
-          the nightly scan — the cross-project feed lives on the 🔍 tab). */}
-      {(ps.inspections ?? []).length > 0 && (
+          the nightly scan — the cross-project feed lives on the 🔍 tab).
+          We hide dismissed:true rows here AND gate the whole block on the
+          filtered count, so the list disappears once they're all dismissed.
+          (Dismissing tombstones the row — see dismissInspection — so the
+          scanner won't re-add it on the next nightly run.) */}
+      {(ps.inspections ?? []).filter((i) => !i.dismissed).length > 0 && (
         <div className="insp-list insp-inline">
-          {(ps.inspections ?? []).map((i) => (
-            <div key={i.sourceKey} className="insp-row static">
-              <span className={'insp-status ' + (/disapprov|fail|reject|denied/i.test(i.status) ? 'fail' : 'partial')}>
-                {i.status}
-              </span>
-              <span className="insp-main">
-                <span className="insp-desc">{i.desc}</span>
-              </span>
-              <span className="insp-date muted">{i.date || ''}</span>
-            </div>
-          ))}
+          {(ps.inspections ?? [])
+            .filter((i) => !i.dismissed)
+            .map((i) => (
+              <div key={i.sourceKey} className="insp-row static">
+                <span className={'insp-status ' + (/disapprov|fail|reject|denied/i.test(i.status) ? 'fail' : 'partial')}>
+                  {i.status}
+                </span>
+                <span className="insp-main">
+                  <span className="insp-desc">{i.desc}</span>
+                </span>
+                <span className="insp-date muted">{i.date || ''}</span>
+                {/* Same small ✕ dismiss button the task rows use (.trow-x) —
+                    tombstones this result so it stops showing here and on the
+                    cross-project 🔍 tab, without deleting it from the data. */}
+                <button
+                  className="trow-x"
+                  title="Dismiss this inspection result"
+                  aria-label="Dismiss inspection result"
+                  onClick={() => dismissInspection(p.id, i.sourceKey)}
+                >
+                  <Icon name="close" size={15} />
+                </button>
+              </div>
+            ))}
         </div>
       )}
 
@@ -866,8 +945,10 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, u
         {issued && <> · Issued {issued}</>}
       </p>
 
-      {/* Quick-open links — the URL itself stays hidden; you just click to open.
-          encodeURI handles spaces in SharePoint folder names. */}
+      {/* Permit-package handoff. (The "Open project folder" and "Open permit
+          record" links that used to live here moved UP to the project header —
+          "Project Documents" and "Permit Portal" — so they're reachable from
+          any tab, not just this one.) */}
       <div className="contact-row">
         {/* New-permit handoff: drafts the package email to Jennifer's
             Permitting Service, pre-filled with site facts and the standard
@@ -878,16 +959,6 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, u
           <Icon name={drafting ? 'hourglass_top' : 'mail'} size={15} />
           {drafting ? ' Creating download links…' : ' Email Jennifer — permit package'}
         </button>
-        {folder && (
-          <a className="contact" href={encodeURI(folder)} target="_blank" rel="noreferrer">
-            <Icon name="folder" size={15} /> Open project folder
-          </a>
-        )}
-        {permitUrl && (
-          <a className="contact" href={permitUrl} target="_blank" rel="noreferrer">
-            <Icon name="link" size={15} /> Open permit record
-          </a>
-        )}
       </div>
 
       {/* Feedback after drafting: ✓ links minted (plain) or ⚠️ fallback (warn). */}

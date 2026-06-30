@@ -32,7 +32,13 @@ function dateNum(i: InspectionItem): number {
 function InspectionsView({ roster, getProjectState, onOpen }: Props) {
   // Flatten: one row per result, joined with its project, newest first.
   const rows = roster
-    .flatMap((p) => (getProjectState(p.id).inspections ?? []).map((insp) => ({ p, insp })))
+    .flatMap((p) =>
+      // Skip dismissed:true rows so an item dismissed on a project's Permit tab
+      // doesn't linger on this cross-project feed either (mirrors the Permit tab).
+      (getProjectState(p.id).inspections ?? [])
+        .filter((insp) => !insp.dismissed)
+        .map((insp) => ({ p, insp })),
+    )
     .sort((a, b) => dateNum(b.insp) - dateNum(a.insp))
 
   return (

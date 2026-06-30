@@ -143,6 +143,12 @@ export interface InspectionItem {
   status: string // e.g. "Disapproved - no fees", "Partial Approval - Repeat Inspection"
   date?: string // the portal's inspection date (M/D/YYYY)
   noticedAt?: string // when the scanner first saw it
+  // Mirrors PermitNote.dismissed: set true to HIDE this from the UI without
+  // deleting it. We tombstone instead of removing because the nightly scanner
+  // re-reconciles by sourceKey — a hard delete would just get re-added on the
+  // next run, but a dismissed:true row is preserved (the scanner only refreshes
+  // desc/status/date on an existing key, see scanner/scan.mjs).
+  dismissed?: boolean
 }
 
 /**

@@ -107,6 +107,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
     addProjectFiles,
     removeProjectFile,
     dismissNotification,
+    dismissInspection,
     setModelTakeoff,
     setModelOrderList,
     addModelFiles,
@@ -454,6 +455,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
             updateTask={updateTask}
             removeTask={removeTask}
             dismissNotification={dismissNotification}
+            dismissInspection={dismissInspection}
             setStepList={setStepList}
             resetStepList={resetStepList}
             updateProjectFacts={updateProjectFacts}

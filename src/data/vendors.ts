@@ -68,7 +68,7 @@ export const VENDORS: Vendor[] = [
     phone: '352-629-9788', // Marion Masonry of Ocala dispatch
     icon: '🧱',
     supplies: 'Slab package · lintels · sand',
-    categories: ['Slab package', 'Lintels', 'Sand'],
+    categories: ['Slab package', 'Lintels'],
   },
   {
     // Block comes from DZ Block, NOT Marion Masonry (Adam's correction,
