@@ -57,6 +57,9 @@ import { grantedProjectIds, shareFileToInvestor } from '../lib/investor'
 import { writeRichClipboard } from '../lib/richCopy'
 import { isMaterialsDone, ordersSummary } from '../lib/orders'
 import { GEORGES } from '../data/contacts'
+// SECO's real load form, pre-filled from this project — same helper Batch
+// Apply uses (lib/secoForm.ts); this just adds a second place to download it.
+import { SECO_BLANK_FORM_URL, fillSecoLoadForm } from '../lib/secoForm'
 import Checklist from './Checklist'
 import ContactLinks from './ContactLinks'
 import DocumentsBox from './DocumentsBox'
@@ -113,6 +116,9 @@ interface Props extends Updaters {
   selectionsCatalog?: SelectionsCatalog
   /** Owner-editable vendors directory (Settings → Vendor setup). */
   vendors: import('../data/vendors').Vendor[]
+  /** Owner-editable EXTRA utility companies (Settings → Utility companies setup) —
+   *  for territories not covered by SECO/Duke/Clay/Marion County Utilities/Georges. */
+  utilities: import('../data/utilities').UtilityCompany[]
   /** Stream tab to open on (from a Today/Tasks deep-link). Default: Overview. */
   initialStream?: Stream
   onBack: () => void
@@ -276,6 +282,7 @@ function Detail(props: Props) {
           ps={ps}
           setField={setField}
           updateFacts={props.updateProjectFacts}
+          utilities={props.utilities}
           onClose={() => setShowSettings(false)}
         />
       )}
@@ -362,7 +369,7 @@ function Detail(props: Props) {
       {/* ---- STREAM tabs: contacts + the stream body + that stream's notes ---- */}
       {activeTab !== 'overview' && activeTab !== 'selections' && (
         <>
-          <ContactLinks stream={activeTab} p={p} ps={ps} />
+          <ContactLinks stream={activeTab} p={p} ps={ps} utilities={props.utilities} />
 
           {activeTab === 'electric' && <ElectricBody {...props} />}
           {activeTab === 'water' && <WaterBody {...props} />}
@@ -439,6 +446,9 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField, templ
   // meter set). Same busy-flag idiom as the Duke portal button below.
   const [notifying, setNotifying] = useState(false)
   const [notifyNote, setNotifyNote] = useState<string | null>(null)
+  // 📄 SECO load-form download — same busy-flag idiom; true only while the
+  // blank PDF is being fetched + filled (it's a network round-trip).
+  const [formBusy, setFormBusy] = useState(false)
 
   /** Copy this project's portal fill-data (JSON) — including computed
    *  turn-by-turn directions from the nearest main road — and open the
@@ -495,6 +505,28 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField, templ
     }, 1500)
   }
 
+  // SECO: fetch the bundled blank PDF, pre-fill it from THIS project, and
+  // download it so Adam can tick the few radio buttons, sign, and attach it.
+  // Same logic as BatchApply's downloadSecoForm — just scoped to the single
+  // p/ps already in scope here (no getProjectState needed for one house).
+  async function downloadSecoForm() {
+    setFormBusy(true)
+    try {
+      const blank = await (await fetch(SECO_BLANK_FORM_URL)).arrayBuffer()
+      const bytes = await fillSecoLoadForm(blank, p, ps)
+      const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'application/pdf' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `SECO Load Form - ${p.address}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      alert(`Couldn't build the SECO form: ${(e as Error).message}`)
+    } finally {
+      setFormBusy(false)
+    }
+  }
+
   return (
     <>
       {needsVerify(p, ps) && (
@@ -526,6 +558,23 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField, templ
         </div>
       )}
       {u === 'DUKE' && <GuideCallout id="apply-duke" />}
+
+      {/* SECO's apply-flow button, in the same visual spot as Duke's portal
+          button above — SECO doesn't have a web portal, just a pre-filled
+          load form to attach to the application email. */}
+      {u === 'SECO' && (
+        <div className="contact-row">
+          <button
+            className="contact"
+            onClick={downloadSecoForm}
+            disabled={formBusy}
+            title="Download the SECO load form pre-filled from this project — then tick Single Family / service / e-mail, sign, and attach it"
+          >
+            <Icon name={formBusy ? 'hourglass_top' : 'description'} size={15} />
+            {formBusy ? ' Building…' : ' Load form (PDF)'}
+          </button>
+        </div>
+      )}
 
       {/* The crucial bit the old button hid: opening the portal is only
           step one. The form gets filled by ASKING CLAUDE — spell that out

@@ -36,6 +36,7 @@ import {
 import { permitExpiresOf } from '../lib/permitExpiry'
 import { useEffect, useState } from 'react'
 import { investorNames } from '../lib/investor'
+import type { UtilityCompany } from '../data/utilities'
 
 interface Props {
   project: Project
@@ -43,6 +44,10 @@ interface Props {
   setField: <K extends keyof ProjectState>(id: number, field: K, value: ProjectState[K]) => void
   /** Edit the core roster facts (address, model, parcel, permit, status…). */
   updateFacts: (id: number, patch: Partial<Project>) => void
+  /** Owner-editable EXTRA utility companies (Settings → Utility companies
+   *  setup) — power the extra electric options + the water/sewer company
+   *  pickers below (those only appear once at least one matching entry exists). */
+  utilities: UtilityCompany[]
   /** Close the panel (the Done button). */
   onClose: () => void
 }
@@ -59,7 +64,7 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: 'CO', label: 'C.O. — finished' },
 ]
 
-function ProjectSettings({ project: p, ps, setField, updateFacts, onClose }: Props) {
+function ProjectSettings({ project: p, ps, setField, updateFacts, utilities, onClose }: Props) {
   // Edit a core roster fact (address, model, …) directly on the project. Only
   // string-valued fields are edited here, so the computed-key cast is safe.
   type FactField = 'address' | 'city' | 'zip' | 'model' | 'parcel' | 'subdivision' | 'permit' | 'workOrder' | 'listStatus'
@@ -188,6 +193,15 @@ function ProjectSettings({ project: p, ps, setField, updateFacts, onClose }: Pro
             <option value="SECO">SECO</option>
             <option value="DUKE">Duke</option>
             <option value="CLAY">Clay</option>
+            {/* Extra companies added in Settings → Utility companies setup —
+                contact-only (call/email), no auto-filled application packet. */}
+            {utilities
+              .filter((u) => u.kind === 'electric')
+              .map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
           </select>
         </label>
         {/* Duke replies (load form, meter-notify) go to whichever EDA office
@@ -248,6 +262,27 @@ function ProjectSettings({ project: p, ps, setField, updateFacts, onClose }: Pro
             <option value="CityWM">City Water + main extension</option>
           </select>
         </label>
+        {/* Only appears once Adam has added at least one extra water company
+            in Settings → Utility companies setup — otherwise MCU is the only
+            option and there's nothing to pick from. */}
+        {utilities.some((u) => u.kind === 'water') && (
+          <label>
+            Water company
+            <select
+              value={ps.waterCompanyId ?? ''}
+              onChange={(e) => setField(p.id, 'waterCompanyId', e.target.value || undefined)}
+            >
+              <option value="">Marion County Utilities (default)</option>
+              {utilities
+                .filter((u) => u.kind === 'water')
+                .map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}
+                  </option>
+                ))}
+            </select>
+          </label>
+        )}
       </div>
 
       {/* ---- Septic ---- */}
@@ -274,6 +309,26 @@ function ProjectSettings({ project: p, ps, setField, updateFacts, onClose }: Pro
               <option value="INRB">INRB — recorded notice required</option>
               <option value="ATU">ATU — aerobic treatment unit</option>
               <option value="NA">N/A — conventional system</option>
+            </select>
+          </label>
+        )}
+        {/* Only appears once Adam has added at least one extra sewer/septic
+            company — otherwise Georges/MCU stay the only contacts. */}
+        {utilities.some((u) => u.kind === 'sewer') && (
+          <label>
+            Sewer / septic company
+            <select
+              value={ps.sewerCompanyId ?? ''}
+              onChange={(e) => setField(p.id, 'sewerCompanyId', e.target.value || undefined)}
+            >
+              <option value="">Georges Plumbing (Septic) / Marion County Utilities (Sewer) — default</option>
+              {utilities
+                .filter((u) => u.kind === 'sewer')
+                .map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}
+                  </option>
+                ))}
             </select>
           </label>
         )}

@@ -46,6 +46,7 @@ const PeopleView = lazy(() => import('./components/PeopleView'))
 const VendorsView = lazy(() => import('./components/VendorsView'))
 const VendorsEditor = lazy(() => import('./components/VendorsEditor'))
 import { VENDORS } from './data/vendors'
+const UtilitiesEditor = lazy(() => import('./components/UtilitiesEditor'))
 const GuideView = lazy(() => import('./components/GuideView'))
 
 /** A top-level view. 'settings' (🛠), 'people' (👥), 'vendors' (🚚), and 'guide'
@@ -128,6 +129,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
     setAssignees,
     setSelectionsCatalog,
     setVendors,
+    setUtilities,
     replaceState,
     saveState,
     saveNow,
@@ -136,6 +138,9 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
   // Effective vendors directory: the owner-edited list from the blob, or the
   // code defaults until first save (migrate seeds it; the ?? is defensive).
   const vendors = state.vendors ?? VENDORS
+  // Effective extra-utilities roster: same fallback shape as vendors above
+  // (migrate seeds state.utilities to [] on first run; this ?? is defensive).
+  const utilities = state.utilities ?? []
 
   // Sync the global step-list overrides into the lifecycles resolver BEFORE any
   // child computes a next-action / checklist (pure step getters read this).
@@ -381,6 +386,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
           />
           <SelectionsCatalogEditor catalog={state.selectionsCatalog} onSave={setSelectionsCatalog} vendors={vendors} />
           <VendorsEditor vendors={vendors} onSave={setVendors} />
+          <UtilitiesEditor utilities={utilities} onSave={setUtilities} />
         </>
       )}
 
@@ -408,6 +414,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
           />
         ) : adding ? (
           <AddProject
+            utilities={utilities}
             onSave={(facts) => {
               const newId = addProject(facts)
               setAdding(false)
@@ -428,6 +435,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
             modelOrderLists={state.modelOrderLists}
             selectionsCatalog={state.selectionsCatalog}
             vendors={vendors}
+            utilities={utilities}
             initialStream={openStream}
             toggleStep={toggleStep}
             setStepNote={setStepNote}

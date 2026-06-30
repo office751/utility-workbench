@@ -39,6 +39,34 @@ function TaskRow({
   const due = dueLabel(t)
   const overdue = !t.done && t.dueDate ? new Date(t.dueDate + 'T00:00:00').getTime() < Date.now() : false
   const hat = hatOf(t.category)
+
+  // `draft` holds the in-progress edit, separate from `t` (the saved task).
+  // Typing in the edit inputs only updates this local draft — nothing is
+  // written back via updateTask until Save is clicked, so Cancel can just
+  // throw the draft away and the real task is untouched the whole time.
+  // editing === (draft !== null).
+  const [draft, setDraft] = useState<Partial<Task> | null>(null)
+
+  function startEdit() {
+    setDraft({ text: t.text, category: t.category, company: t.company ?? '', dueDate: t.dueDate ?? '', waitingOn: t.waitingOn ?? '' })
+  }
+
+  function save() {
+    if (!draft || !(draft.text ?? '').trim()) return
+    updateTask(t.id, {
+      text: (draft.text ?? '').trim(),
+      category: draft.category,
+      company: (draft.company ?? '').trim() || undefined,
+      dueDate: draft.dueDate || undefined,
+      waitingOn: (draft.waitingOn ?? '').trim() || undefined,
+    })
+    setDraft(null)
+  }
+
+  function cancel() {
+    setDraft(null)
+  }
+
   return (
     <div className={'trow' + (t.done ? ' done' : '')}>
       <button
@@ -53,18 +81,59 @@ function TaskRow({
       <button className="trow-star" title="Star as Today's Focus" onClick={() => updateTask(t.id, { focus: !t.focus })}>
         <Icon name="star" size={17} color={t.focus ? 'var(--gold)' : 'var(--ink-3)'} fill={t.focus} />
       </button>
-      <span className="trow-text">{t.text}</span>
-      {showHat && (
-        <span className="trow-chip">
-          <Icon name={hat.mi} size={13} />
-          {hat.label}
-        </span>
-      )}
-      {t.company && <span className="trow-chip">{t.company}</span>}
-      {t.waitingOn && (
-        <span className="trow-chip" title={`${t.waitingOn} is waiting on you to act`}>
-          <Icon name="hourglass_top" size={13} />
-          {t.waitingOn}
+      {draft === null ? (
+        <>
+          <span className="trow-text">{t.text}</span>
+          {showHat && (
+            <span className="trow-chip">
+              <Icon name={hat.mi} size={13} />
+              {hat.label}
+            </span>
+          )}
+          {t.company && <span className="trow-chip">{t.company}</span>}
+          {t.waitingOn && (
+            <span className="trow-chip" title={`${t.waitingOn} is waiting on you to act`}>
+              <Icon name="hourglass_top" size={13} />
+              {t.waitingOn}
+            </span>
+          )}
+        </>
+      ) : (
+        <span className="trow-edit">
+          <input
+            className="ta-text trow-edit-text"
+            value={draft.text ?? ''}
+            onChange={(e) => setDraft({ ...draft, text: e.target.value })}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') save()
+              if (e.key === 'Escape') cancel()
+            }}
+            autoFocus
+          />
+          <select value={draft.category ?? ''} onChange={(e) => setDraft({ ...draft, category: e.target.value })}>
+            {HATS.map((h) => (
+              <option key={h.id} value={h.id}>
+                {h.label}
+              </option>
+            ))}
+          </select>
+          <input
+            value={draft.company ?? ''}
+            placeholder="Company (optional)"
+            onChange={(e) => setDraft({ ...draft, company: e.target.value })}
+          />
+          <input type="date" value={draft.dueDate ?? ''} onChange={(e) => setDraft({ ...draft, dueDate: e.target.value })} />
+          <input
+            value={draft.waitingOn ?? ''}
+            placeholder="Who's waiting? (optional)"
+            onChange={(e) => setDraft({ ...draft, waitingOn: e.target.value })}
+          />
+          <button className="btn btn-primary btn-sm" onClick={save} disabled={!(draft.text ?? '').trim()}>
+            Save
+          </button>
+          <button className="btn btn-secondary btn-sm" onClick={cancel}>
+            Cancel
+          </button>
         </span>
       )}
       {/* Who owns this to-do. Blank = Unassigned (shared pile, shows for everyone). */}
@@ -82,6 +151,11 @@ function TaskRow({
         ))}
       </select>
       {due && <span className={'trow-due' + (overdue ? ' over' : '')}>{due}</span>}
+      {draft === null && (
+        <button className="trow-edit-btn" title="Edit task" aria-label="Edit task" onClick={startEdit}>
+          <Icon name="edit" size={15} />
+        </button>
+      )}
       <button className="trow-x" title="Delete" aria-label="Delete task" onClick={() => removeTask(t.id)}>
         <Icon name="close" size={15} />
       </button>

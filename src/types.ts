@@ -36,8 +36,18 @@ export interface OrderItem {
 /** Who's handling the building permit — tracked even when it isn't us. */
 export type PermitResponsible = 'Us' | 'Owner' | 'GC' | ''
 
-/** Electric utility companies we deal with. '' = not known/verified yet. */
-export type Utility = 'SECO' | 'DUKE' | 'CLAY' | ''
+/**
+ * Electric utility "code" for a project. '' = not known/verified yet.
+ * 'SECO' / 'DUKE' / 'CLAY' remain the three BUILT-IN codes that drive special
+ * automated behavior (SECO's pre-filled PDF load form, Duke's web-portal
+ * apply flow + office routing, Clay's phone-only contact card). Loosened from
+ * a closed union to `string` so Adam can also store the id of a custom roster
+ * entry from Settings → Utility companies setup (data/utilities.ts) — any
+ * value that isn't SECO/DUKE/CLAY/'' is treated as contact-only: a name/phone
+ * /email you call or email by hand, same as Clay today, just no bespoke
+ * automation behind it.
+ */
+export type Utility = string
 
 /** Overhead or underground electric service. */
 export type ServiceType = 'OH' | 'UG' | ''
@@ -247,8 +257,16 @@ export interface ProjectState {
   dukeOffice?: 'Ocala' | 'Inverness'
   engineer?: string
   waterSource?: WaterSource
+  /** Overrides the default water contact (Marion County Utilities) with a
+   *  data/utilities.ts roster entry id (kind 'water'). Leaving it unset
+   *  preserves today's behavior exactly — MCU stays the contact shown. */
+  waterCompanyId?: string
   septicSource?: SepticSource
   septicSystem?: SepticSystem
+  /** Overrides the default septic/sewer contact (Georges Plumbing / Marion
+   *  County Utilities) with a data/utilities.ts roster entry id (kind
+   *  'sewer'). Leaving it unset preserves today's behavior exactly. */
+  sewerCompanyId?: string
   closingDate?: string // YYYY-MM-DD; drives the shut-off reminder
   transferred?: boolean // electric account transferred after sale
 
@@ -427,6 +445,14 @@ export interface WorkbenchState {
    * Typed via an inline import so types.ts stays free of a runtime import cycle.
    */
   vendors?: import('./data/vendors').Vendor[]
+  /**
+   * Owner-editable EXTRA utility companies (Electric/Water/Sewer), for
+   * territories not covered by the built-in SECO/Duke/Clay/Marion County
+   * Utilities/Georges Plumbing. Seeded from data/utilities.ts defaults (an
+   * empty list) on first run; after that the blob owns it (edited in 🛠
+   * Settings → Utility companies setup). Same pattern as `vendors` above.
+   */
+  utilities?: import('./data/utilities').UtilityCompany[]
 }
 
 /** One model's library page: its plan files + editable facts. */

@@ -691,6 +691,12 @@ textarea {
 }
 .vend-del { flex: 0 0 auto; align-self: flex-end; }
 .vend-check { display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); color: var(--text); font-weight: 600; }
+/* Groups the Utility-companies editor into its Electric / Water / Sewer sections.
+   A separator line between consecutive sections makes the three groups read as
+   distinct (without it the headings + cards just stack with no visual break). */
+.vend-section { margin-top: 16px; }
+.vend-section + .vend-section { border-top: 1px solid var(--border); margin-top: 22px; padding-top: 14px; }
+.vend-section > h4 { display: flex; align-items: center; gap: 6px; margin: 0 0 4px; font-size: var(--text-sm); color: var(--text); }
 @media (max-width: 640px) {
   .vend-row { flex-direction: column; align-items: stretch; }
   .vend-f, .vend-f.vend-icon, .vend-f.vend-grow { width: 100%; }
@@ -3791,6 +3797,41 @@ a.map-btn {
   justify-content: center;
 }
 .trow-x:hover { color: var(--danger); border-color: var(--danger); }
+.trow-edit-btn {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--ink-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.trow-edit-btn:hover { color: var(--accent); border-color: var(--accent); }
+/* Edit mode swaps the static text+chips for inline inputs — same row, same
+   gap, but it needs to wrap on narrow screens since it carries 5 fields. */
+.trow-edit {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.trow-edit-text { flex: 1 1 160px; min-width: 120px; }
+.trow-edit input,
+.trow-edit select {
+  font-size: var(--text-sm);
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+}
 
 .tdone-btn {
   appearance: none;

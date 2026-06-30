@@ -8,14 +8,18 @@
  */
 import { useState } from 'react'
 import type { Project, ServiceType, Utility, WaterSource } from '../types'
+import type { UtilityCompany } from '../data/utilities'
 
 interface Props {
+  /** Owner-editable EXTRA electric companies (Settings → Utility companies
+   *  setup) — shown as additional options after Clay in the utility picker. */
+  utilities: UtilityCompany[]
   /** Called with the new project's facts; App adds it + selects it. */
   onSave: (facts: Omit<Project, 'id' | 'listStatus'>) => void
   onCancel: () => void
 }
 
-function AddProject({ onSave, onCancel }: Props) {
+function AddProject({ utilities, onSave, onCancel }: Props) {
   // Every form field in one object. 'Ocala' is prefilled since most lots
   // are there — typing over a default beats typing from scratch.
   const [form, setForm] = useState({
@@ -105,6 +109,15 @@ function AddProject({ onSave, onCancel }: Props) {
             <option value="SECO">SECO</option>
             <option value="DUKE">Duke</option>
             <option value="CLAY">Clay</option>
+            {/* Extra companies added in Settings → Utility companies setup —
+                contact-only (call/email), no auto-filled application packet. */}
+            {utilities
+              .filter((u) => u.kind === 'electric')
+              .map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
           </select>
         </label>
 

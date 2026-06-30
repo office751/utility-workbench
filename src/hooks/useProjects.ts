@@ -32,6 +32,7 @@ import type {
 import { buildInitialState, emptyProjectState, inferPermitSteps, seedStateFor } from '../data/seed'
 import { defaultCatalog, defaultSelections } from '../data/selections'
 import { VENDORS, type Vendor } from '../data/vendors'
+import { UTILITIES, type UtilityCompany } from '../data/utilities'
 import { ESTABLISHED_MODELS, TAKEOFF_TYPES } from '../data/takeoffs'
 import { PROJECTS } from '../data/projects'
 import { supabase } from '../lib/supabase'
@@ -179,6 +180,10 @@ export function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
     // Vendors directory — seed from code defaults on first run, then the blob
     // owns it (edited in Settings -> Vendor setup). Array-guarded like the rest.
     vendors: Array.isArray(parsed.vendors) ? parsed.vendors : VENDORS,
+    // Extra utility companies (Electric/Water/Sewer) — same seed-then-blob-owns
+    // pattern as vendors above. Array-guarded so a malformed/missing field
+    // never crashes a load; falls back to the (empty) code default.
+    utilities: Array.isArray(parsed.utilities) ? parsed.utilities : UTILITIES,
   }
 
   // ONE-TIME (June 2026): the scanner used to turn inspection RESULTS into
@@ -890,6 +895,12 @@ export function useProjects() {
     setState((prev) => ({ ...prev, vendors }))
   }
 
+  /** Replace the whole extra-utilities roster (Settings → Utility companies
+   *  setup). Same working-copy-then-save-in-one-shot shape as setVendors. */
+  function setUtilities(utilities: UtilityCompany[]) {
+    setState((prev) => ({ ...prev, utilities }))
+  }
+
   /** Dismiss a permit portal notification — kept in history, just marked read. */
   function dismissNotification(id: number, sourceKey: string) {
     const ps = getProjectState(id)
@@ -964,6 +975,7 @@ export function useProjects() {
     setAssignees,
     setSelectionsCatalog,
     setVendors,
+    setUtilities,
     setModelTakeoff,
     setModelOrderList,
     addModelFiles,
