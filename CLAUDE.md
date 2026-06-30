@@ -20,6 +20,25 @@ Adam is a beginner coder learning as we build — that shapes everything:
 - Stop at milestones, verify, then `git commit` each working checkpoint.
 - Lead summaries with what shipped and how to use it, not implementation.
 
+### Definition of done for a feature
+
+A passing `npm run build` is necessary but NOT sufficient — CSS isn't checked
+against usage, so a feature can compile clean and still render broken. Before
+calling a feature done:
+
+- **It looks finished.** Every CSS class you reference actually exists (or you
+  added it); new UI matches the surrounding components' style. (A real bug we
+  hit: inline inputs referenced `trow-edit-*` classes that were never defined,
+  so they built clean but rendered unstyled.)
+- **The visible result is verified, not assumed.** For anything observable in
+  the browser, confirm what Adam will actually see — a screenshot or a precise
+  description of the rendered screen — not just a green build. Verify via the
+  isolation-preview path, never the live dev server (it hits the production
+  Supabase blob; see gotchas #2 and #6).
+- **You name what you cut.** Before declaring done, list anything left rough or
+  deferred so it's a deliberate choice, not a silent gap.
+- **Verifier findings get fixed in the same pass**, not just reported.
+
 ## Stack & architecture
 
 Vite + React 19 + TypeScript SPA. No backend of our own — Supabase does
