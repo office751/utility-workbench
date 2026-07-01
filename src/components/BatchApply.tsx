@@ -15,6 +15,7 @@ import { needsVerify, utilityOf } from '../lib/nextAction'
 import { confirmSend } from '../lib/confirmSend'
 import { applicationDraft } from '../lib/loadForm'
 import { SECO_BLANK_FORM_URL, fillSecoLoadForm } from '../lib/secoForm'
+import { fillDukeLoadForm } from '../lib/dukeForm'
 import Icon from './Icon'
 
 interface Props {
@@ -29,7 +30,6 @@ interface Props {
 
 function BatchApply({ projects, getProjectState, templates, markApplied, onClose, onOpen }: Props) {
   const [previewId, setPreviewId] = useState<number | null>(null)
-  const [copiedId, setCopiedId] = useState<number | null>(null)
   const [formBusyId, setFormBusyId] = useState<number | null>(null)
 
   // Houses that still need an application: active, electric 'submit' not done.
@@ -49,14 +49,6 @@ function BatchApply({ projects, getProjectState, templates, markApplied, onClose
   const bySeco = ready.filter((p) => utilityOf(p, getProjectState(p.id)) === 'SECO')
   const byDuke = ready.filter((p) => utilityOf(p, getProjectState(p.id)) === 'DUKE')
 
-  async function copyPacket(p: Project) {
-    const d = applicationDraft(p, getProjectState(p.id), templates)
-    if (!d) return
-    await navigator.clipboard.writeText(d.packet)
-    setCopiedId(p.id)
-    setTimeout(() => setCopiedId(null), 1200)
-  }
-
   // SECO: fetch the bundled blank PDF, pre-fill it from the project, and
   // download it so Adam can tick the few radio buttons, sign, and attach it.
   async function downloadSecoForm(p: Project) {
@@ -72,6 +64,25 @@ function BatchApply({ projects, getProjectState, templates, markApplied, onClose
       URL.revokeObjectURL(url)
     } catch (e) {
       alert(`Couldn't build the SECO form: ${(e as Error).message}`)
+    } finally {
+      setFormBusyId(null)
+    }
+  }
+
+  // Duke: generate the Residential Service Information Form pre-filled from the
+  // project and download it, to attach to the WO# reply (mailto can't attach).
+  async function downloadDukeForm(p: Project) {
+    setFormBusyId(p.id)
+    try {
+      const bytes = await fillDukeLoadForm(p, getProjectState(p.id))
+      const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'application/pdf' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Duke Load Form - ${p.address}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      alert(`Couldn't build the Duke form: ${(e as Error).message}`)
     } finally {
       setFormBusyId(null)
     }
@@ -99,15 +110,6 @@ function BatchApply({ projects, getProjectState, templates, markApplied, onClose
               👁 {previewId === p.id ? 'Hide' : 'Preview'}
             </button>
           )
-          const copyBtn = (
-            <button
-              className="doc-btn"
-              onClick={() => copyPacket(p)}
-              title="Copy the filled load-form data to type into the load form"
-            >
-              {copiedId === p.id ? '✓ Copied' : '📋 Copy form'}
-            </button>
-          )
           const appliedBtn = (
             <button
               className="doc-btn applied"
@@ -128,14 +130,27 @@ function BatchApply({ projects, getProjectState, templates, markApplied, onClose
               ✓ Mark applied
             </button>
           )
-          // SECO's real load form, pre-filled — replaces the text "Copy form"
-          // for SECO (Duke keeps Copy form: you type into the .docx Duke sends).
+          // SECO's real load form, pre-filled and downloaded (Duke has its own
+          // pre-filled PDF via dukeFormBtn below — neither utility retypes now).
           const secoFormBtn = (
             <button
               className="doc-btn"
               onClick={() => downloadSecoForm(p)}
               disabled={formBusyId === p.id}
               title="Download the SECO load form pre-filled from this project — then tick Single Family / service / e-mail, sign, and attach it"
+            >
+              📄 {formBusyId === p.id ? 'Building…' : 'Load form (PDF)'}
+            </button>
+          )
+          // Duke's equivalent: the pre-filled Residential Service Information
+          // Form, downloaded to attach to the WO# reply (replaces the old
+          // "type it into the .docx Duke sends" copy step).
+          const dukeFormBtn = (
+            <button
+              className="doc-btn"
+              onClick={() => downloadDukeForm(p)}
+              disabled={formBusyId === p.id}
+              title="Download the Duke load form pre-filled from this project — then attach it, with the site plan, to your reply to Duke's Work Order email"
             >
               📄 {formBusyId === p.id ? 'Building…' : 'Load form (PDF)'}
             </button>
@@ -186,13 +201,14 @@ function BatchApply({ projects, getProjectState, templates, markApplied, onClose
                         >
                           ✉️ Send load form
                         </a>
-                        {copyBtn}
+                        {dukeFormBtn}
                         {previewBtn}
                         {appliedBtn}
                       </>
                     ) : (
                       <>
                         <span className="doc-btn ba-locked">✉️ Send load form</span>
+                        {dukeFormBtn}
                         <span
                           className="ba-waiting"
                           title="Apply in the portal first; Duke emails a Work Order # (~next day). Paste the WO# in ⚙️ Settings, then reply with the load form."
@@ -281,9 +297,10 @@ function BatchApply({ projects, getProjectState, templates, markApplied, onClose
       )}
 
       <p className="muted ba-note">
-        📎 SECO: <b>📄 Load form (PDF)</b> downloads the form pre-filled from this project — tick the boxes
-        (Single Family / service / e-mail), sign, and attach it with the site plan. Duke's reply attaches the
-        completed load form Duke sent you + the site plan (with the septic on it).
+        📎 <b>📄 Load form (PDF)</b> downloads the form pre-filled from this project. SECO: tick the boxes
+        (Single Family / service / e-mail), sign, and attach it with the site plan. Duke: attach it to your
+        reply to Duke's Work Order email, along with the site plan (with the septic on it). Email drafts can't
+        carry attachments, so the form downloads separately for you to attach.
       </p>
     </section>
   )

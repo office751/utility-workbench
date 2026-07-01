@@ -60,6 +60,9 @@ import { GEORGES } from '../data/contacts'
 // SECO's real load form, pre-filled from this project — same helper Batch
 // Apply uses (lib/secoForm.ts); this just adds a second place to download it.
 import { SECO_BLANK_FORM_URL, fillSecoLoadForm } from '../lib/secoForm'
+// Duke's load form (Residential Service Information Form), generated pre-filled
+// so Adam can attach it to the WO# reply instead of retyping Duke's blank.
+import { fillDukeLoadForm } from '../lib/dukeForm'
 import Checklist from './Checklist'
 import ContactLinks from './ContactLinks'
 import DocumentsBox from './DocumentsBox'
@@ -589,6 +592,26 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField, templ
     }
   }
 
+  // Duke: generate the Residential Service Information Form pre-filled from THIS
+  // project and download it, so Adam can attach it to the WO# reply (mailto
+  // can't carry an attachment — same download-then-attach flow as SECO).
+  async function downloadDukeForm() {
+    setFormBusy(true)
+    try {
+      const bytes = await fillDukeLoadForm(p, ps)
+      const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'application/pdf' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Duke Load Form - ${p.address}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      alert(`Couldn't build the Duke form: ${(e as Error).message}`)
+    } finally {
+      setFormBusy(false)
+    }
+  }
+
   return (
     <>
       {needsVerify(p, ps) && (
@@ -616,6 +639,23 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField, templ
               : dukeState === 'opened' || dukeState === 'noclip'
                 ? ' Portal opened — see next step ↓'
                 : ' Duke portal — new service application'}
+          </button>
+        </div>
+      )}
+
+      {/* Duke's load form (Residential Service Information Form), pre-filled and
+          downloaded — the piece you attach to the WO# reply. Sits right under
+          the portal button because it's step 2 of the same Duke flow. */}
+      {u === 'DUKE' && (
+        <div className="contact-row">
+          <button
+            className="contact"
+            onClick={downloadDukeForm}
+            disabled={formBusy}
+            title="Download the Duke load form (Residential Service Information Form) pre-filled from this project — then attach it, with the site plan, to your reply to Duke's Work Order email"
+          >
+            <Icon name={formBusy ? 'hourglass_top' : 'description'} size={15} />
+            {formBusy ? ' Building…' : ' Load form (PDF)'}
           </button>
         </div>
       )}
