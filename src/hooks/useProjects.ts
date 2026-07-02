@@ -38,6 +38,7 @@ import { PROJECTS } from '../data/projects'
 import { supabase } from '../lib/supabase'
 import { deleteProjectFile, uploadModelFile, uploadProjectFile } from '../lib/files'
 import { mergeWorkbench } from '../lib/mergeState'
+import { applyFactsPatch, hasManualPermitEdits } from '../lib/projectFacts'
 
 /** The key our data is filed under in the browser's localStorage. */
 const STORAGE_KEY = 'isc_workbench_v1'
@@ -133,14 +134,13 @@ export function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
   for (const [id, ps] of Object.entries(parsed.projects ?? {})) {
     const norm = normalize(ps as ProjectState)
     // Permit checklist follows the county portal (via inferPermitSteps), so
-    // re-derive it on load — UNLESS you've manually toggled a step. We treat a
-    // step as manual when its date is a real date, not our '(inferred)' /
-    // '(county)' marker. That keeps your edits while staying in sync with the
-    // portal data we captured.
-    const manual = Object.values(norm.steps.permit).some(
-      (s) => s.date && s.date !== '(inferred)' && s.date !== '(county)',
-    )
-    if (!manual) norm.steps.permit = inferPermitSteps(permitById.get(Number(id)) ?? '')
+    // re-derive it on load — UNLESS you've manually toggled a step (a manual
+    // step has a REAL date, not our '(inferred)'/'(county)' marker — the
+    // shared test lives in lib/projectFacts.ts, also used when the permit #
+    // is edited in ⚙️ Project settings). Keeps your edits while staying in
+    // sync with the portal data we captured.
+    if (!hasManualPermitEdits(norm.steps.permit))
+      norm.steps.permit = inferPermitSteps(permitById.get(Number(id)) ?? '')
     projects[Number(id)] = norm
   }
   // Tasks arrived after the first releases — older saves won't have them.
@@ -599,12 +599,15 @@ export function useProjects() {
   /** Edit a project's CORE FACTS (the roster fields: address, model, parcel,
    *  permit, subdivision, city/zip, WO#, status…). These start as a copy of
    *  data/projects.ts but the saved roster is the source of truth, so edits
-   *  persist — e.g. a "TBD" address that now has a real house number. */
+   *  persist — e.g. a "TBD" address that now has a real house number.
+   *
+   *  The real work is the pure `applyFactsPatch` (lib/projectFacts.ts): it
+   *  trims strings, ignores a patch that changes nothing, and — the subtle
+   *  part — re-derives the permit CHECKLIST when the permit # changes (the
+   *  permit # keys the county-portal/SharePoint links and the inferred
+   *  steps), unless you've hand-toggled steps. ONE setState, per the rule. */
   function updateProjectFacts(id: number, patch: Partial<Project>) {
-    setState((prev) => ({
-      ...prev,
-      roster: prev.roster.map((p) => (p.id === id ? { ...p, ...patch } : p)),
-    }))
+    setState((prev) => applyFactsPatch(prev, id, patch))
   }
 
   /** Remove a project AND all its saved progress. */
