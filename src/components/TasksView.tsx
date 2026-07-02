@@ -69,16 +69,27 @@ function TaskRow({
 
   return (
     <div className={'trow' + (t.done ? ' done' : '')}>
+      {/* Icon-only buttons: aria-label gives screen readers a real name (the
+          title tooltip alone isn't reliably announced) and aria-pressed tells
+          them the on/off state the icon shows sighted users. */}
       <button
         className={'trow-check' + (t.done ? ' on' : '')}
-        title="Mark done"
+        title={t.done ? 'Mark not done' : 'Mark done'}
+        aria-label={t.done ? 'Mark not done' : 'Mark done'}
+        aria-pressed={t.done}
         onClick={() =>
           updateTask(t.id, t.done ? { done: false, doneAt: undefined } : { done: true, doneAt: new Date().toISOString() })
         }
       >
         {t.done && <Icon name="check" size={13} color="#fff" />}
       </button>
-      <button className="trow-star" title="Star as Today's Focus" onClick={() => updateTask(t.id, { focus: !t.focus })}>
+      <button
+        className="trow-star"
+        title="Star as Today's Focus"
+        aria-label="Star as Today's Focus"
+        aria-pressed={Boolean(t.focus)}
+        onClick={() => updateTask(t.id, { focus: !t.focus })}
+      >
         <Icon name="star" size={17} color={t.focus ? 'var(--gold)' : 'var(--ink-3)'} fill={t.focus} />
       </button>
       {draft === null ? (

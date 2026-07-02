@@ -19,7 +19,10 @@ function GuideView() {
       <div className="guide-legend">
         {LEGEND.map((w) => (
           <span key={w} className="guide-legend-item">
-            {WHO[w].icon} {WHO[w].label}
+            {/* the label text right next to it says the same thing, so the
+                emoji is decorative here — aria-hidden stops screen readers
+                reading "person… You" double-speak */}
+            <span aria-hidden="true">{WHO[w].icon}</span> {WHO[w].label}
           </span>
         ))}
       </div>

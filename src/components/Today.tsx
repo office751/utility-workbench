@@ -128,7 +128,20 @@ function TaskRow({
   const hat = hatOf(t.category)
   return (
     <div className="t-row">
-      <input type="checkbox" className="t-check" title="Mark done" onChange={() => onCompleteTask(t.id)} />
+      {/* The <label> is the checkbox's 44px tap "landing pad" on phones (see
+          App.css .t-check-hit) — tapping anywhere on it toggles the input, so
+          the drawn box can stay small without being hard to hit. The
+          aria-label names the control for screen readers (a title tooltip
+          alone isn't reliably announced). */}
+      <label className="t-check-hit">
+        <input
+          type="checkbox"
+          className="t-check"
+          title="Mark done"
+          aria-label={`Mark "${t.text}" done`}
+          onChange={() => onCompleteTask(t.id)}
+        />
+      </label>
       <span className="t-row-icon">
         <Icon name={hat.mi} size={18} color="var(--ink-2)" />
       </span>

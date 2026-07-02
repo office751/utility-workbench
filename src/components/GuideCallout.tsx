@@ -35,7 +35,10 @@ function GuideCallout({ id, defaultOpen = false }: Props) {
           <ol className="guide-steps">
             {guide.steps.map((s, i) => (
               <li key={i} className="guide-step">
-                <span className="guide-who" title={WHO[s.who].label}>
+                {/* role="img" + aria-label: a screen reader announces "You" /
+                    "Automatic" / etc. instead of describing the raw emoji —
+                    the title tooltip only helps mouse users. */}
+                <span className="guide-who" role="img" aria-label={WHO[s.who].label} title={WHO[s.who].label}>
                   {WHO[s.who].icon}
                 </span>
                 <span className="guide-step-text">{s.text}</span>
