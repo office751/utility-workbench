@@ -330,6 +330,11 @@ async function syncToWorkbench(results) {
   console.log(`   notifications: +${nAdded} new, ${nCleared} cleared`)
   if (!doWrite) return console.log('\n(PREVIEW — nothing written. Re-run with  --write  to apply.)\n')
 
+  // Heartbeat for the app: stamp when this scan last WROTE, so 🏠 Today can
+  // raise a "scanner has gone quiet" banner if the nightly job stops (it was
+  // silently dead for 19 days in June 2026). Read by src/lib/scanHealth.ts.
+  blob.scanMeta = { lastScanAt: new Date().toISOString(), permitsRead: results.length }
+
   fs.mkdirSync(new URL('./backups/', import.meta.url), { recursive: true })
   const stamp = new Date().toISOString().replace(/[:.]/g, '-')
   fs.writeFileSync(new URL(`./backups/workbench-${stamp}.json`, import.meta.url), originalJson)

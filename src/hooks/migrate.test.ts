@@ -27,6 +27,7 @@ const full: Partial<WorkbenchState> = {
   stepOverrides: { electric: [{ id: 's1', label: 'Sentinel step' }] },
   assignees: ['Carey'],
   vendors: [{ id: 'v-test', name: 'TestVendor', email: '', icon: '📦', supplies: '', categories: [] }],
+  scanMeta: { lastScanAt: '2026-07-02T09:31:00Z', permitsRead: 56 },
 }
 
 const out = migrate(full)
@@ -50,6 +51,10 @@ describe('migrate() round-trip', () => {
     expect(out.tasks.some((t) => t.text === 'sentinel task')).toBe(true)
   })
 
+  it('keeps the scanner heartbeat stamp (drives the Today stale-scan alert)', () => {
+    expect(out.scanMeta?.lastScanAt).toBe('2026-07-02T09:31:00Z')
+  })
+
   // The guard: if someone adds a field to WorkbenchState, they must add it here
   // AND to migrate()'s result object — or this fails. That's the whole point.
   it('output carries EVERY WorkbenchState field', () => {
@@ -67,6 +72,8 @@ describe('migrate() round-trip', () => {
       'stepOverrides',
       'assignees',
       'vendors',
+      'utilities',
+      'scanMeta',
     ]
     for (const k of EXPECTED_KEYS) expect(out).toHaveProperty(k)
   })

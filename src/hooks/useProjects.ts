@@ -184,6 +184,11 @@ export function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
     // pattern as vendors above. Array-guarded so a malformed/missing field
     // never crashes a load; falls back to the (empty) code default.
     utilities: Array.isArray(parsed.utilities) ? parsed.utilities : UTILITIES,
+    // Heartbeat stamped by the nightly permit scanner (scanner/scan.mjs
+    // --write). Absent until the scanner's first stamped run. Like assignees:
+    // MUST be carried here or every load/sync strips it and the Today
+    // "scanner has gone quiet" alert could never fire. Shape-guarded.
+    scanMeta: parsed.scanMeta?.lastScanAt ? parsed.scanMeta : undefined,
   }
 
   // ONE-TIME (June 2026): the scanner used to turn inspection RESULTS into

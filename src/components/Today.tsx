@@ -22,6 +22,7 @@ import type { Stream, Task } from '../types'
 import type { ActionCenter, ActionItem } from '../lib/actionCenter'
 import { daysUntilDue, dueLabel, dueSoonTasks, focusTasks, forOperator, unassignedOpen, waitingOnTasks } from '../lib/tasks'
 import { hatOf } from '../data/hats'
+import { scanHealth } from '../lib/scanHealth'
 import Icon from './Icon'
 
 /** Action-center items carry EMOJI icons (so the status-report text keeps them);
@@ -55,6 +56,9 @@ interface Props {
   /** The signed-in person's display name — personalizes the greeting and (in
    *  the next step) scopes "my queue". Empty when unknown (local dev / pre-RBAC). */
   me?: string
+  /** Nightly permit-scanner heartbeat (WorkbenchState.scanMeta). Absent until
+   *  the scanner's first stamped run; stale → the "gone quiet" alert below. */
+  scanMeta?: { lastScanAt: string; permitsRead?: number }
 }
 
 function greeting(): string {
@@ -202,7 +206,7 @@ function MoveGroup({
   )
 }
 
-function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks, me }: Props) {
+function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks, me, scanMeta }: Props) {
   // YOUR queue = tasks assigned to you PLUS every unassigned task (fail-open, so
   // a to-do never disappears from both people's screens). Carey's assigned tasks
   // drop off your Today; manage everyone's work from the Tasks tab. House alerts
@@ -241,6 +245,11 @@ function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks, me }: Props) {
   const everythingClear =
     ac.stats.allClear && attnTasks.length === 0 && waiting.length === 0 && focus.length === 0
 
+  // Scanner heartbeat → ok / warn / crit (null until the scanner first stamps).
+  // ok shows as a quiet "portal scan ✓" note in the greeting; warn/crit render
+  // the alert strip below the banner.
+  const scan = scanHealth(scanMeta)
+
   const today = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
   // Just the date here — the stat chips carry the numbers, so we don't say the
   // same counts twice (audit finding, June 2026).
@@ -264,7 +273,7 @@ function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks, me }: Props) {
       <header className="t-banner">
         <div className="t-banner-text">
           <h2>{greeting()}{me ? `, ${me.split(' ')[0]}` : ''}</h2>
-          <p>{summary}{upForGrabs > 0 ? ` · ${upForGrabs} unassigned task${upForGrabs !== 1 ? 's' : ''} up for grabs` : ''}</p>
+          <p>{summary}{upForGrabs > 0 ? ` · ${upForGrabs} unassigned task${upForGrabs !== 1 ? 's' : ''} up for grabs` : ''}{scan?.level === 'ok' ? ` · portal scan ✓ ${scan.agoLabel}` : ''}</p>
         </div>
         <div className="t-stats">
           <StatChip n={focus.length} l="Focus" />
@@ -273,6 +282,21 @@ function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks, me }: Props) {
           <StatChip n={ac.stats.moves} l="To move" />
         </div>
       </header>
+
+      {/* ⚠ Infrastructure alert: the nightly portal scan stopped reporting.
+          Holds/inspections/permit statuses on this screen go stale fast when
+          the scanner is down — in June 2026 it was silently dead for 19 days,
+          which is exactly why this banner exists. */}
+      {scan && scan.level !== 'ok' && (
+        <div className={`scan-alert${scan.level === 'crit' ? ' crit' : ''}`} role="alert">
+          <Icon name="satellite_alt" size={20} />
+          <p>
+            <strong>Permit scanner has gone quiet</strong> — last check-in {scan.agoLabel}.
+            Holds, inspections &amp; permit statuses here may be stale. Check that the
+            office Mac is on and awake; the scan logs live in scanner/logs.
+          </p>
+        </div>
+      )}
 
       {everythingClear && (
         <div className="t-clear">

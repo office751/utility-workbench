@@ -337,6 +337,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
           ac={ac}
           tasks={state.tasks}
           me={me}
+          scanMeta={state.scanMeta}
           onOpen={openProject}
           onCompleteTask={(id) => updateTask(id, { done: true, doneAt: new Date().toISOString() })}
           onGoTasks={() => setTab('tasks')}

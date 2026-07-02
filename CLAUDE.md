@@ -105,6 +105,11 @@ vendors.ts), user overrides in `WorkbenchState.templates`, edited in
 2. For logic, write a throwaway `src/_check.ts` that imports the real
    modules + `data/projects.ts`/`data/seed.ts`, run
    `npx tsx src/_check.ts`, eyeball real-data output, then DELETE it.
+   For UI, browser-verify in ISOLATION mode (never against the live blob):
+   `npm run dev -- --mode isolation --port 5199`. It needs
+   `.env.isolation.local` with BLANK values (`VITE_SUPABASE_URL=` /
+   `VITE_SUPABASE_ANON_KEY=`) so `hasSupabase` is false → localStorage-only,
+   login skipped. The file is gitignored (`*.local`) — recreate it if missing.
 3. Deploy = `git push` on `main`; confirm with
    `curl -s https://utility-workbench.vercel.app/ | grep -o '/assets/index-[^"]*\.js'`
    (hash changes when the new build is live).

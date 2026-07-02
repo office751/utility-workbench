@@ -459,6 +459,13 @@ export interface WorkbenchState {
    * Settings → Utility companies setup). Same pattern as `vendors` above.
    */
   utilities?: import('./data/utilities').UtilityCompany[]
+  /**
+   * Heartbeat from the nightly permit scanner: scanner/scan.mjs (--write)
+   * stamps this on every successful sync. 🏠 Today turns a stale stamp into a
+   * "scanner has gone quiet" alert (logic in lib/scanHealth.ts) — added after
+   * the June 2026 outage where the scan job died silently for 19 days.
+   */
+  scanMeta?: { lastScanAt: string; permitsRead?: number }
 }
 
 /** One model's library page: its plan files + editable facts. */

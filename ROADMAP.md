@@ -32,7 +32,12 @@ the details.
       though the UI hides them. If that's not acceptable, move financials to their
       own RLS table. Decide before/when Carey is in daily.
 
-**Dev items — DONE June 27 2026 (audit pass 4):**
+**Dev items — DONE:**
+- [x] **Scanner heartbeat** *(July 1 2026 — born from the 19-day silent scanner
+      outage found that night)* — `scan.mjs --write` stamps `scanMeta.lastScanAt`
+      into the blob; 🏠 Today shows an amber "scanner has gone quiet" alert at
+      ≥36h and red at ≥72h (`lib/scanHealth.ts` + tests), plus a quiet
+      "portal scan ✓ today at 5:31 AM" note in the greeting when fresh.
 - [x] **Focus indicator (a11y)** — global `:focus-visible` 2px accent ring on
       every button/tab/link/nav (was none); inputs keep their border-colour
       focus. `src/index.css`.

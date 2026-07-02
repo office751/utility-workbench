@@ -1638,6 +1638,25 @@ button.danger:hover {
    Rust greeting banner + glass stat chips, consistent section headers, and
    grouped inset cards of rows. (The older .today-hero/.stat/.action-row/
    .move-group/.today-section rules below are superseded and now unused.) */
+/* ⚠ Scanner heartbeat alert (Today) — the nightly portal scan stopped
+   reporting (lib/scanHealth.ts): amber = missed a night; .crit = 3+ nights
+   dark. Sits directly under the greeting banner so it can't be missed. */
+.scan-alert {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: #fdf3e2;
+  color: #8a5a10;
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  font-size: calc(14px * var(--font-scale));
+  line-height: 1.45;
+}
+.scan-alert p { margin: 0; }
+.scan-alert.crit { background: var(--danger-bg); color: #8c3b22; }
+[data-theme='dark'] .scan-alert { background: #3d3016; color: #eecf8a; }
+[data-theme='dark'] .scan-alert.crit { background: #42291d; color: #f0b285; }
+
 .t-banner {
   background: linear-gradient(135deg, var(--accent), #8f3f12);
   border-radius: var(--radius-xl);
