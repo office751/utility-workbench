@@ -714,6 +714,10 @@ textarea {
   font-size: var(--text-sm);
   color: var(--muted);
 }
+/* one legend entry (icon + label) — GuideView referenced this class but it was
+   never defined (found in the July 2026 polish pass); nowrap keeps each
+   icon+label pair together when the legend wraps on a phone. */
+.guide-legend-item { white-space: nowrap; }
 .guide-list {
   margin-top: 12px;
 }
@@ -1606,17 +1610,22 @@ button.primary.on {
   color: var(--muted);
 }
 
-/* status-tinted dropdowns */
-.s-toOrder { color: #b06b00; font-weight: 700; }
+/* Status-tinted dropdowns — one colour per order-lifecycle stage so a
+   Materials list scans at a glance:
+     amber "act now" → blue "in flight" → rust "on site, your move" → green "done".
+   Each stage uses a semantic token from index.css, and every token already has
+   a dark twin there — so dark mode is covered automatically, with no
+   hard-coded hex and no per-theme override to forget. (Before this pass only
+   toOrder/installed were tinted, and toOrder was a light-mode-only hex.) */
+.s-toOrder   { color: var(--warn); font-weight: 700; } /* bold — it's the "needs action" state */
+.s-ordered   { color: var(--info); }
+.s-delivered { color: var(--accent); }
 .s-installed { color: var(--success); }
-/* …their dark twins — the light greens/ambers were near-invisible on the
-   dark background (audit finding). Same palette as .qa-done's dark version,
-   and the same lift for the red error / amber warning texts that also lacked
-   dark versions (.docs-error, .qa-error, .ba-warn, .sr-hint). */
-[data-theme='dark'] .s-toOrder,
+/* Dark lift for the red error / amber warning texts that lacked dark versions
+   (.docs-error, .qa-error, .ba-warn, .sr-hint) — audit finding. (The .s-*
+   status tints used to be listed here too; they're token-driven now, above.) */
 [data-theme='dark'] .ba-warn,
 [data-theme='dark'] .sr-hint { color: #e6c860; }
-[data-theme='dark'] .s-installed { color: #86dba6; }
 [data-theme='dark'] .docs-error,
 [data-theme='dark'] .qa-error { color: #f0a892; }
 
@@ -1728,8 +1737,9 @@ button.danger:hover {
 
 /* ===== Today — "Calm Canvas" design (Claude Design handoff, June 2026) =====
    Rust greeting banner + glass stat chips, consistent section headers, and
-   grouped inset cards of rows. (The older .today-hero/.stat/.action-row/
-   .move-group/.today-section rules below are superseded and now unused.) */
+   grouped inset cards of rows. (The pre-redesign .today-hero/.stat/.action-row/
+   .move-group rules that used to live below were dead code — deleted in the
+   July 2026 phone-polish sweep.) */
 /* ⚠ Scanner heartbeat alert (Today) — the nightly portal scan stopped
    reporting (lib/scanHealth.ts): amber = missed a night; .crit = 3+ nights
    dark. Sits directly under the greeting banner so it can't be missed. */
@@ -1887,8 +1897,15 @@ button.danger:hover {
 .t-row--link:hover {
   background: var(--surface-2);
 }
+/* The <label> wrapped around .t-check (Today.tsx). On desktop it's invisible
+   sizing-wise; on phones the media block near the end of this file pads it
+   out into a 44px tap "landing pad" for the small checkbox inside. */
+.t-check-hit {
+  display: inline-flex;
+  flex: none;
+  margin-top: 2px; /* the alignment nudge the bare input used to carry */
+}
 .t-check {
-  margin-top: 2px;
   flex: none;
   width: 16px;
   height: 16px;
@@ -1961,244 +1978,6 @@ button.danger:hover {
 .t-move-item {
   padding-left: 44px;
 }
-
-/* the hero banner — rust-orange gradient, white text, soft glow */
-.today-hero {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 18px;
-  flex-wrap: wrap;
-  padding: 22px 26px;
-  border-radius: var(--radius-xl);
-  color: var(--on-accent);
-  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 60%, #000));
-  box-shadow: 0 10px 30px -14px color-mix(in srgb, var(--accent) 75%, transparent);
-}
-.today-greet h2 {
-  margin: 0;
-  font-size: calc(24px * var(--font-scale));
-}
-.today-greet p {
-  margin: 5px 0 0;
-  font-size: calc(14px * var(--font-scale));
-  opacity: 0.92;
-}
-
-.today-stats {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 68px;
-  padding: 8px 12px;
-  border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.16);
-}
-.stat-n {
-  font-size: calc(24px * var(--font-scale));
-  font-weight: 800;
-  line-height: 1;
-}
-.stat-l {
-  font-size: calc(11px * var(--font-scale));
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  opacity: 0.9;
-  margin-top: 4px;
-}
-
-/* section headers */
-.today-h {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 10px;
-  font-size: calc(14px * var(--font-scale));
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-.today-h.accent {
-  color: var(--accent);
-}
-.today-h .cnt {
-  font-size: calc(12px * var(--font-scale));
-  font-weight: 700;
-  padding: 1px 9px;
-  border-radius: var(--radius-pill);
-  background: var(--border);
-  color: var(--muted);
-}
-
-.action-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-/* one action row — a full-width clickable card with a colored urgency stripe */
-.action-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  text-align: left;
-  font: inherit;
-  color: var(--text);
-  cursor: pointer;
-  padding: 11px 14px;
-  border-radius: var(--radius-lg);
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--border);
-  transition: border-color 0.12s ease, transform 0.06s ease;
-}
-.action-row:hover {
-  border-color: var(--accent);
-  transform: translateX(2px);
-}
-.action-row.sev-crit { border-left-color: var(--danger); }
-.action-row.sev-warn { border-left-color: #d99a00; }
-.action-row.sev-info { border-left-color: var(--accent); }
-
-.ar-icon {
-  font-size: calc(18px * var(--font-scale));
-  width: 22px;
-  text-align: center;
-  flex: none;
-}
-.ar-body {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 0; /* lets the address truncate instead of overflowing the row */
-}
-.ar-text {
-  font-weight: 700;
-  font-size: calc(14px * var(--font-scale));
-}
-.ar-addr {
-  font-size: calc(12px * var(--font-scale));
-  color: var(--muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.ar-chip {
-  flex: none;
-  font-size: calc(12px * var(--font-scale));
-  font-weight: 700;
-  white-space: nowrap;
-  padding: 3px 10px;
-  border-radius: var(--radius-pill);
-  background: var(--bg);
-  color: var(--muted);
-}
-.ar-chip.sev-crit { background: var(--danger-bg); color: #b03020; }
-.ar-chip.sev-warn { background: #fbf0d5; color: #8a6414; }
-.ar-go {
-  flex: none;
-  color: var(--muted);
-  font-size: calc(18px * var(--font-scale));
-}
-
-/* the "all caught up" state */
-.today-clear {
-  padding: 18px 20px;
-  border-radius: 14px;
-  font-size: calc(15px * var(--font-scale));
-  background: #e6f3e6;
-  color: var(--success);
-  border: 1px solid #c6e2c6;
-}
-
-/* compact density: tighten the rows + hero */
-[data-density='compact'] .action-row { padding: 8px 12px; }
-[data-density='compact'] .today-hero { padding: 16px 20px; }
-
-/* dark-mode fixes for the hard-coded chip / stripe colors */
-[data-theme='dark'] .action-row.sev-crit { border-left-color: #f0876c; }
-[data-theme='dark'] .action-row.sev-warn { border-left-color: #e6c860; }
-[data-theme='dark'] .ar-chip.sev-crit { background: #4a2b24; color: #f0a892; }
-[data-theme='dark'] .ar-chip.sev-warn { background: #3a3320; color: #e8cf9a; }
-[data-theme='dark'] .today-clear { background: #1f3a29; color: #86dba6; border-color: #2f5a3f; }
-
-/* grouped "ready for your move" list — collapsible piles of same-action work */
-.move-groups {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.move-group {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--panel);
-  overflow: hidden;
-}
-.move-group.open {
-  border-color: var(--accent);
-}
-.mg-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  font: inherit;
-  color: var(--text);
-  cursor: pointer;
-  text-align: left;
-  padding: 11px 14px;
-  background: transparent;
-  border: none;
-}
-.mg-head:hover {
-  background: var(--bg);
-}
-.mg-caret {
-  color: var(--muted);
-  width: 14px;
-  flex: none;
-}
-.mg-label {
-  flex: 1;
-  font-weight: 700;
-  font-size: calc(14px * var(--font-scale));
-}
-.mg-items {
-  display: flex;
-  flex-direction: column;
-}
-.mg-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  font: inherit;
-  color: var(--text);
-  cursor: pointer;
-  text-align: left;
-  padding: 9px 14px 9px 40px; /* indented under the group header */
-  background: transparent;
-  border: none;
-  border-top: 1px solid var(--border);
-}
-.mg-item:hover {
-  background: var(--bg);
-}
-.mg-addr {
-  font-weight: 600;
-  font-size: calc(13px * var(--font-scale));
-}
-.mg-item .ar-go {
-  margin-left: auto;
-}
-[data-density='compact'] .mg-head { padding: 8px 12px; }
-[data-density='compact'] .mg-item { padding: 6px 12px 6px 36px; }
 
 /* ---------- Tasks tab + Today's Focus ---------- */
 
@@ -2350,11 +2129,6 @@ button.danger:hover {
 
 .done-block { margin-top: 6px; }
 .done-block .mini { margin-bottom: 6px; }
-
-/* Today's Focus rows (a div styled like an action row, but the checkbox is the action) */
-.focus-row { border-left-color: var(--accent); cursor: default; }
-.focus-row:hover { transform: none; border-color: var(--border); border-left-color: var(--accent); }
-.focus-check { width: 18px; height: 18px; accent-color: var(--accent); flex: none; cursor: pointer; }
 
 /* inline text button (e.g. the empty-focus hint) */
 .linklike {
@@ -3403,35 +3177,6 @@ a.map-btn {
   .nav-pill { padding: 7px 11px; }
   .icon-btn { height: 40px; min-width: 40px; } /* roomier touch target */
 
-  /* Today hero: stack the greeting over an even 4-up stat strip. */
-  .today-hero {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 18px;
-    gap: 14px;
-  }
-  .today-greet h2 {
-    font-size: calc(20px * var(--font-scale));
-  }
-  .today-greet p {
-    font-size: calc(13px * var(--font-scale));
-  }
-  .today-stats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-  }
-  .stat {
-    min-width: 0;
-    padding: 8px 4px;
-  }
-  .stat-n {
-    font-size: calc(20px * var(--font-scale));
-  }
-  .stat-l {
-    font-size: calc(9.5px * var(--font-scale));
-  }
-
   /* Detail + checklist + materials rows: stack instead of cramming columns. */
   .detail {
     padding: 16px;
@@ -3525,9 +3270,46 @@ a.map-btn {
     font-size: calc(16px * var(--font-scale));
   }
 
-  /* A little more height on tappable action rows. */
-  .action-row {
-    padding: 12px;
+  /* ---- 44px touch targets for the small row controls (Apple's HIG floor) ----
+     On a phone an 18px checkbox or a 26px ✕ is easy to miss with a thumb. We
+     keep the DRAWN box small (dense rows still look right) but grow the
+     TAPPABLE area to --tap-min (44px) with an invisible ::before square.
+     The trick: position:relative makes each button the anchor, then the
+     absolutely-positioned ::before is a transparent 44×44 square centered
+     back over the button (top/left 50% + translate(-50%,-50%)). A tap on the
+     square counts as a tap on the button — no layout shift, no visual change.
+     (Neighboring controls' zones can overlap a little; the one on top wins
+     in the overlap, which still beats an 18px target.) */
+  .trow-check,
+  .trow-star,
+  .trow-x,
+  .trow-edit-btn,
+  .task-x,
+  .team-x {
+    position: relative;
+  }
+  .trow-check::before,
+  .trow-star::before,
+  .trow-x::before,
+  .trow-edit-btn::before,
+  .task-x::before,
+  .team-x::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--tap-min);
+    height: var(--tap-min);
+    transform: translate(-50%, -50%);
+  }
+  /* The Today checkbox is a native <input>, which can't grow a ::before — so
+     its wrapping <label> (see Today.tsx) is the landing pad instead: padding
+     grows the tappable label to 44px (16px box + 14px each side) and the
+     matching negative margin gives that space right back to the layout, so
+     nothing visibly moves. Clicking a label toggles the input inside it. */
+  .t-check-hit {
+    padding: 14px;
+    margin: -12px -14px -14px; /* top is -12px: 14px minus the 2px alignment nudge */
   }
 
   /* ----- investor portal on phones ----- */
@@ -4084,13 +3866,20 @@ a.map-btn {
 
 .ip-progress { display: flex; flex-direction: column; gap: 12px; }
 .ip-prow { display: flex; align-items: baseline; gap: 10px; }
+/* Stream label ("PERMITTING" / "ELECTRIC" / …). Was a fixed width: 84px, which
+   "PERMITTING" outgrew after the font bump — it wrapped onto two ugly lines.
+   The fix: never let a label break mid-word (white-space: nowrap), let it take
+   its natural width, and use min-width so the three shorter labels still line
+   their values up in the same column as the longest one. Worst case a longer
+   future label nudges its own value right a few px — far better than wrapping. */
 .ip-prow-label {
   font-size: calc(12px * var(--font-scale));
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--ink-3);
-  width: 84px;
+  min-width: 96px;
+  white-space: nowrap;
   flex: 0 0 auto;
 }
 .ip-prow-val { font-size: calc(14px * var(--font-scale)); color: var(--ink); }

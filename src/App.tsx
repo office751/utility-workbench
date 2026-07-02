@@ -230,10 +230,14 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
   return (
     <div className="app">
       <header className="app-header">
-        {/* ★ Lodestar brand lockup (Calm Canvas) */}
+        {/* ★ Lodestar brand lockup (Calm Canvas). Screen-reader notes: the ★ is
+            decorative (aria-hidden skips it — otherwise it reads as "black
+            star"), and the sr-only span speaks the same tagline the mouse
+            tooltip shows, since title="" alone isn't reliably announced. */}
         <div className="brand-lockup" title="Lodestar — your command center">
-          <span className="brand-star">★</span>
+          <span className="brand-star" aria-hidden="true">★</span>
           <span className="brand-word">Lodestar</span>
+          <span className="sr-only"> — your command center</span>
         </div>
 
         {/* Pill nav — the role's visible tabs, active = rust-tint */}

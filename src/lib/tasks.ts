@@ -37,18 +37,6 @@ export function dueLabel(t: Task): string | null {
   return `in ${d}d`
 }
 
-/**
- * "Urgent" = overdue, due within 3 days, or someone is waiting on you. These
- * are the tasks that should jump onto the Today command center on their own
- * (wired up in M2). Kept here so the rule lives in one place.
- */
-export function isUrgentTask(t: Task): boolean {
-  if (t.done) return false
-  if (t.waitingOn && t.waitingOn.trim()) return true
-  const d = daysUntilDue(t)
-  return d !== null && d <= 3
-}
-
 /** Open tasks that are time-urgent: overdue or due within `days` (default 2). */
 export function dueSoonTasks(tasks: Task[], days = 2): Task[] {
   return openTasks(tasks).filter((t) => {
