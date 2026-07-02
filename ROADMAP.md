@@ -47,22 +47,25 @@ the details.
       Root. Main bundle 660KB → 496KB (gzip 190 → 142KB). Today/Tasks/ProjectList
       stay eager.
 
-**Low / polish tail:**
-- [ ] **Dark twin + full coverage for status tints** — `.s-toOrder` (#b06b00) is
-      light-mode only and only 2 of 4 statuses are tinted (App.css ~1466).
-- [ ] **Materials empty state** — add an "add your first order" call-to-action
-      (MaterialsBody.tsx ~73) and a separator/heading above the add-order row.
-- [ ] **Redundant vendor affordance** — a row shows BOTH a free-text "vendor…"
-      box and a one-click ✉️; show the text box only when no known vendor matches.
-- [ ] **Investor stream label** sits in a fixed 84px column — "PERMITTING" can
-      wrap after the font bump (App.css ~3813 / InvestorView.tsx).
-- [ ] **Touch targets** — small checkboxes / remove buttons (`.trow-check`,
-      `.trow-x`, `.focus-check`) are under the 44px floor on phones.
+**Low / polish tail** *(most items DONE July 1 2026 — the parallel-agent batch)*:
+- [x] **Dark twin + full coverage for status tints** — all 4 order statuses
+      tinted via theme tokens, light + dark (July 1 2026).
+- [x] **Materials empty state** — friendly empty state + one-click "Seed Model
+      X's standard list" button (10 standard categories, duplicate-guarded) +
+      heading above the add-order row (July 1 2026).
+- [x] **Redundant vendor affordance** — free-text vendor box now shows only on
+      categories with no directory vendor (July 1 2026).
+- [x] **Investor stream label** — no longer wraps (July 1 2026).
+- [x] **Touch targets** — `.trow-check`/`.trow-x`/`.trow-star` + Today rows get
+      invisible 44px tap overlays; `.focus-check` was dead CSS, deleted
+      (July 1 2026).
 - [ ] **Models / Selections cards** read dense on a single mobile column.
-- [ ] **Tooltip-only labels** on the brand lockup + guide "who" pills (a11y).
-- [ ] **Dead code**: remove unused `isUrgentTask` (lib/tasks.ts:45) and the
-      legacy `.today-hero/.stat` CSS (App.css ~1803); `:focus-visible` rings on
-      custom buttons would round out keyboard a11y.
+- [x] **Tooltip-only labels** — aria-labels on brand lockup, guide "who" pills,
+      task check/star controls (July 1 2026).
+- [x] **Dead code** — `isUrgentTask` + legacy `.today-hero/.stat` CSS removed
+      (~250 lines). NOTED for a future sweep: the old `.task-row`/`.task-star`/
+      `.task-list`/`.done-block` CSS family also looks dead but sits next to
+      `.task-x` which IS used — verify before deleting (July 1 2026).
 - [ ] **Emoji → `<Icon>`** for interactive controls (✉️/📞/✕) so they theme
       consistently and read better to screen readers (aria-labels already added).
 
@@ -241,8 +244,11 @@ role-assigned in 👥 People); per-stream scoping for the coworker role.
 - [ ] Keyboard navigation — ↑/↓ moves through the project list
 - [ ] "Reset to built-in roster" escape hatch (since localStorage owns the
       roster now)
-- [ ] Edit a project's fixed facts (address/parcel/permit) — natural home is
-      now the ⚙️ Project settings panel (add a "Project info" section to it)
+- [x] Edit a project's fixed facts *(July 1 2026)* — "🏠 Project details"
+      section in the ⚙️ gear: address/city/zip/subdivision/model/parcel/permit
+      /WO#, save-on-blur w/ trim + no-op guards; permit-# edits re-derive the
+      inferred checklist via the shared `lib/projectFacts.ts` helper (manual
+      step edits win); inline hints on permit/parcel/model tentacles.
 
 ## Done
 
@@ -273,12 +279,17 @@ role-assigned in 👥 People); per-stream scoping for the coworker role.
       To order / Ordered / Delivered, and a **Quick-Add bar**: paste Josh's
       text or type shorthand → it matches the project + item(s) and creates
       "To order". Config in `data/orders.ts`, parser in `lib/orders.ts`.
-- [ ] **Lead-time "order now" alerts** — per-category lead times + a needed-by
-      date so trusses/cabinets flag before they're late (fold into Action Center).
-- [ ] **Model order templates** — seed a model's standard order list when a
-      project is added (spec homes repeat: A/B/E2/F…).
-- [ ] **Vendor directory + order email shortcuts** — supplier per category with
-      click-to-call / pre-filled order email (reuse the ContactLinks pattern).
+- [x] **Lead-time "order now" alerts** *(July 1 2026)* — orders carry a
+      "Needed" date; per-category lead times in `data/orders.ts`
+      (`LEAD_TIME_DAYS`, tunable) drive an "order by <date>" pill (amber ≤7
+      days, red past) + "Order NOW/soon" items on 🏠 Today (`lib/leadTimes.ts`
+      + tests).
+- [x] **Model order templates** *(July 1 2026)* — empty Materials tab offers
+      "Seed Model X's standard list" (10 standard categories, duplicate-guarded,
+      `seedStandardOrders()`); per-model overrides = `MODEL_STANDARD_ORDERS`
+      in `data/orders.ts` (empty map = the designed extension point).
+- [x] **Vendor directory + order email shortcuts** — shipped June 2026 (✉️
+      order buttons + 🚚 Vendors directory, owner-editable in Settings).
 - [x] **"Claude pulls from Messages"** capture path *(June 2026)* — Full Disk
       Access granted; `scripts/read-josh-orders.mjs` reads Josh & Mickey's texts
       (+ their group chats) from the Mac Messages DB, decodes binary-text
