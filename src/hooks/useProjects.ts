@@ -34,6 +34,8 @@ import { defaultCatalog, defaultSelections } from '../data/selections'
 import { VENDORS, type Vendor } from '../data/vendors'
 import { UTILITIES, type UtilityCompany } from '../data/utilities'
 import { ESTABLISHED_MODELS, TAKEOFF_TYPES } from '../data/takeoffs'
+import { standardOrdersFor } from '../data/orders'
+import { modelKey } from '../data/models'
 import { PROJECTS } from '../data/projects'
 import { supabase } from '../lib/supabase'
 import { deleteProjectFile, uploadModelFile, uploadProjectFile } from '../lib/files'
@@ -698,6 +700,39 @@ export function useProjects() {
     })
   }
 
+  /**
+   * Seed a project's Materials list with its model's STANDARD categories
+   * (data/orders.ts standardOrdersFor) — the one-click "start the list" button
+   * on an empty Materials tab. Every seeded line starts at 'toOrder'.
+   *
+   * ONE setState for the whole batch (not addOrder in a loop — each loop call
+   * would read the same stale closure state and only the last survives; the
+   * same lesson as addOrder's note above). Duplicate-guarded: a category the
+   * project ALREADY has is skipped, so pressing the button twice — or seeding
+   * after Josh's text-scan already added Trusses — never doubles a line.
+   */
+  function seedStandardOrders(id: number) {
+    setState((prev) => {
+      const cur = prev.projects[id] ?? emptyProjectState()
+      // The project's model comes from the saved roster (source of truth for
+      // added houses too), normalized to its key: "Model F-LH" → 'F'.
+      const model = prev.roster.find((p) => p.id === id)?.model ?? ''
+      const have = new Set((cur.orders ?? []).map((o) => o.category))
+      const toAdd = standardOrdersFor(modelKey(model)).filter((c) => !have.has(c))
+      if (toAdd.length === 0) return prev // nothing new — don't churn a save
+      const seeded: OrderItem[] = toAdd.map((category) => ({
+        id: crypto.randomUUID(),
+        category,
+        status: 'toOrder',
+        createdAt: new Date().toLocaleDateString(),
+      }))
+      return {
+        ...prev,
+        projects: { ...prev.projects, [id]: { ...cur, orders: [...(cur.orders ?? []), ...seeded] } },
+      }
+    })
+  }
+
   /** Patch one order (e.g. advance its status, set vendor/note). */
   function updateOrder(id: number, orderId: string, patch: Partial<OrderItem>) {
     const ps = getProjectState(id)
@@ -1007,6 +1042,7 @@ export function useProjects() {
     removeModelFile,
     setModelInfo,
     addOrder,
+    seedStandardOrders,
     updateOrder,
     removeOrder,
     setSelection,

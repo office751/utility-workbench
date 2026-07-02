@@ -1468,6 +1468,7 @@ button.primary.on {
 .order-status,
 .order-vendor,
 .order-date,
+.order-needby input,
 .order-add select,
 .order-add-date input {
   font: inherit;
@@ -1509,6 +1510,97 @@ button.primary.on {
   display: flex;
   align-items: center;
   gap: 6px;
+  font-size: calc(12px * var(--font-scale));
+  font-weight: 600;
+  color: var(--muted);
+}
+/* the "Needed <date>" labelled field on each order row (when the material must
+   be ON SITE) — same quiet labelled-input look as .order-add-date above. */
+.order-needby {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  font-size: calc(12px * var(--font-scale));
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* "order by <date>" pill next to the category — the lead-time verdict from
+   lib/leadTimes.ts. ok = quiet note, soon = amber (order this week!),
+   late = red (the window already closed). Color vars carry their own dark
+   values (index.css), with explicit dark twins below for the hard-coded bits. */
+.order-by {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  font-size: calc(11.5px * var(--font-scale));
+  font-weight: 700;
+  white-space: nowrap;
+  vertical-align: 1px;
+}
+.ob-ok {
+  color: var(--muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-weight: 600;
+}
+.ob-soon {
+  color: var(--warn);
+  background: var(--warn-bg);
+  border: 1px solid #a06a0033;
+}
+.ob-late {
+  color: var(--danger);
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+}
+/* dark twins for the hard-coded borders (the fill/text vars flip on their own) */
+[data-theme='dark'] .ob-soon {
+  border-color: #e6c86044;
+}
+[data-theme='dark'] .ob-late {
+  border-color: #f0876c55;
+}
+
+/* Read-only "via <vendor>" on rows past "to order" whose category maps to a
+   directory vendor — replaces the redundant free-text vendor box there. */
+.order-vendor-known {
+  flex: 1 1 150px;
+  min-width: 120px;
+  font-size: calc(13px * var(--font-scale));
+  font-style: italic;
+  color: var(--muted);
+}
+
+/* Empty Materials tab: friendly line + the one-click model-list seed button. */
+.orders-empty {
+  margin: 4px 0 16px;
+  padding: 14px;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+.orders-empty-line {
+  margin: 0 0 10px;
+  font-weight: 600;
+  font-size: calc(14px * var(--font-scale));
+}
+.orders-seed {
+  font-weight: 600;
+}
+.orders-empty-hint {
+  margin: 8px 0 0;
+  font-size: calc(12.5px * var(--font-scale));
+  color: var(--muted);
+}
+
+/* the small separator heading over the add-order composer */
+.order-add-head {
+  margin: 14px 0 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
   font-size: calc(12px * var(--font-scale));
   font-weight: 600;
   color: var(--muted);
@@ -3361,11 +3453,18 @@ a.map-btn {
   .order-top .order-cat,
   .order-top .order-status,
   .order-top .order-date,
-  .order-top .order-vendor {
+  .order-top .order-needby,
+  .order-top .order-vendor,
+  .order-top .order-vendor-known {
     width: 100%;
     min-width: 0;
     max-width: none;
     flex: 0 0 auto; /* the column is vertical now — don't let cat/vendor grow tall */
+  }
+  /* the "Needed" label keeps its text at the left; its date input fills the rest */
+  .order-top .order-needby input {
+    flex: 1;
+    min-width: 0;
   }
   .order-top .task-x {
     margin-left: 0;
@@ -3418,6 +3517,7 @@ a.map-btn {
   .login-card input,
   .order-status,
   .order-date,
+  .order-needby input,
   .order-vendor,
   .order-add select,
   .order-add-date input,

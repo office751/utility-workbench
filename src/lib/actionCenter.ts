@@ -3,7 +3,8 @@
  *
  * It walks EVERY project once and gathers everything time-sensitive or
  * actionable into two prioritized lists:
- *   - attention : deadlines (permit expiry, electric shut-off) + stalled stages
+ *   - attention : deadlines (permit expiry, electric shut-off, material
+ *                 order-by dates from lead times) + stalled stages
  *   - moves     : the next step where the ball is in OUR court, + materials to order
  *
  * It's pure logic (no React), reusing the per-stream brains we already have so
@@ -23,9 +24,10 @@ import {
   nextPermitAction,
   permitNeedsAction,
 } from './nextAction'
-import { toOrderCount } from './orders'
+import { ordersOf, toOrderCount } from './orders'
+import { orderLeadInfo } from './leadTimes'
 
-export type ActionKind = 'expiry' | 'shutoff' | 'stale' | 'todo' | 'order' | 'takeoff'
+export type ActionKind = 'expiry' | 'shutoff' | 'stale' | 'todo' | 'order' | 'takeoff' | 'leadtime'
 export type Severity = 'crit' | 'warn' | 'info'
 
 /** One actionable line on the command center. */
@@ -202,6 +204,27 @@ export function buildActionCenter(
     }
     for (const t of todos) {
       moves.push({ ...base, stream: t.stream, kind: 'todo', icon: STREAM_ICON[t.stream], text: t.label, severity: 'info', sortDays: 0 })
+    }
+
+    // --- deadline: material lead times ("order NOW or the schedule slips") ---
+    // Any to-order line with a needed-by date gets order-by math from
+    // lib/leadTimes.ts. 'late' = the order-by date already passed (crit);
+    // 'soon' = it lands within a week (warn). 'ok' lines stay quiet here —
+    // the Materials row's pill covers them. Clicking deep-links to the
+    // project's Materials tab like every other attention item.
+    for (const o of ordersOf(ps)) {
+      const lead = orderLeadInfo(o) // null unless still toOrder + neededBy set
+      if (!lead || lead.status === 'ok') continue
+      attention.push({
+        ...base,
+        stream: 'materials',
+        kind: 'leadtime',
+        icon: '🛒',
+        text: `${lead.status === 'late' ? 'Order NOW' : 'Order soon'}: ${o.category} — needed ${lead.neededByLabel}, ${lead.leadTimeDays}-day lead`,
+        detail: `order by ${lead.orderByLabel}`,
+        severity: lead.status === 'late' ? 'crit' : 'warn',
+        sortDays: lead.daysLeft, // negative once missed → floats above closer deadlines
+      })
     }
 
     // --- materials waiting to be ordered ---

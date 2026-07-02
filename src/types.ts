@@ -28,7 +28,7 @@ export interface OrderItem {
   status: OrderStatus
   vendor?: string
   orderedOn?: string // YYYY-MM-DD — the date YOU placed the order
-  neededBy?: string // YYYY-MM-DD — optional; powers lead-time hints later
+  neededBy?: string // YYYY-MM-DD — when it must be ON SITE; with the category's lead time (data/orders.ts) it drives the "order by" pill + Today's Order-NOW alerts (lib/leadTimes.ts)
   note?: string
   createdAt: string // display date it was captured
 }

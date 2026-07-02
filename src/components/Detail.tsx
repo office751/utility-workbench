@@ -86,6 +86,8 @@ interface Updaters {
   addOrder: (id: number, order: { category: string; status: OrderStatus; orderedOn?: string }) => void
   updateOrder: (id: number, orderId: string, patch: Partial<OrderItem>) => void
   removeOrder: (id: number, orderId: string) => void
+  /** Seed the model's standard order categories on an empty Materials tab. */
+  seedStandardOrders: (id: number) => void
   setSelection: (id: number, area: 'interior' | 'exterior', categoryId: string, choice: SelectionChoice) => void
   setAdditionalRequests: (id: number, text: string) => void
   lockSelections: (id: number, signature: string, printedName: string) => void
@@ -451,6 +453,7 @@ function Detail(props: Props) {
               addOrder={props.addOrder}
               updateOrder={props.updateOrder}
               removeOrder={props.removeOrder}
+              seedStandardOrders={props.seedStandardOrders}
             />
           )}
 
