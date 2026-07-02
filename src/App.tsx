@@ -114,6 +114,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
     removeModelFile,
     setModelInfo,
     addOrder,
+    seedStandardOrders,
     updateOrder,
     removeOrder,
     setSelection,
@@ -448,6 +449,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
             addOrder={addOrder}
             updateOrder={updateOrder}
             removeOrder={removeOrder}
+            seedStandardOrders={seedStandardOrders}
             setSelection={setSelection}
             setAdditionalRequests={setAdditionalRequests}
             lockSelections={lockSelections}

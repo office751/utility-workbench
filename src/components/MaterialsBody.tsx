@@ -8,10 +8,11 @@
  */
 import { Fragment, useState } from 'react'
 import type { OrderItem, OrderStatus, Project, ProjectState, TemplateOverride, WorkbenchState } from '../types'
-import { MATERIAL_CATEGORIES, ORDER_STATUSES, SITE_SERVICES } from '../data/orders'
+import { MATERIAL_CATEGORIES, ORDER_STATUSES, SITE_SERVICES, standardOrdersFor } from '../data/orders'
 import { orderMailto, vendorCallHref, vendorMailto, type Vendor } from '../data/vendors'
 import { modelKey } from '../data/models'
 import { ordersOf } from '../lib/orders'
+import { orderLeadInfo } from '../lib/leadTimes'
 import { missingTakeoffs, permitIssued } from '../lib/takeoffs'
 import GuideCallout from './GuideCallout'
 
@@ -28,6 +29,9 @@ interface Props {
   addOrder: (id: number, order: { category: string; status: OrderStatus; orderedOn?: string }) => void
   updateOrder: (id: number, orderId: string, patch: Partial<OrderItem>) => void
   removeOrder: (id: number, orderId: string) => void
+  /** One-click "seed the model's standard list" on an empty Materials tab —
+   *  a single batched updater in useProjects (duplicate-guarded there). */
+  seedStandardOrders: (id: number) => void
 }
 
 /** Today as YYYY-MM-DD, for the order-date field's default. */
@@ -36,12 +40,13 @@ function today(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLists, vendors, addOrder, updateOrder, removeOrder }: Props) {
+function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLists, vendors, addOrder, updateOrder, removeOrder, seedStandardOrders }: Props) {
   const orders = ordersOf(ps)
   const [newCategory, setNewCategory] = useState(MATERIAL_CATEGORIES[0])
   const [newDate, setNewDate] = useState(today())
   const missing = missingTakeoffs(modelTakeoffs, p.model)
-  const lists = modelOrderLists?.[modelKey(p.model)]
+  const mk = modelKey(p.model) // '' when the model is unknown/TBD
+  const lists = modelOrderLists?.[mk]
 
   // Show "to order" first, then by status order, so the action items are on top.
   const statusRank: Record<OrderStatus, number> = { toOrder: 0, ordered: 1, delivered: 2, installed: 3 }
@@ -73,7 +78,25 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
       <GuideCallout id="order-materials" />
 
       {orders.length === 0 ? (
-        <p className="summary">🛒 No orders yet — add one below.</p>
+        /* EMPTY STATE — no orders yet. When we know the model, offer the
+           one-click seed: it adds the standard categories (data/orders.ts)
+           as "To order" lines via ONE batched update in useProjects. */
+        <div className="orders-empty">
+          <p className="orders-empty-line">🛒 No orders yet for this house.</p>
+          {mk ? (
+            <>
+              <button className="mini orders-seed" onClick={() => seedStandardOrders(p.id)}>
+                ✨ Seed Model {mk}&rsquo;s standard list
+              </button>
+              <p className="orders-empty-hint">
+                One click adds the {standardOrdersFor(mk).length} usual categories (trusses, block, cabinets…) as
+                &ldquo;To order&rdquo; — or add a single order below.
+              </p>
+            </>
+          ) : (
+            <p className="orders-empty-hint">Add your first order below.</p>
+          )}
+        </div>
       ) : (
         <div className="orders">
           {sorted.map((o) => {
@@ -83,12 +106,31 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
             const draft = o.status === 'toOrder' ? orderMailto(vendors, o.category, p, ps, templates, lists) : null
             const who = draft ? draft.vendor.contact || draft.vendor.name : ''
             const call = draft ? vendorCallHref(draft.vendor) : null
+            // Does ANY vendor in the directory cover this category? Decides
+            // whether the row needs the free-text "vendor…" box at all (a known
+            // vendor already shows on the ✉️ Order button — the box was
+            // redundant next to it; roadmap "redundant vendor affordance").
+            const knownVendor = vendors.find((v) => v.categories?.includes(o.category))
+            // Lead-time math: null unless still "to order" WITH a needed-by
+            // date. Renders as the tinted "order by <date>" pill next to the
+            // category (Today's Order-NOW alerts come from the same module).
+            const lead = orderLeadInfo(o)
             return (
               <div key={o.id} className={'order' + (o.status === 'toOrder' ? ' to-order' : '')}>
                 {/* Top line: category + the order's controls. Wraps if the row
                     is narrow; stacks full-width on phones (mobile block in App.css). */}
                 <div className="order-top">
-                  <span className="order-cat">{o.category}</span>
+                  <span className="order-cat">
+                    {o.category}
+                    {lead && (
+                      <span
+                        className={`order-by ob-${lead.status}`}
+                        title={`${lead.leadTimeDays}-day lead time, needed on site ${lead.neededByLabel} — place the order by ${lead.orderByLabel}`}
+                      >
+                        order by {lead.orderByLabel}
+                      </span>
+                    )}
+                  </span>
 
                   <select
                     className={`order-status s-${o.status}`}
@@ -110,12 +152,35 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
                     title="Date ordered"
                   />
 
-                  <input
-                    className="order-vendor"
-                    value={o.vendor ?? ''}
-                    onChange={(e) => updateOrder(p.id, o.id, { vendor: e.target.value })}
-                    placeholder="vendor…"
-                  />
+                  {/* When must it be ON SITE? Setting this lights up the
+                      "order by" pill + the Today alert once the category's
+                      lead time says the ordering window is closing. */}
+                  <label className="order-needby" title="When this material must be on site — powers the order-by alert">
+                    Needed
+                    <input
+                      type="date"
+                      value={o.neededBy ?? ''}
+                      onChange={(e) => updateOrder(p.id, o.id, { neededBy: e.target.value || undefined })}
+                    />
+                  </label>
+
+                  {/* The free-text vendor box only earns its space when the
+                      directory has NO vendor for this category (or you already
+                      typed one by hand — never hide typed data). With a known
+                      vendor, the ✉️ Order button below names them, and rows
+                      past "to order" get a quiet read-only "via <vendor>". */}
+                  {!knownVendor || o.vendor ? (
+                    <input
+                      className="order-vendor"
+                      value={o.vendor ?? ''}
+                      onChange={(e) => updateOrder(p.id, o.id, { vendor: e.target.value })}
+                      placeholder="vendor…"
+                    />
+                  ) : o.status !== 'toOrder' ? (
+                    <span className="order-vendor-known" title={knownVendor.supplies}>
+                      via {knownVendor.name}
+                    </span>
+                  ) : null}
 
                   <button
                     className="task-x"
@@ -160,7 +225,10 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
       )}
 
       {/* Add an order manually: pick a material OR a Florida Express site
-          service (deliver / swap / remove), set the date you ordered it. */}
+          service (deliver / swap / remove), set the date you ordered it. The
+          heading separates this composer from the list above (roadmap note —
+          it used to blend into the last order row). */}
+      <h3 className="order-add-head">＋ Add an order</h3>
       <div className="order-add">
         <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)}>
           <optgroup label="Materials">

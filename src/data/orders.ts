@@ -46,6 +46,71 @@ export const SITE_SERVICES: string[] = [
   'Remove dumpster + porta-potty',
 ]
 
+/**
+ * LEAD TIMES — how many days ahead each material must be ORDERED so it lands
+ * on site by its needed-by date. This powers the "order by <date>" pill on an
+ * order row and the "Order NOW" alerts on 🏠 Today (see lib/leadTimes.ts).
+ *
+ * TUNE THESE: they're sensible starting guesses, not gospel. When a vendor's
+ * real turnaround differs (Tibbetts quotes 3 weeks on trusses, FGT quotes 4+
+ * on cabinets…), just change the number here — everything downstream follows.
+ * Keys must match ORDER_CATEGORIES above.
+ */
+export const LEAD_TIME_DAYS: Record<string, number> = {
+  Trusses: 21, // engineered + built to order — the classic schedule-killer
+  Cabinets: 28, // longest lead in the house; FGT builds per order
+  'Garage door': 21, // sized/ordered per opening
+  Flooring: 14,
+  'Lighting package': 14,
+  'Bathroom tile': 14,
+  Block: 7,
+  Lintels: 7, // sand ships bundled in this package (no separate Sand category)
+  'Framing package': 7,
+  'Slab package': 7,
+  // site services are quick calls, not manufacturing:
+  Dumpster: 3,
+  'Porta-potty': 3,
+}
+
+/** Fallback for a category we don't have a tuned number for (custom/free-form
+ *  categories, or the SITE_SERVICES action names below). One work-week is a
+ *  safe middle ground — better a slightly-early nudge than a late truss. */
+export const DEFAULT_LEAD_TIME_DAYS = 7
+
+/**
+ * MODEL STANDARD ORDER LIST — the categories every spec house needs, used by
+ * the Materials tab's one-click "Seed the standard list" button when a project
+ * has no orders yet. (Spec homes repeat: A/B/E2/F… all order the same kinds of
+ * things; only the takeoff CONTENTS differ, and those live in
+ * ⚙️ Settings → Takeoffs as model order lists.)
+ */
+export const STANDARD_ORDER_CATEGORIES: string[] = [
+  'Trusses',
+  'Framing package',
+  'Block',
+  'Lintels',
+  'Slab package',
+  'Cabinets',
+  'Flooring',
+  'Lighting package',
+  'Bathroom tile',
+  'Garage door',
+]
+
+/**
+ * Per-model customizations of the standard list, keyed by modelKey ('A', 'E2',
+ * 'Republic'…). Empty today — every model uses STANDARD_ORDER_CATEGORIES.
+ * When a model genuinely differs (say Fire-House adds a second garage door
+ * category), add its full list here and only that model changes.
+ */
+export const MODEL_STANDARD_ORDERS: Record<string, string[]> = {}
+
+/** The standard order list for one model: its custom list when defined,
+ *  the common list otherwise. `modelK` is a normalized modelKey (models.ts). */
+export function standardOrdersFor(modelK: string): string[] {
+  return MODEL_STANDARD_ORDERS[modelK] ?? STANDARD_ORDER_CATEGORIES
+}
+
 /** The order lifecycle (in order). */
 export const ORDER_STATUSES: { key: OrderStatus; label: string }[] = [
   { key: 'toOrder', label: 'To order' },
