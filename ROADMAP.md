@@ -38,6 +38,13 @@ the details.
       into the blob; 🏠 Today shows an amber "scanner has gone quiet" alert at
       ≥36h and red at ≥72h (`lib/scanHealth.ts` + tests), plus a quiet
       "portal scan ✓ today at 5:31 AM" note in the greeting when fresh.
+- [x] **🔄 "Scan now" button** *(July 1 2026)* — the Today banner button stamps
+      `scanMeta.requestedAt`; the Mac watcher (`scanner/watch-scan-request.mjs`,
+      launchd `com.ironshield.scanwatcher` every 2 min) sees a request newer
+      than the last completed scan and runs `scan.mjs --write`; that run's
+      completion stamp clears the pending note on every device via realtime.
+      Requests expire after 30 min on BOTH sides (Mac off → button re-offers);
+      pgrep + pid lockfile stop overlapping scans (incl. the 5:30 nightly).
 - [x] **Focus indicator (a11y)** — global `:focus-visible` 2px accent ring on
       every button/tab/link/nav (was none); inputs keep their border-colour
       focus. `src/index.css`.

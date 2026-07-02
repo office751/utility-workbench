@@ -22,7 +22,7 @@ import type { Stream, Task } from '../types'
 import type { ActionCenter, ActionItem } from '../lib/actionCenter'
 import { daysUntilDue, dueLabel, dueSoonTasks, focusTasks, forOperator, unassignedOpen, waitingOnTasks } from '../lib/tasks'
 import { hatOf } from '../data/hats'
-import { scanHealth } from '../lib/scanHealth'
+import { scanHealth, scanPending } from '../lib/scanHealth'
 import Icon from './Icon'
 
 /** Action-center items carry EMOJI icons (so the status-report text keeps them);
@@ -58,7 +58,10 @@ interface Props {
   me?: string
   /** Nightly permit-scanner heartbeat (WorkbenchState.scanMeta). Absent until
    *  the scanner's first stamped run; stale → the "gone quiet" alert below. */
-  scanMeta?: { lastScanAt: string; permitsRead?: number }
+  scanMeta?: { lastScanAt?: string; permitsRead?: number; requestedAt?: string }
+  /** 🔄 "Scan now" — stamps a scan request the office Mac's watcher picks up
+   *  (within ~2 min). Absent = button hidden (e.g. a future read-only view). */
+  onRequestScan?: () => void
 }
 
 function greeting(): string {
@@ -219,7 +222,7 @@ function MoveGroup({
   )
 }
 
-function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks, me, scanMeta }: Props) {
+function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks, me, scanMeta, onRequestScan }: Props) {
   // YOUR queue = tasks assigned to you PLUS every unassigned task (fail-open, so
   // a to-do never disappears from both people's screens). Carey's assigned tasks
   // drop off your Today; manage everyone's work from the Tasks tab. House alerts
@@ -262,6 +265,8 @@ function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks, me, scanMeta }: P
   // ok shows as a quiet "portal scan ✓" note in the greeting; warn/crit render
   // the alert strip below the banner.
   const scan = scanHealth(scanMeta)
+  // A "Scan now" press that the Mac hasn't answered yet (30-min shelf life).
+  const pending = scanPending(scanMeta)
 
   const today = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
   // Just the date here — the stat chips carry the numbers, so we don't say the
@@ -286,7 +291,19 @@ function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks, me, scanMeta }: P
       <header className="t-banner">
         <div className="t-banner-text">
           <h2>{greeting()}{me ? `, ${me.split(' ')[0]}` : ''}</h2>
-          <p>{summary}{upForGrabs > 0 ? ` · ${upForGrabs} unassigned task${upForGrabs !== 1 ? 's' : ''} up for grabs` : ''}{scan?.level === 'ok' ? ` · portal scan ✓ ${scan.agoLabel}` : ''}</p>
+          <p>{summary}{upForGrabs > 0 ? ` · ${upForGrabs} unassigned task${upForGrabs !== 1 ? 's' : ''} up for grabs` : ''}{scan?.level === 'ok' && !pending ? ` · portal scan ✓ ${scan.agoLabel}` : ''}{pending ? ' · scan requested — the office Mac picks it up within ~2 min' : ''}</p>
+          {/* 🔄 The remote control for the Mac's county-portal scan. Hidden
+              while a request is pending (the note above says so instead) and
+              until the scanner has stamped at least once (old saves stay quiet). */}
+          {onRequestScan && scanMeta && !pending && (
+            <button
+              className="t-scan-btn"
+              onClick={onRequestScan}
+              title="Ask the office Mac to run the county-portal permit scan now (results land here live)"
+            >
+              <Icon name="refresh" size={14} /> Scan now
+            </button>
+          )}
         </div>
         <div className="t-stats">
           <StatChip n={focus.length} l="Focus" />

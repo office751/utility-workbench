@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  The Mac half of the app's 🔄 "Scan now" button: every 2 minutes, check the
+  blob for a fresh scan request and run scan.mjs -\-write if there is one
+  (see watch-scan-request.mjs for the guards). Idle ticks cost one HTTP read.
+
+  Install:
+    cp scanner/com.ironshield.scanwatcher.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ironshield.scanwatcher.plist
+  Remove:
+    launchctl bootout gui/$(id -u)/com.ironshield.scanwatcher
+
+  LESSON (July 2026): if this job ever dies instantly with "exit 78" and an
+  untouched log, the log FILES have gone bad (stale com.apple.macl xattr) —
+  rotate them aside and it heals. Don't chase the plist.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.ironshield.scanwatcher</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/Construction/.nvm/versions/node/v24.16.0/bin/node</string>
+    <string>watch-scan-request.mjs</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/Users/Construction/Documents/Claude/Projects/Lodestar/construction-lodestar/scanner</string>
+  <key>StartInterval</key>
+  <integer>120</integer>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/Users/Construction/Documents/Claude/Projects/Lodestar/construction-lodestar/scanner/logs/scan-watch.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/Construction/Documents/Claude/Projects/Lodestar/construction-lodestar/scanner/logs/scan-watch.err.log</string>
+</dict>
+</plist>

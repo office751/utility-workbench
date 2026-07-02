@@ -190,7 +190,9 @@ export function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
     // --write). Absent until the scanner's first stamped run. Like assignees:
     // MUST be carried here or every load/sync strips it and the Today
     // "scanner has gone quiet" alert could never fire. Shape-guarded.
-    scanMeta: parsed.scanMeta?.lastScanAt ? parsed.scanMeta : undefined,
+    // (either field keeps it — a fresh "Scan now" request can exist before
+    // the scanner has ever stamped a completed run)
+    scanMeta: parsed.scanMeta?.lastScanAt || parsed.scanMeta?.requestedAt ? parsed.scanMeta : undefined,
   }
 
   // ONE-TIME (June 2026): the scanner used to turn inspection RESULTS into
@@ -926,6 +928,19 @@ export function useProjects() {
     setState((prev) => ({ ...prev, assignees: names }))
   }
 
+  /** The 🏠 Today "Scan now" button: stamp a scan REQUEST into the blob. The
+   *  office Mac's watcher (scanner/watch-scan-request.mjs, launchd every
+   *  2 min) sees a request newer than the last completed scan and runs
+   *  scan.mjs --write; that run's completion stamp (lastScanAt) clears the
+   *  pending state on every device via realtime sync. Requests older than
+   *  30 min are ignored by BOTH sides (Mac was off — press again). */
+  function requestScan() {
+    setState((prev) => ({
+      ...prev,
+      scanMeta: { ...prev.scanMeta, requestedAt: new Date().toISOString() },
+    }))
+  }
+
   /** Replace the whole Selections catalog (Settings → Selections setup). The
    *  editor holds a working copy and saves it here in one shot. */
   function setSelectionsCatalog(catalog: SelectionsCatalog) {
@@ -1033,6 +1048,7 @@ export function useProjects() {
     dismissInspection,
     setTemplate,
     setAssignees,
+    requestScan,
     setSelectionsCatalog,
     setVendors,
     setUtilities,

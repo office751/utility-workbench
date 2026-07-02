@@ -129,6 +129,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
     updateProjectFacts,
     setTemplate,
     setAssignees,
+    requestScan,
     setSelectionsCatalog,
     setVendors,
     setUtilities,
@@ -343,6 +344,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
           tasks={state.tasks}
           me={me}
           scanMeta={state.scanMeta}
+          onRequestScan={requestScan}
           onOpen={openProject}
           onCompleteTask={(id) => updateTask(id, { done: true, doneAt: new Date().toISOString() })}
           onGoTasks={() => setTab('tasks')}

@@ -465,7 +465,17 @@ export interface WorkbenchState {
    * "scanner has gone quiet" alert (logic in lib/scanHealth.ts) — added after
    * the June 2026 outage where the scan job died silently for 19 days.
    */
-  scanMeta?: { lastScanAt: string; permitsRead?: number }
+  scanMeta?: {
+    lastScanAt?: string
+    permitsRead?: number
+    /**
+     * Set by the 🔄 "Scan now" button on 🏠 Today. The office Mac's watcher
+     * (scanner/watch-scan-request.mjs, launchd every 2 min) sees a request
+     * newer than lastScanAt and runs the scan; the completed scan's
+     * lastScanAt stamp is what clears the pending state on every device.
+     */
+    requestedAt?: string
+  }
 }
 
 /** One model's library page: its plan files + editable facts. */

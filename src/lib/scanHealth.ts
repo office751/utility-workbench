@@ -37,7 +37,7 @@ const CRIT_AFTER_H = 72
  * nothing in that case, so old saves never cry wolf.
  */
 export function scanHealth(
-  meta: { lastScanAt: string } | undefined,
+  meta: { lastScanAt?: string } | undefined,
   now: Date = new Date(),
 ): ScanHealthInfo | null {
   if (!meta?.lastScanAt) return null
@@ -47,6 +47,25 @@ export function scanHealth(
   const level: ScanHealthLevel =
     hoursSince >= CRIT_AFTER_H ? 'crit' : hoursSince >= WARN_AFTER_H ? 'warn' : 'ok'
   return { level, hoursSince, agoLabel: agoLabel(then, now) }
+}
+
+/**
+ * True while a 🔄 "Scan now" request is waiting for the office Mac: requested
+ * more recently than the last completed scan, and not so old (> 30 min) that
+ * the Mac is clearly off. A stale request stops claiming "pending" so the
+ * button offers itself again — the Mac-side watcher ignores stale requests on
+ * the same 30-minute clock, so the two sides can't disagree.
+ */
+export function scanPending(
+  meta: { lastScanAt?: string; requestedAt?: string } | undefined,
+  now: Date = new Date(),
+): boolean {
+  if (!meta?.requestedAt) return false
+  const req = new Date(meta.requestedAt).getTime()
+  if (Number.isNaN(req)) return false
+  const last = meta.lastScanAt ? new Date(meta.lastScanAt).getTime() : 0
+  if (req <= last) return false // a completed scan already served it
+  return now.getTime() - req < 30 * 60_000
 }
 
 /** "today at 5:31 AM" / "yesterday at 5:30 AM" / "4 days ago" */
