@@ -3965,6 +3965,30 @@ a.map-btn {
 }
 .ip-msg-btn:hover { background: var(--rust-strong); }
 
+/* ── Desktop (computers) ──────────────────────────────────────────────────
+   The portal above is mobile-first: a 460px phone column, which on a big
+   monitor showed as a narrow strip marooned in gray. Investors mostly use a
+   phone (that column is untouched below 640px), but on a computer we unbox it
+   into a proper wide page: a roomier centered card, a taller hero, and a
+   two-up photo feed so the width isn't wasted. Everything here is additive and
+   desktop-only — no mobile rule changes. 641px pairs with the app's 640px
+   breakpoint (index.css --bp-sm). */
+@media (min-width: 641px) {
+  .ip-shell { max-width: 960px; }
+  .ip-hero { height: 300px; }
+  .ip-body { padding: 30px 40px 56px; gap: 26px; }
+  /* Progress rows + builder note read better not stretched full width. */
+  .ip-progress, .ip-note { max-width: 640px; }
+  /* Captioned photo updates sit two-up on desktop. minmax(0,1fr) keeps long
+     captions/comments from blowing out the column; align-items:start stops
+     shorter cards from stretching to match the tallest. */
+  .ip-feed { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
+  .ip-update-photo, .ip-update-skel { height: 240px; }
+  /* Keep the sticky primary action a comfortable pill, not a full-width bar. */
+  .ip-msgbar { padding: 16px 40px; }
+  .ip-msg-btn { max-width: 340px; margin: 0 auto; }
+}
+
 /* Owner's per-comment actions (Mark read · Remove) on the project Overview. */
 .inv-comment-actions { float: right; display: inline-flex; gap: 6px; }
 .inv-comment-actions .doc-btn { display: inline-flex; align-items: center; gap: 3px; }
