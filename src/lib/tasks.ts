@@ -95,8 +95,15 @@ export function assigneesInUse(tasks: Task[]): string[] {
 export function tasksByHat(tasks: Task[]): Map<string, Task[]> {
   const map = new Map<string, Task[]>()
   for (const t of openTasks(tasks)) {
-    if (!map.has(t.category)) map.set(t.category, [])
-    map.get(t.category)!.push(t)
+    // A task saved without a category (old blobs, scanner writes, imports) would
+    // otherwise become a Map key of undefined. TasksView renders each group as
+    // <section key={hatId}> — and key={undefined} is "no key" to React, firing
+    // the "each child should have a unique key" console warning. Fall back to
+    // 'other' (a real hat, see data/hats.ts) so the key is always a stable
+    // string and uncategorized tasks get a proper "Other" home.
+    const hatId = t.category || 'other'
+    if (!map.has(hatId)) map.set(hatId, [])
+    map.get(hatId)!.push(t)
   }
   return map
 }
