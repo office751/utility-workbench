@@ -522,12 +522,20 @@ export function useProjects() {
           [stepId]: {
             ...existing,
             done,
-            // Stamp BOTH date fields the first time it's checked off, and keep
-            // them if it's later unchecked (same behavior as before):
+            // Stamp BOTH date fields with the CURRENT date/time every time a step
+            // is checked off, and CLEAR them when it's unchecked.
             //   date   → friendly string shown next to the step in the UI
             //   doneAt → exact machine timestamp the stale-status math reads
-            date: done ? (existing.date ?? new Date().toLocaleDateString()) : existing.date,
-            doneAt: done ? (existing.doneAt ?? new Date().toISOString()) : existing.doneAt,
+            //
+            // Why fresh-every-time instead of "keep the first date"? The old code
+            // did `existing.date ?? …`, which meant a step never lost its very
+            // first date — so an item checked on 6/30, unchecked, then re-checked
+            // on 7/2 still showed 6/30. The date should reflect when you ACTUALLY
+            // checked it. (This mirrors setModelTakeoff, which already stamps a
+            // fresh date on done and drops it on undone. Clearing is safe: both
+            // the UI and staleness.ts only read these fields when `done` is true.)
+            date: done ? new Date().toLocaleDateString() : undefined,
+            doneAt: done ? new Date().toISOString() : undefined,
           },
         },
       },
@@ -545,8 +553,10 @@ export function useProjects() {
       const stamp = (ex: StepState | undefined): StepState => ({
         ...ex,
         done: true,
-        date: ex?.date ?? new Date().toLocaleDateString(),
-        doneAt: ex?.doneAt ?? new Date().toISOString(),
+        // "Mark applied" means you applied JUST NOW, so stamp today's date fresh
+        // rather than preserving any earlier date (same fix as toggleStep above).
+        date: new Date().toLocaleDateString(),
+        doneAt: new Date().toISOString(),
       })
       const electric = {
         ...cur.steps.electric,

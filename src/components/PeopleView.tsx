@@ -14,15 +14,35 @@
 import { useEffect, useState } from 'react'
 import type { Project } from '../types'
 import { ROLES, ROLE_ORDER, normalizeRole } from '../data/roles'
-import { allProjectAccess, inviteUser, listAppUsers, setUserName, setUserProjects, setUserRole, type AppUserRow } from '../lib/admin'
+import {
+  allProjectAccess,
+  currentUserId,
+  deleteUser,
+  inviteUser,
+  listAppUsers,
+  setUserName,
+  setUserProjects,
+  setUserRole,
+  type AppUserRow,
+} from '../lib/admin'
 
 // Roles you can hand out via the invite form — never 'admin' (create those in
 // the Supabase dashboard) and never 'pending' (that's the auto holding state).
 const INVITABLE = ROLE_ORDER.filter((r) => r !== 'admin' && r !== 'pending')
 
-function PeopleView({ roster }: { roster: Project[] }) {
+function PeopleView({
+  roster,
+  assignees,
+  setAssignees,
+}: {
+  roster: Project[]
+  /** Shared "Assign to" list (Tasks tab). We keep it in sync with the logins below. */
+  assignees: string[]
+  setAssignees: (names: string[]) => void
+}) {
   const [users, setUsers] = useState<AppUserRow[]>([])
   const [access, setAccess] = useState<Record<string, number[]>>({})
+  const [meId, setMeId] = useState('') // my own login id — used to block self-removal
   const [loading, setLoading] = useState(true)
   const [flash, setFlash] = useState('')
   // Invite form state.
@@ -32,14 +52,42 @@ function PeopleView({ roster }: { roster: Project[] }) {
   const [inviting, setInviting] = useState(false)
 
   async function reload() {
-    const [u, a] = await Promise.all([listAppUsers(), allProjectAccess()])
+    const [u, a, uid] = await Promise.all([listAppUsers(), allProjectAccess(), currentUserId()])
     setUsers(u)
     setAccess(a)
+    setMeId(uid)
     setLoading(false)
   }
   useEffect(() => {
     reload()
   }, [])
+
+  // Keep the shared "Assign to" list (✓ Tasks tab) in step with the people who
+  // have a login here. Every INTERNAL teammate (not investors, not pending)
+  // becomes assignable — and since that list lives in the shared blob, it looks
+  // the SAME for everyone, no matter who's signed in. This is the fix for
+  // "office@ only sees Adam + Unassigned": the team list was empty, so each
+  // person only saw themselves plus names already sitting on a task. Union-only,
+  // so manual names added in Settings → Team (e.g. a sub with no login) survive.
+  useEffect(() => {
+    const teamNames = users
+      .filter((u) => {
+        const r = normalizeRole(u.role)
+        return !ROLES[r].usesInvestorPortal && r !== 'pending'
+      })
+      .map((u) => u.display_name.trim())
+      .filter(Boolean)
+    const have = new Set(assignees.map((a) => a.toLowerCase()))
+    const merged = [...assignees]
+    for (const n of teamNames) {
+      if (!have.has(n.toLowerCase())) {
+        have.add(n.toLowerCase())
+        merged.push(n)
+      }
+    }
+    // A union only grows the list, so a length change means we found new names.
+    if (merged.length !== assignees.length) setAssignees(merged)
+  }, [users]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function note(msg: string) {
     setFlash(msg)
@@ -92,6 +140,32 @@ function PeopleView({ roster }: { roster: Project[] }) {
     }
   }
 
+  async function removeUser(u: AppUserRow) {
+    if (u.user_id === meId) return // never remove yourself (the button is hidden too)
+    const label = u.display_name || 'this login'
+    if (
+      !window.confirm(
+        `Remove ${label}?\n\nThey'll lose all access to Lodestar and disappear from this list. Their sign-in still exists but can't get in until you re-add them.`,
+      )
+    )
+      return
+    if (await deleteUser(u.user_id)) {
+      setUsers((prev) => prev.filter((x) => x.user_id !== u.user_id))
+      // Drop their name from the shared "Assign to" list too — unless another
+      // remaining login happens to share that exact name.
+      const name = (u.display_name || '').trim()
+      if (name) {
+        const stillUsed = users.some(
+          (x) => x.user_id !== u.user_id && x.display_name.trim().toLowerCase() === name.toLowerCase(),
+        )
+        if (!stillUsed) setAssignees(assignees.filter((a) => a.toLowerCase() !== name.toLowerCase()))
+      }
+      note(`Removed ${label}.`)
+    } else {
+      note('Could not remove that login (is the RBAC migration in place?).')
+    }
+  }
+
   // Active projects make the assignment list manageable (skip C.O./Hold).
   const assignable = roster.filter((p) => p.listStatus !== 'CO' && p.listStatus !== 'Hold')
 
@@ -129,16 +203,32 @@ function PeopleView({ roster }: { roster: Project[] }) {
                       if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
                     }}
                   />
-                  <label className="person-role">
-                    Role
-                    <select value={u.role} onChange={(e) => changeRole(u, e.target.value)}>
-                      {ROLE_ORDER.map((r) => (
-                        <option key={r} value={r}>
-                          {ROLES[r].label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <div className="person-head-right">
+                    <label className="person-role">
+                      Role
+                      <select value={u.role} onChange={(e) => changeRole(u, e.target.value)}>
+                        {ROLE_ORDER.map((r) => (
+                          <option key={r} value={r}>
+                            {ROLES[r].label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    {/* You can't remove your own login (that would lock you out). */}
+                    {u.user_id === meId ? (
+                      <span className="person-you" title="This is your own login — you can't remove yourself">
+                        You
+                      </span>
+                    ) : (
+                      <button
+                        className="person-remove"
+                        title={`Remove ${u.display_name || 'this login'} from Lodestar`}
+                        onClick={() => removeUser(u)}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <p className="person-desc muted">{cfg.description}</p>
 

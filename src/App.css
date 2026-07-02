@@ -4066,6 +4066,28 @@ a.map-btn {
 .person-name-input:hover { border-color: var(--border); background: var(--surface-2); }
 .person-name-input:focus { outline: none; border-color: var(--rust); background: var(--surface); }
 
+/* Right side of a person card's header: the Role picker + Remove / "You". */
+.person-head-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.person-you {
+  font-size: calc(12px * var(--font-scale));
+  font-weight: 600;
+  color: var(--muted);
+  padding: 5px 10px;
+}
+/* Quiet-but-red remove button (matches button.danger, sized for the card row). */
+.person-remove {
+  font: inherit;
+  font-size: calc(12px * var(--font-scale));
+  font-weight: 600;
+  color: var(--danger);
+  background: transparent;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius);
+  padding: 5px 10px;
+  cursor: pointer;
+}
+.person-remove:hover { background: #c0492f14; }
+
 /* ===== Selections tab (homeowner finish choices) ===== */
 .sel-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 10px 0 4px; }
 .sel-action-note { font-size: var(--text-sm); color: var(--muted); }

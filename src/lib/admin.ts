@@ -18,6 +18,16 @@ export interface AppUserRow {
   display_name: string
 }
 
+/** The signed-in user's own id — used to stop an admin from removing themselves. */
+export async function currentUserId(): Promise<string> {
+  if (!supabase) return ''
+  try {
+    return (await supabase.auth.getUser()).data.user?.id ?? ''
+  } catch {
+    return ''
+  }
+}
+
 /** Every login that has an app_users row (admin sees all via RLS). */
 export async function listAppUsers(): Promise<AppUserRow[]> {
   if (!supabase) return []
@@ -101,6 +111,28 @@ export async function allProjectAccess(): Promise<Record<string, number[]>> {
     return map
   } catch {
     return {}
+  }
+}
+
+/**
+ * Remove a login from the app. Deletes their app_users row (RLS "owners manage
+ * app_users" lets an admin do this); investor_project_access rows cascade away
+ * via the foreign key. After this they vanish from the People list AND drop to
+ * no-access — normalizeRole() maps "no app_users row" to 'pending', so if they
+ * ever sign in again they land on the no-access holding screen.
+ *
+ * NOTE: this does NOT delete the underlying Supabase Auth login (the browser
+ * can't — that needs the service key, like invite-user's Edge Function). The
+ * login still exists but is powerless. A future delete-user Edge Function can
+ * fold in full auth deletion; see docs/rbac-plan.md.
+ */
+export async function deleteUser(userId: string): Promise<boolean> {
+  if (!supabase) return false
+  try {
+    const { error } = await supabase.from('app_users').delete().eq('user_id', userId)
+    return !error
+  } catch {
+    return false
   }
 }
 

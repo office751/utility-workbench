@@ -377,7 +377,9 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
         />
       )}
 
-      {tab === 'people' && roleCfg.canManageUsers && <PeopleView roster={projects} />}
+      {tab === 'people' && roleCfg.canManageUsers && (
+        <PeopleView roster={projects} assignees={state.assignees ?? []} setAssignees={setAssignees} />
+      )}
 
       {tab === 'vendors' && <VendorsView vendors={vendors} />}
 

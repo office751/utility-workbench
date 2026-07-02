@@ -52,8 +52,9 @@ function TeamEditor({ assignees, setAssignees }: { assignees: string[]; setAssig
     <div className="tpl-group">
       <h3>Team — who you can assign tasks to</h3>
       <p className="muted">
-        These names fill the <b>Assign to</b> dropdown on the ✓ Tasks tab. Add yourself, Carey, anyone — a name
-        doesn't need a login. (Your greeting and "my queue" come from your own login name — set that in 👥 People.)
+        People you add in <b>👥 People &amp; access</b> show up here automatically. Use this to add extra names that
+        don't have a login — a subcontractor or helper you still want to assign tasks to. (Your greeting and "my
+        queue" come from your own login name — set that in 👥 People.)
       </p>
       <div className="team-names">
         {assignees.length === 0 && <span className="muted">No names yet — add one below.</span>}
@@ -69,7 +70,7 @@ function TeamEditor({ assignees, setAssignees }: { assignees: string[]; setAssig
       <div className="team-add">
         <input
           value={name}
-          placeholder="Add a name (e.g. Carey)"
+          placeholder="Add a name (e.g. a sub)"
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') add()
