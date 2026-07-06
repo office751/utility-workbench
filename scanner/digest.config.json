@@ -1,0 +1,7 @@
+{
+  "from": "office@ironshieldconstruction.com",
+  "recipients": [
+    { "name": "Adam", "email": "admin@mrocalabuyshouses.com", "enabled": true },
+    { "name": "Carey", "email": "FILL-IN-CAREYS-EMAIL", "enabled": false }
+  ]
+}

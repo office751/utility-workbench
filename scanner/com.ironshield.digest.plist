@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Morning digest email. Reads the Workbench blob (READ-ONLY) and emails each
+  enabled recipient in scanner/digest.config.json their morning digest from
+  office@ — company fires for everyone, tasks filtered per person.
+  Runs 6:30 AM: after the 5:30 permit scan and the 6:00 SharePoint sync, so
+  the digest reports on the freshest data.
+
+  ⚠ DO NOT LOAD until the one-time Mail.Send grant is done (see the header of
+  scripts/send-digest.ts) and a manual `npm run digest:send` has succeeded.
+
+  Install (after the grant):
+    cp scanner/com.ironshield.digest.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.ironshield.digest.plist
+  Pause / remove:
+    launchctl unload ~/Library/LaunchAgents/com.ironshield.digest.plist
+  Preview what it would send (no email): npm run digest
+  Logs: scanner/logs/digest.log
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.ironshield.digest</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/Construction/.nvm/versions/node/v24.16.0/bin/node</string>
+    <string>node_modules/.bin/tsx</string>
+    <string>scripts/send-digest.ts</string>
+    <string>--send</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/Users/Construction/Documents/Claude/Projects/Lodestar/construction-lodestar</string>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>6</integer>
+    <key>Minute</key>
+    <integer>30</integer>
+  </dict>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>StandardOutPath</key>
+  <string>/Users/Construction/Documents/Claude/Projects/Lodestar/construction-lodestar/scanner/logs/digest.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/Construction/Documents/Claude/Projects/Lodestar/construction-lodestar/scanner/logs/digest.err.log</string>
+</dict>
+</plist>
