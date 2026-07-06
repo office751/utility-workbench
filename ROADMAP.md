@@ -230,6 +230,34 @@ role-assigned in 👥 People); per-stream scoping for the coworker role.
         tag / downpipe / sweep / straps / clear-path photos) to SECO Engineering
         or the Duke EDA office, plus an additive `meternotify` electric step.
 
+## Fable-day batch *(July 6 2026 — brains + digest + improvement loop)*
+
+Built in the one-day Fable 5 session. Code is DONE and committed; the two
+automations ship INACTIVE pending the one-time steps in `automation/README.md`.
+
+- [x] **Brains test suite + spec** — 53 → 133 Vitest tests across every
+      pure-logic brain; `docs/BRAINS.md` = the canonical rules (priority
+      order, date math, thresholds, fail-open), linked from CLAUDE.md, each
+      rule enforced by a test. Fixed along the way: OUR_COURT unified into
+      `lib/nextAction.ts` (Today and the list dots once disagreed on
+      customized lists), and negative-zero day counts normalized.
+- [x] **☀️ Morning digest email** — `lib/digest.ts` (tested brain reusing
+      buildActionCenter) + `scripts/send-digest.ts` (office@ via Graph,
+      per-person queues, dry-run default) + `com.ironshield.digest` plist
+      (6:30 AM). Zero Claude usage once running. Preview: `npm run digest`.
+- [x] **🔧 Weekly improvement loop** — `automation/improve.sh` +
+      `improve-prompt.md`: headless Claude in a throwaway worktree; 3 proposer
+      lenses → adversarial judge → small+safe gets BUILT on an
+      `improve/<date>` branch (tests must pass; never main), else a
+      recommendation; report emailed Mondays 7:00 AM.
+
+**⚠ Adam's one-time activation steps (full detail in `automation/README.md`):**
+- [ ] Grant the Graph app **Mail.Send** + admin consent (unlocks both emails)
+- [ ] `npm run digest:send` test → install the digest plist
+- [ ] `claude` → `/login` once in Terminal (CLI is installed, not signed in)
+- [ ] One supervised `automation/improve.sh` run → install the improver plist
+- [ ] Add Carey to `scanner/digest.config.json` when she should get hers
+
 ## Later (when the need is real)
 
 - [ ] **Phone / multi-device access + real notifications (the "Full" spec)** —
@@ -238,11 +266,10 @@ role-assigned in 👥 People); per-stream scoping for the coworker role.
       (push/email/SMS). Swap the internals of `useProjects()` for API calls;
       UI stays. A few sessions. Trigger: when Export/Import shuffling annoys, or
       when in-app notifications aren't enough because you're not at the desk.
-- [ ] **Tests for the brains** — Vitest tests for `lib/shutoff.ts` (business-
-      day math) and `lib/nextAction.ts` (bucket logic). ~an hour, great
-      learning value. (Bonus: now that the stale-status flags have landed,
-      `lib/staleness.ts` and the attention ranking in `lib/actionCenter.ts`
-      are two more great targets.)
+      *(July 6 2026: the EMAIL leg of this is now covered by the morning
+      digest above — revisit only if push/SMS becomes necessary.)*
+- [x] **Tests for the brains** — DONE July 6 2026, far beyond the original
+      scope: see the Fable-day batch above (133 tests + docs/BRAINS.md).
 
 ## Polish (small, anytime)
 

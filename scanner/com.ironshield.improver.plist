@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Weekly improvement loop (Monday 7:00 AM). Runs automation/improve.sh:
+  a headless Claude Code session in a throwaway worktree proposes improvements
+  (3 lenses), an adversarial judge picks ONE, small+safe items get BUILT on an
+  improve/<date> branch (never main), and the report is emailed to Adam.
+
+  ⚠ DO NOT LOAD until:
+    1. `claude` + /login done once in Terminal (CLI auth)
+    2. the Mail.Send grant is done (see scripts/send-digest.ts header)
+    3. one SUPERVISED run of automation/improve.sh looked sane
+
+  Install (after the above):
+    cp scanner/com.ironshield.improver.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.ironshield.improver.plist
+  Pause / remove:
+    launchctl unload ~/Library/LaunchAgents/com.ironshield.improver.plist
+  Run once now (supervised): automation/improve.sh
+  Reports: scanner/logs/improve-<date>.md · Errors: scanner/logs/improver.err.log
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.ironshield.improver</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>automation/improve.sh</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/Users/Construction/Documents/Claude/Projects/Lodestar/construction-lodestar</string>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Weekday</key>
+    <integer>1</integer>
+    <key>Hour</key>
+    <integer>7</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>StandardOutPath</key>
+  <string>/Users/Construction/Documents/Claude/Projects/Lodestar/construction-lodestar/scanner/logs/improver.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/Construction/Documents/Claude/Projects/Lodestar/construction-lodestar/scanner/logs/improver.launchd.err.log</string>
+</dict>
+</plist>
