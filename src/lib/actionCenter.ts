@@ -13,11 +13,11 @@
 import type { Project, ProjectState, Stream, WorkbenchState } from '../types'
 import { missingTakeoffs, permitIssued } from './takeoffs'
 import { modelKey } from '../data/models'
-import { isStepListCustomized, stepListKey } from '../data/lifecycles'
 import { shutoffFor } from './shutoff'
 import { permitExpiryFor } from './permitExpiry'
 import { stalenessFor, isStale } from './staleness'
 import {
+  isOurCourtKey,
   nextElectricAction,
   nextWaterAction,
   nextSepticAction,
@@ -50,34 +50,9 @@ export interface ActionCenter {
   stats: { projects: number; attention: number; moves: number; toOrder: number; allClear: boolean }
 }
 
-/**
- * Which "next action" keys mean the ball is in OUR court — something we can act
- * on right now, versus waiting on a utility, the county, or an installer. (The
- * next*Action functions return these keys; see lib/nextAction.ts.)
- */
-const OUR_COURT: Record<Stream, Set<string>> = {
-  electric: new Set(['verify', 'apply', 'addr', 'deposit', 'rough', 'meternotify']),
-  // water: set the source, confirm availability, apply, and the main-extension
-  // agreement are ours; the tap/connect/well-drill are the utility/driller.
-  // ('wpermit' was a dead key — no such step — and 'cwmagree' was missing.)
-  water: new Set(['wsrc', 'cavail', 'capply', 'cwmagree']),
-  // septic AND sewer (a Sewer lot resolves to SEWER_STEPS): eval/apply/county/
-  // INRB-notice for septic, and confirm-availability/apply/pay-fees for sewer
-  // are ours; final approval and the physical connection are not. (Sewer keys
-  // were missing entirely, so a Sewer lot's next move never reached Today.)
-  septic: new Set(['seval', 'sapplied', 'scounty', 'snrb', 'sweravail', 'swerapply', 'swertap']),
-  permit: new Set(['submitted', 'approved']), // submit it / go pick it up
-  materials: new Set(), // handled via the order count instead
-}
-
-/** Is this stream's pending next-action something WE act on (vs. waiting on a
- *  utility/installer)? For built-in lists we use the curated OUR_COURT keys;
- *  once the owner CUSTOMIZES a list we can't know, so any pending custom step
- *  counts as our move (better surfaced on Today than silently dropped). */
-function ourCourt(stream: Stream, key: string, p: Project, ps: ProjectState): boolean {
-  if (key === 'done') return false
-  return OUR_COURT[stream].has(key) || isStepListCustomized(stepListKey(stream, p, ps))
-}
+// OUR_COURT (which next-action keys are OUR move vs. waiting on someone) lives
+// in lib/nextAction.ts now — one source shared with the project-list dots, so
+// Today and the list can never disagree about whose move it is.
 
 const SEV_RANK: Record<Severity, number> = { crit: 0, warn: 1, info: 2 }
 
@@ -193,14 +168,14 @@ export function buildActionCenter(
     // --- your move: the next step where the ball is in our court ---
     const todos: { stream: Stream; label: string }[] = []
     const e = nextElectricAction(p, ps)
-    if (ourCourt('electric', e.key, p, ps)) todos.push({ stream: 'electric', label: e.label })
+    if (isOurCourtKey('electric', e.key, p, ps)) todos.push({ stream: 'electric', label: e.label })
     const w = nextWaterAction(p, ps)
-    if (ourCourt('water', w.key, p, ps)) todos.push({ stream: 'water', label: w.label })
+    if (isOurCourtKey('water', w.key, p, ps)) todos.push({ stream: 'water', label: w.label })
     const s = nextSepticAction(ps)
-    if (ourCourt('septic', s.key, p, ps)) todos.push({ stream: 'septic', label: s.label })
+    if (isOurCourtKey('septic', s.key, p, ps)) todos.push({ stream: 'septic', label: s.label })
     if (permitNeedsAction(ps)) {
       const pm = nextPermitAction(ps)
-      if (ourCourt('permit', pm.key, p, ps)) todos.push({ stream: 'permit', label: pm.label })
+      if (isOurCourtKey('permit', pm.key, p, ps)) todos.push({ stream: 'permit', label: pm.label })
     }
     for (const t of todos) {
       moves.push({ ...base, stream: t.stream, kind: 'todo', icon: STREAM_ICON[t.stream], text: t.label, severity: 'info', sortDays: 0 })

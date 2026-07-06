@@ -24,7 +24,9 @@ export function daysUntilDue(t: Task): number | null {
   if (!t.dueDate) return null
   // "T00:00:00" pins to local midnight so a timezone can't shift the day.
   const target = new Date(t.dueDate + 'T00:00:00')
-  return Math.ceil((target.getTime() - Date.now()) / MS_PER_DAY)
+  // "+ 0" normalizes Math.ceil's NEGATIVE zero (ceil(-0.5) === -0) so a
+  // due-today task is exactly 0 under Object.is / strict test equality.
+  return Math.ceil((target.getTime() - Date.now()) / MS_PER_DAY) + 0
 }
 
 /** A friendly due label, e.g. "due today", "in 3d", "2d overdue" — or null. */

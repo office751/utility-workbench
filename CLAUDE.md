@@ -6,6 +6,10 @@ Tracks every house across five streams — ⚡ Electric · 💧 Water · 🚽 Se
 applications, model takeoffs, and status reports.
 
 - **Live app:** https://utility-workbench.vercel.app (Vercel auto-deploys `main`)
+- **The brains spec:** `docs/BRAINS.md` — the canonical rules for every pure-logic
+  module in `src/lib/` (priority order, date math, thresholds, fail-open rules),
+  each enforced by a test. READ IT BEFORE touching anything in `src/lib/`, and
+  update spec + test together when a rule changes on purpose.
 - **Owner:** Adam Stiles (office751). The original single-file
   `Electric Applications Workbench.html` (in Projects/Lodestar/construction-reference/genesis/, Mac only) is the
   historical data reference the app was rebuilt from.

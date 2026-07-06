@@ -36,7 +36,9 @@ export function shutoffFor(ps: ProjectState): ShutoffInfo | null {
   if (!ps.closingDate || ps.transferred) return null
   const target = addBusinessDays(ps.closingDate, 2)
   const msPerDay = 86_400_000 // 24h * 60m * 60s * 1000ms
-  const daysLeft = Math.ceil((target.getTime() - Date.now()) / msPerDay)
+  // "+ 0" normalizes Math.ceil's NEGATIVE zero (ceil(-0.5) === -0) so a
+  // due-today deadline is exactly 0 under Object.is / strict test equality.
+  const daysLeft = Math.ceil((target.getTime() - Date.now()) / msPerDay) + 0
   return {
     date: target.toLocaleDateString(undefined, {
       weekday: 'short',

@@ -17,6 +17,7 @@ import type {
   SepticSource,
   SepticSystem,
   ServiceType,
+  Stream,
   Utility,
   WaterSource,
 } from '../types'
@@ -26,6 +27,7 @@ import {
   isStepListCustomized,
   permitSteps,
   septicStepsFor,
+  stepListKey,
   waterStepsFor,
 } from '../data/lifecycles'
 
@@ -100,6 +102,37 @@ export interface NextAction {
   label: string
 }
 
+/* ==================== WHOSE COURT IS THE BALL IN? ==================== */
+
+/**
+ * Which "next action" keys mean the ball is in OUR court — something we can act
+ * on right now, versus waiting on a utility, the county, or an installer.
+ * This is THE single source for that judgment: lib/actionCenter.ts (the Today
+ * command center) and electricNeedsAction (the project-list dots) both read it,
+ * so the two screens can never disagree about whose move it is.
+ */
+export const OUR_COURT: Record<Stream, Set<string>> = {
+  electric: new Set(['verify', 'apply', 'addr', 'deposit', 'rough', 'meternotify']),
+  // water: set the source, confirm availability, apply, and the main-extension
+  // agreement are ours; the tap/connect/well-drill are the utility/driller.
+  water: new Set(['wsrc', 'cavail', 'capply', 'cwmagree']),
+  // septic AND sewer (a Sewer lot resolves to SEWER_STEPS): eval/apply/county/
+  // INRB-notice for septic, and confirm-availability/apply/pay-fees for sewer
+  // are ours; final approval and the physical connection are not.
+  septic: new Set(['seval', 'sapplied', 'scounty', 'snrb', 'sweravail', 'swerapply', 'swertap']),
+  permit: new Set(['submitted', 'approved']), // submit it / go pick it up
+  materials: new Set(), // handled via the order count instead
+}
+
+/** Is this stream's pending next-action something WE act on (vs. waiting on a
+ *  utility/installer)? For built-in lists we use the curated OUR_COURT keys;
+ *  once the owner CUSTOMIZES a list we can't know, so any pending custom step
+ *  counts as our move (better surfaced than silently dropped). */
+export function isOurCourtKey(stream: Stream, key: string, p: Project, ps: ProjectState): boolean {
+  if (key === 'done') return false
+  return OUR_COURT[stream].has(key) || isStepListCustomized(stepListKey(stream, p, ps))
+}
+
 /**
  * The electric brain: walk the lifecycle in order and report the first
  * thing that hasn't happened yet. Mirrors the original tool exactly.
@@ -137,14 +170,13 @@ export function isElectricDone(ps: ProjectState): boolean {
  * "Needs action" = the ball is in OUR court (verify / apply / pay / notify),
  * or a shut-off deadline is 10 days out or closer. Waiting on the utility
  * (engineer, field work) does NOT count — nothing for us to do there.
+ * Uses the shared OUR_COURT judgment so the list dots and Today always agree
+ * (a hand-copied key list here once drifted from the command center's).
  */
 export function electricNeedsAction(p: Project, ps: ProjectState): boolean {
   const key = nextElectricAction(p, ps).key
   const so = shutoffFor(ps)
-  return (
-    ['verify', 'apply', 'addr', 'deposit', 'rough', 'meternotify'].includes(key) ||
-    Boolean(so && so.daysLeft <= 10)
-  )
+  return isOurCourtKey('electric', key, p, ps) || Boolean(so && so.daysLeft <= 10)
 }
 
 /* ======================== WATER ======================== */

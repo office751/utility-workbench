@@ -27,7 +27,9 @@ export function permitExpiryFor(p: Project, ps: ProjectState): ExpiryInfo | null
   // "T00:00:00" pins to local midnight so timezones can't shift the date.
   const target = new Date(expires + 'T00:00:00')
   const msPerDay = 86_400_000
-  const daysLeft = Math.ceil((target.getTime() - Date.now()) / msPerDay)
+  // "+ 0" normalizes Math.ceil's NEGATIVE zero (ceil(-0.5) === -0) so an
+  // expires-today permit is exactly 0 under Object.is / strict test equality.
+  const daysLeft = Math.ceil((target.getTime() - Date.now()) / msPerDay) + 0
   return {
     date: target.toLocaleDateString(undefined, {
       weekday: 'short',
