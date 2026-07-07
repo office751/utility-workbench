@@ -4321,3 +4321,31 @@ a.map-btn {
 @media (max-width: 640px) {
   .selcat-photo-label { flex-basis: 90px; }
 }
+
+/* ---- Settings → Custom materials editor ---- */
+.cme-editor { margin-top: 24px; }
+.cme-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.cme-list { list-style: none; margin: 12px 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.cme-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cme-input {
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+}
+/* Grow to fill the row's width (row direction, so the basis is width — not the
+   column-height trap from the Materials composer). */
+.cme-name { flex: 1 1 220px; min-width: 0; font-weight: var(--weight-semibold); }
+.cme-count { font-size: var(--text-xs); color: var(--muted); white-space: nowrap; }
+.cme-del { flex: 0 0 auto; }
+.cme-add { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+.cme-add .cme-input { flex: 1 1 220px; min-width: 0; }
+.cme-error, .cme-row-err { color: var(--danger); font-size: var(--text-sm); margin: 6px 0 0; }
+.cme-row-err { flex-basis: 100%; margin-top: 2px; }
+.cme-empty { margin: 10px 0; }
+.cme-builtins { margin-top: 16px; font-size: var(--text-sm); }
+.cme-builtins summary { cursor: pointer; color: var(--muted); }
+.cme-builtins-list { margin-top: 6px; }

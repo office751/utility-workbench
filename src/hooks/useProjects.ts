@@ -193,6 +193,12 @@ export function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
     // (either field keeps it — a fresh "Scan now" request can exist before
     // the scanner has ever stamped a completed run)
     scanMeta: parsed.scanMeta?.lastScanAt || parsed.scanMeta?.requestedAt ? parsed.scanMeta : undefined,
+    // Owner-added custom material names (Settings → Custom materials, and the
+    // Materials tab's "➕ Custom material…" composer). Like assignees/vendors
+    // above, this MUST be carried through migrate — otherwise every cloud load
+    // and realtime sync strips it and writes the blob back empty, so your custom
+    // materials vanish on reload (the blob-clobber failure mode). Array-guarded.
+    customOrderCategories: Array.isArray(parsed.customOrderCategories) ? parsed.customOrderCategories : [],
   }
 
   // ONE-TIME (June 2026): the scanner used to turn inspection RESULTS into
@@ -985,6 +991,50 @@ export function useProjects() {
     setState((prev) => ({ ...prev, utilities }))
   }
 
+  /**
+   * Replace the owner's custom material list (🛠 Settings → Custom materials:
+   * add/remove). Built-in categories live in data/orders.ts and are NOT stored
+   * here — this holds only the names you've added yourself, which show up in
+   * every project's order picker under "Your materials".
+   */
+  function setCustomOrderCategories(list: string[]) {
+    setState((prev) => ({ ...prev, customOrderCategories: list }))
+  }
+
+  /**
+   * Rename a custom material EVERYWHERE in one shot: the saved list AND every
+   * order (across all projects) already placed under the old name — so fixing a
+   * typo fixes the orders too. ONE setState because it touches two fields at
+   * once; two separate updaters would each read the same stale closure state
+   * and clobber each other (the addOrder lesson). No-ops on an empty/unchanged
+   * name; de-dupes the list case-insensitively so a rename can't create twins.
+   */
+  function renameCustomCategory(oldName: string, newName: string) {
+    const from = oldName.trim()
+    const to = newName.trim()
+    if (!from || !to || from === to) return
+    setState((prev) => {
+      const seen = new Set<string>()
+      const list = (prev.customOrderCategories ?? [])
+        .map((c) => (c === from ? to : c))
+        .filter((c) => {
+          const k = c.toLowerCase()
+          if (seen.has(k)) return false
+          seen.add(k)
+          return true
+        })
+      const projects = Object.fromEntries(
+        Object.entries(prev.projects).map(([id, ps]) => [
+          id,
+          ps.orders
+            ? { ...ps, orders: ps.orders.map((o) => (o.category === from ? { ...o, category: to } : o)) }
+            : ps,
+        ]),
+      ) as typeof prev.projects
+      return { ...prev, customOrderCategories: list, projects }
+    })
+  }
+
   /** Dismiss a permit portal notification — kept in history, just marked read. */
   function dismissNotification(id: number, sourceKey: string) {
     const ps = getProjectState(id)
@@ -1078,6 +1128,8 @@ export function useProjects() {
     setSelectionsCatalog,
     setVendors,
     setUtilities,
+    setCustomOrderCategories,
+    renameCustomCategory,
     setModelTakeoff,
     setModelOrderList,
     addModelFiles,

@@ -47,6 +47,7 @@ const VendorsView = lazy(() => import('./components/VendorsView'))
 const VendorsEditor = lazy(() => import('./components/VendorsEditor'))
 import { VENDORS } from './data/vendors'
 const UtilitiesEditor = lazy(() => import('./components/UtilitiesEditor'))
+const CustomMaterialsEditor = lazy(() => import('./components/CustomMaterialsEditor'))
 const GuideView = lazy(() => import('./components/GuideView'))
 
 /** A top-level view. 'settings' (🛠), 'people' (👥), 'vendors' (🚚), and 'guide'
@@ -133,6 +134,8 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
     setSelectionsCatalog,
     setVendors,
     setUtilities,
+    setCustomOrderCategories,
+    renameCustomCategory,
     replaceState,
     saveState,
     saveNow,
@@ -398,6 +401,12 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
           <SelectionsCatalogEditor catalog={state.selectionsCatalog} onSave={setSelectionsCatalog} vendors={vendors} />
           <VendorsEditor vendors={vendors} onSave={setVendors} />
           <UtilitiesEditor utilities={utilities} onSave={setUtilities} />
+          <CustomMaterialsEditor
+            categories={state.customOrderCategories ?? []}
+            projects={state.projects}
+            onSave={setCustomOrderCategories}
+            onRename={renameCustomCategory}
+          />
         </>
       )}
 
