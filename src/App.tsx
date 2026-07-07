@@ -477,6 +477,10 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
             key={selected.id}
             project={selected}
             ps={getProjectState(selected.id)}
+            // Whether this login's role can open 📐 Models — the Materials
+            // missing-takeoffs banner words its advice differently for a
+            // coworker, whose tab set doesn't include that screen.
+            canSeeModels={roleCfg.tabs.includes('models')}
             tasks={state.tasks}
             templates={state.templates}
             modelTakeoffs={state.modelTakeoffs}

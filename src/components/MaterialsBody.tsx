@@ -19,6 +19,9 @@ import GuideCallout from './GuideCallout'
 interface Props {
   project: Project
   ps: ProjectState
+  /** Whether this login's role can open 📐 Models. A coworker can't — so the
+   *  missing-takeoffs banner must not send them to a tab they don't have. */
+  canSeeModels: boolean
   /** Custom email wording from ⚙️ Settings → Templates (defaults when unset). */
   templates?: Record<string, TemplateOverride>
   /** Per-model takeoff status + order lists (⚙️ Settings → Takeoffs). */
@@ -42,7 +45,7 @@ function today(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLists, customCategories, vendors, addOrder, updateOrder, removeOrder, seedStandardOrders }: Props) {
+function MaterialsBody({ project: p, ps, canSeeModels, templates, modelTakeoffs, modelOrderLists, customCategories, vendors, addOrder, updateOrder, removeOrder, seedStandardOrders }: Props) {
   const orders = ordersOf(ps)
   const [newCategory, setNewCategory] = useState<string>(MATERIAL_CATEGORIES[0])
   const [customName, setCustomName] = useState('')
@@ -91,7 +94,12 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
       {missing.length > 0 && (
         <div className={permitIssued(ps) ? 'banner' : 'flag'}>
           🧩 Model {modelKey(p.model)} is missing takeoffs: {missing.map((t) => t.label).join(', ')}
-          {permitIssued(ps) && <b> — permit is ISSUED, this is now the priority</b>}. Gather them on the 📐 Models tab.
+          {permitIssued(ps) && <b> — permit is ISSUED, this is now the priority</b>}.{' '}
+          {/* Route the advice by role: don't send a coworker to a tab their
+              login doesn't have (Carey-handoff audit finding, July 2026). */}
+          {canSeeModels
+            ? 'Gather them on the 📐 Models tab.'
+            : 'Ask Adam to gather them — 📐 Models is an owner/manager screen.'}
         </div>
       )}
 

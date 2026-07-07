@@ -123,6 +123,9 @@ interface Props extends Updaters {
   customOrderCategories?: string[]
   /** Owner-editable Selections catalog (Settings → Selections setup). */
   selectionsCatalog?: SelectionsCatalog
+  /** Whether this role's tabs include 📐 Models — decides how the Materials
+   *  missing-takeoffs banner phrases its "go gather them" advice. */
+  canSeeModels: boolean
   /** Owner-editable vendors directory (Settings → Vendor setup). */
   vendors: import('../data/vendors').Vendor[]
   /** Owner-editable EXTRA utility companies (Settings → Utility companies setup) —
@@ -448,6 +451,7 @@ function Detail(props: Props) {
             <MaterialsBody
               project={p}
               ps={ps}
+              canSeeModels={props.canSeeModels}
               templates={props.templates}
               modelTakeoffs={props.modelTakeoffs}
               modelOrderLists={props.modelOrderLists}
