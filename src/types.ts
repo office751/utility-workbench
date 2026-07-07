@@ -400,6 +400,12 @@ export interface WorkbenchState {
    */
   inspectionsMigrated?: boolean
   /**
+   * One-time marker: saved vendors have had their `catalog` (the company's
+   * order menu) backfilled from the code defaults — so Florida Express, which
+   * predates the field, gets its deliver/swap/remove menu. See migrate().
+   */
+  vendorCatalogsSeeded?: boolean
+  /**
    * Custom wording for workflow templates (vendor order emails, and future
    * ones like the load form), keyed by template id — editable in ⚙️ Settings.
    */

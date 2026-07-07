@@ -37,6 +37,13 @@ export interface Vendor {
    *  project's matching "to order" items in the draft AND to pick the right
    *  vendor for an order row's one-click ✉️ Order button. */
   categories?: string[]
+  /** COMPANY-FIRST ordering: the menu of things you order FROM this company
+   *  (e.g. Florida Express → deliver / swap / remove a dumpster or porta-potty).
+   *  On the Materials composer you pick the company, then one of these items.
+   *  A catalog item is auto-"covered" by this vendor (see vendorCovers), so its
+   *  order still gets this company's one-click ✉️ email. Empty for plain
+   *  material suppliers. Owner-editable in Settings → Vendor setup. */
+  catalog?: string[]
   /** True for FINISH trades (cabinets, flooring, tile, countertops, paint,
    *  lighting…). The homeowner Selections tab emails the locked selections
    *  package to these vendors. Mark each finish vendor as you add it here, and
@@ -100,9 +107,12 @@ export const VENDORS: Vendor[] = [
     phone: '352-369-5411', // Florida Express Waste & Recycling (460 NW 52nd Ave, Ocala)
     icon: '🗑️',
     supplies: 'Dumpster & porta-potty — deliver / swap / remove',
-    // Bare Dumpster/Porta-potty (from text-scans) PLUS the explicit
-    // deliver/swap/remove actions you pick when adding an order.
-    categories: ['Dumpster', 'Porta-potty', ...SITE_SERVICES],
+    // Bare Dumpster/Porta-potty come from text-scans. The deliver/swap/remove
+    // actions are this company's order MENU (catalog): you pick Florida Express
+    // first, then the action. vendorCovers checks categories AND catalog, so a
+    // catalog order still gets Florida Express's one-click email.
+    categories: ['Dumpster', 'Porta-potty'],
+    catalog: [...SITE_SERVICES],
     // Action-neutral wording: the action lives in each {{items}} line
     // ("Deliver dumpster" / "Remove porta-potty"), so this reads right for
     // deliveries, swaps, AND removals — unlike the generic "place an order".
@@ -121,6 +131,14 @@ export const VENDORS: Vendor[] = [
   },
 ]
 
+/** Does this vendor cover an order category? True when the category is one of
+ *  its `categories` (materials it supplies) OR its `catalog` (company order
+ *  menu). One shared rule so the order email, the row's ✉️ button, and the
+ *  composer all agree on which company an item belongs to. */
+export function vendorCovers(v: Vendor, category: string): boolean {
+  return (v.categories?.includes(category) ?? false) || (v.catalog?.includes(category) ?? false)
+}
+
 /** The live values a vendor-email template's {{tokens}} can use. When the
  *  model has a saved order list for a category (⚙️ Settings → Takeoffs), the
  *  list's contents ride along under that item. Pass `onlyCategory` to scope
@@ -132,8 +150,12 @@ export function vendorTemplateVars(
   modelLists?: Record<string, string>,
   onlyCategory?: string,
 ): Record<string, string> {
+  // A vendor with NO declared coverage (no categories, no catalog) is a generic
+  // recipient → include every to-order item. Otherwise include only what it
+  // covers — materials it supplies OR items on its order menu.
+  const hasCoverage = (v.categories?.length ?? 0) > 0 || (v.catalog?.length ?? 0) > 0
   const items = (ps.orders ?? [])
-    .filter((o) => o.status === 'toOrder' && (!v.categories || v.categories.includes(o.category)))
+    .filter((o) => o.status === 'toOrder' && (!hasCoverage || vendorCovers(v, o.category)))
     .filter((o) => !onlyCategory || o.category === onlyCategory)
     .map((o) => {
       const list = modelLists?.[o.category]
@@ -202,7 +224,7 @@ export function orderMailto(
   overrides?: Record<string, TemplateOverride>,
   modelLists?: Record<string, string>,
 ): { href: string; vendor: Vendor } | null {
-  const v = vendors.find((x) => x.categories?.includes(category))
+  const v = vendors.find((x) => vendorCovers(x, category))
   if (!v) return null
   const t = effectiveTemplate(overrides, `vendor:${v.id}`, {
     subject: v.subjectDefault ?? DEFAULT_VENDOR_SUBJECT,

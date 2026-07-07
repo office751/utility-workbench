@@ -8,8 +8,8 @@
  */
 import { Fragment, useState } from 'react'
 import type { OrderItem, OrderStatus, Project, ProjectState, TemplateOverride, WorkbenchState } from '../types'
-import { MATERIAL_CATEGORIES, ORDER_STATUSES, SITE_SERVICES, standardOrdersFor } from '../data/orders'
-import { orderMailto, vendorCallHref, vendorMailto, type Vendor } from '../data/vendors'
+import { MATERIAL_CATEGORIES, ORDER_STATUSES, standardOrdersFor } from '../data/orders'
+import { orderMailto, vendorCallHref, vendorCovers, vendorMailto, type Vendor } from '../data/vendors'
 import { modelKey } from '../data/models'
 import { ordersOf } from '../lib/orders'
 import { orderLeadInfo } from '../lib/leadTimes'
@@ -46,14 +46,24 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
   const orders = ordersOf(ps)
   const [newCategory, setNewCategory] = useState<string>(MATERIAL_CATEGORIES[0])
   const [customName, setCustomName] = useState('')
+  const [companyItem, setCompanyItem] = useState('') // chosen item when ordering from a company
   const [newDate, setNewDate] = useState(today())
-  // The composer's "type your own material" sentinel. Picking it swaps the
-  // category dropdown for a free-text box; the typed name becomes the order's
-  // category and useProjects.addOrder remembers it for next time.
+  // Composer sentinels. CUSTOM → free-text material box. A `company:<id>` value
+  // → pick that company's order menu (its vendor.catalog) in a second dropdown.
   const CUSTOM = '__custom__'
-  // The material name we'll actually file: the typed one in custom mode, else
-  // the dropdown pick. Trimmed so a stray space can't create a blank order.
-  const resolvedCategory = newCategory === CUSTOM ? customName.trim() : newCategory
+  const COMPANY = 'company:'
+  // Vendors that have an order menu (catalog) — these power the "Order from a
+  // company" path (Florida Express today; any vendor you give a catalog).
+  const catalogVendors = vendors.filter((v) => (v.catalog?.length ?? 0) > 0)
+  // The company chosen in the picker right now (null unless in company mode).
+  const company = newCategory.startsWith(COMPANY)
+    ? vendors.find((v) => v.id === newCategory.slice(COMPANY.length)) ?? null
+    : null
+  // The material/service we'll actually file: the typed one (custom), the
+  // company's chosen menu item (company mode), or the plain dropdown pick.
+  // Trimmed so a stray space can't create a blank order.
+  const resolvedCategory =
+    newCategory === CUSTOM ? customName.trim() : company ? companyItem.trim() : newCategory
   const missing = missingTakeoffs(modelTakeoffs, p.model)
   const mk = modelKey(p.model) // '' when the model is unknown/TBD
   const lists = modelOrderLists?.[mk]
@@ -69,7 +79,7 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
   const coveredVendorIds = new Set(
     orders
       .filter((o) => o.status === 'toOrder')
-      .map((o) => vendors.find((v) => v.categories?.includes(o.category))?.id)
+      .map((o) => vendors.find((v) => vendorCovers(v, o.category))?.id)
       .filter(Boolean),
   )
   const otherVendors = vendors.filter((v) => !coveredVendorIds.has(v.id))
@@ -120,7 +130,7 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
             // whether the row needs the free-text "vendor…" box at all (a known
             // vendor already shows on the ✉️ Order button — the box was
             // redundant next to it; roadmap "redundant vendor affordance").
-            const knownVendor = vendors.find((v) => v.categories?.includes(o.category))
+            const knownVendor = vendors.find((v) => vendorCovers(v, o.category))
             // Lead-time math: null unless still "to order" WITH a needed-by
             // date. Renders as the tinted "order by <date>" pill next to the
             // category (Today's Order-NOW alerts come from the same module).
@@ -240,7 +250,14 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
           it used to blend into the last order row). */}
       <h3 className="order-add-head">＋ Add an order</h3>
       <div className="order-add">
-        <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)}>
+        <select
+          value={newCategory}
+          onChange={(e) => {
+            setNewCategory(e.target.value)
+            setCustomName('')
+            setCompanyItem('')
+          }}
+        >
           <optgroup label="Materials">
             {MATERIAL_CATEGORIES.map((c) => (
               <option key={c}>{c}</option>
@@ -255,17 +272,44 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
               ))}
             </optgroup>
           )}
-          <optgroup label="Site services (Florida Express)">
-            {SITE_SERVICES.map((c) => (
-              <option key={c}>{c}</option>
-            ))}
-          </optgroup>
+          {/* Company-first ordering: pick the company (Florida Express, or any
+              vendor you give an order menu in Settings → Vendor setup), then its
+              item in the second dropdown that appears. */}
+          {catalogVendors.length > 0 && (
+            <optgroup label="Order from a company">
+              {catalogVendors.map((v) => (
+                <option key={v.id} value={COMPANY + v.id}>
+                  {v.icon} {v.name}
+                </option>
+              ))}
+            </optgroup>
+          )}
           {/* Escape hatch: order something not in the lists (gutters, HVAC, a
               one-off). Picking this reveals a name box below. */}
           <optgroup label="Something else">
             <option value={CUSTOM}>➕ Custom material…</option>
           </optgroup>
         </select>
+
+        {/* Company mode: choose what to order from the picked company (its
+            catalog). The chosen item becomes the order's category and still maps
+            back to this company for the one-click ✉️ order email. */}
+        {company && (
+          <select
+            className="order-add-companyitem"
+            value={companyItem}
+            onChange={(e) => setCompanyItem(e.target.value)}
+            aria-label={`What to order from ${company.name}`}
+            autoFocus
+          >
+            <option value="" disabled>
+              What from {company.name}?
+            </option>
+            {(company.catalog ?? []).map((c) => (
+              <option key={c}>{c}</option>
+            ))}
+          </select>
+        )}
 
         {/* Custom mode only: type the material's name. It becomes the order's
             category and is remembered for next time. */}
@@ -286,14 +330,24 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
         <button
           className="mini"
           disabled={!resolvedCategory}
-          title={!resolvedCategory ? 'Type the material name first' : undefined}
+          title={
+            !resolvedCategory
+              ? company
+                ? `Choose what to order from ${company.name}`
+                : 'Type the material name first'
+              : undefined
+          }
           onClick={() => {
             addOrder(p.id, { category: resolvedCategory, status: 'toOrder', orderedOn: newDate || undefined })
-            // Back to the list so the just-added custom name (now saved) shows
-            // under "Your materials" and the text box collapses.
+            // Custom: back to the list so the saved name shows under "Your
+            // materials" and the box collapses. Company: keep the company
+            // selected but clear the item, so ordering several things from the
+            // same company stays quick.
             if (newCategory === CUSTOM) {
               setCustomName('')
               setNewCategory(MATERIAL_CATEGORIES[0])
+            } else if (company) {
+              setCompanyItem('')
             }
           }}
         >

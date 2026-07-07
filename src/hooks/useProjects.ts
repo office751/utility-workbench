@@ -158,12 +158,29 @@ export function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
     }
   }
 
+  // Vendors: seed from code defaults on first run, then the blob owns them.
+  // ONE-TIME backfill: copy each saved vendor's `catalog` (its company order
+  // menu) from the code defaults by id, when missing — so Florida Express,
+  // added before the catalog field existed, gets its deliver/swap/remove menu.
+  // Flag-guarded so a deliberately-emptied catalog isn't re-added every load.
+  let vendors = Array.isArray(parsed.vendors) ? parsed.vendors : VENDORS
+  let vendorCatalogsSeeded = parsed.vendorCatalogsSeeded === true
+  if (!vendorCatalogsSeeded) {
+    const defaultById = new Map(VENDORS.map((v) => [v.id, v]))
+    vendors = vendors.map((v) => {
+      const def = defaultById.get(v.id)
+      return !v.catalog && def?.catalog ? { ...v, catalog: def.catalog } : v
+    })
+    vendorCatalogsSeeded = true
+  }
+
   const result: WorkbenchState = {
     roster: [...roster],
     projects,
     tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
     extrasSeeded: parsed.extrasSeeded === true,
     inspectionsMigrated: parsed.inspectionsMigrated === true,
+    vendorCatalogsSeeded,
     templates: parsed.templates ?? {},
     // Seed the Selections catalog from code defaults on first run; after that
     // the saved blob owns it (editable in Settings → Selections setup).
@@ -179,9 +196,9 @@ export function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
     // carried through migrate or it gets stripped on every cloud load/realtime
     // sync and written back empty — the blob-clobber failure mode. Array-guarded.
     assignees: Array.isArray(parsed.assignees) ? parsed.assignees : [],
-    // Vendors directory — seed from code defaults on first run, then the blob
-    // owns it (edited in Settings -> Vendor setup). Array-guarded like the rest.
-    vendors: Array.isArray(parsed.vendors) ? parsed.vendors : VENDORS,
+    // Vendors directory (seeded/backfilled above; the blob owns it after —
+    // edited in Settings → Vendor setup).
+    vendors,
     // Extra utility companies (Electric/Water/Sewer) — same seed-then-blob-owns
     // pattern as vendors above. Array-guarded so a malformed/missing field
     // never crashes a load; falls back to the (empty) code default.

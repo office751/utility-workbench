@@ -137,6 +137,19 @@ function VendorsEditor({ vendors, onSave }: Props) {
             </label>
           </div>
 
+          <div className="vend-row">
+            <label className="vend-f vend-grow">
+              Order menu (comma-separated) — pick this company first, then an item
+              <input
+                value={(v.catalog ?? []).join(', ')}
+                onChange={(e) =>
+                  patch(i, { catalog: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })
+                }
+                placeholder="Deliver dumpster, Swap out dumpster, Remove dumpster"
+              />
+            </label>
+          </div>
+
           <label className="vend-check">
             <input type="checkbox" checked={!!v.finish} onChange={(e) => patch(i, { finish: e.target.checked })} />
             Finish trade — gets the homeowner Selections package

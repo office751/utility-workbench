@@ -29,6 +29,7 @@ const full: Partial<WorkbenchState> = {
   vendors: [{ id: 'v-test', name: 'TestVendor', email: '', icon: '📦', supplies: '', categories: [] }],
   scanMeta: { lastScanAt: '2026-07-02T09:31:00Z', permitsRead: 56 },
   customOrderCategories: ['Gutters'],
+  vendorCatalogsSeeded: true, // skip the one-time backfill for the passthrough test
 }
 
 const out = migrate(full)
@@ -60,6 +61,16 @@ describe('migrate() round-trip', () => {
     expect(out.customOrderCategories).toEqual(['Gutters'])
   })
 
+  it('backfills a missing vendor catalog once (Florida Express order menu)', () => {
+    const out2 = migrate({
+      // A saved vendor from before the catalog field existed, and no seed flag.
+      vendors: [{ id: 'florida-express', name: 'Florida Express', email: '', icon: '🗑️', supplies: '', categories: ['Dumpster'] }],
+    })
+    const fe = out2.vendors?.find((v) => v.id === 'florida-express')
+    expect((fe?.catalog?.length ?? 0) > 0).toBe(true) // deliver/swap/remove menu restored
+    expect(out2.vendorCatalogsSeeded).toBe(true)
+  })
+
   // The guard: if someone adds a field to WorkbenchState, they must add it here
   // AND to migrate()'s result object — or this fails. That's the whole point.
   it('output carries EVERY WorkbenchState field', () => {
@@ -80,6 +91,7 @@ describe('migrate() round-trip', () => {
       'utilities',
       'scanMeta',
       'customOrderCategories',
+      'vendorCatalogsSeeded',
     ]
     for (const k of EXPECTED_KEYS) expect(out).toHaveProperty(k)
   })
