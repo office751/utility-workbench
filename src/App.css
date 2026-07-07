@@ -1474,7 +1474,8 @@ button.primary.on {
 .order-date,
 .order-needby input,
 .order-add select,
-.order-add-date input {
+.order-add-date input,
+.order-add-custom {
   font: inherit;
   font-size: calc(13px * var(--font-scale));
   color: var(--text);
@@ -1482,6 +1483,20 @@ button.primary.on {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 5px 8px;
+}
+/* The custom-material name box grows to fill the row's spare width so a long
+   name ("Screen enclosure package") isn't cramped. Grow only — we keep
+   flex-basis at auto (not a fixed px) on purpose: on phones .order-add becomes
+   a COLUMN, where a numeric flex-basis would be read as HEIGHT and make the box
+   grotesquely tall. Width on phones comes from the width:100% mobile rule. */
+.order-add-custom {
+  flex-grow: 1;
+  min-width: 150px;
+}
+/* Add stays disabled until a custom name is typed (nothing to file yet). */
+.order-add .mini:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 /* The status dropdown is the row's main verb (advance the order), so give it a
    subtle raised fill + weight so it reads as a control, not the plain vendor box. */
@@ -3244,6 +3259,7 @@ a.map-btn {
   }
   .order-add select,
   .order-add-date,
+  .order-add-custom,
   .order-add .mini {
     width: 100%;
     box-sizing: border-box;
@@ -3284,6 +3300,7 @@ a.map-btn {
   .order-vendor,
   .order-add select,
   .order-add-date input,
+  .order-add-custom,
   .sr-note {
     font-size: calc(16px * var(--font-scale));
   }

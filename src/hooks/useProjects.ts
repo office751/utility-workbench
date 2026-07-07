@@ -34,7 +34,7 @@ import { defaultCatalog, defaultSelections } from '../data/selections'
 import { VENDORS, type Vendor } from '../data/vendors'
 import { UTILITIES, type UtilityCompany } from '../data/utilities'
 import { ESTABLISHED_MODELS, TAKEOFF_TYPES } from '../data/takeoffs'
-import { standardOrdersFor } from '../data/orders'
+import { ORDER_CATEGORIES, SITE_SERVICES, standardOrdersFor } from '../data/orders'
 import { modelKey } from '../data/models'
 import { PROJECTS } from '../data/projects'
 import { supabase } from '../lib/supabase'
@@ -705,8 +705,24 @@ export function useProjects() {
     }
     setState((prev) => {
       const cur = prev.projects[id] ?? emptyProjectState()
+      // Auto-remember a brand-new material name so it joins the "＋ Add an
+      // order" picker on every project from now on (the free-form category the
+      // composer's "➕ Custom material…" option produces). "Already known" =
+      // a built-in category, a site service, or one we've remembered before —
+      // compared case-insensitively so "Windows"/"windows" don't double up.
+      const known = new Set(
+        [...ORDER_CATEGORIES, ...SITE_SERVICES, ...(prev.customOrderCategories ?? [])].map((c) =>
+          c.toLowerCase(),
+        ),
+      )
+      const name = newOrder.category.trim()
+      const customOrderCategories =
+        name && !known.has(name.toLowerCase())
+          ? [...(prev.customOrderCategories ?? []), name]
+          : prev.customOrderCategories
       return {
         ...prev,
+        customOrderCategories,
         projects: { ...prev.projects, [id]: { ...cur, orders: [...(cur.orders ?? []), newOrder] } },
       }
     })

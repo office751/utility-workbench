@@ -444,6 +444,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
             templates={state.templates}
             modelTakeoffs={state.modelTakeoffs}
             modelOrderLists={state.modelOrderLists}
+            customOrderCategories={state.customOrderCategories}
             selectionsCatalog={state.selectionsCatalog}
             vendors={vendors}
             utilities={utilities}

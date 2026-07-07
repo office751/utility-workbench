@@ -423,6 +423,14 @@ export interface WorkbenchState {
    */
   modelOrderLists?: Record<string, Record<string, string>>
   /**
+   * Owner-added custom material categories for the Materials tab's
+   * "＋ Add an order" picker. Built-in categories live in data/orders.ts;
+   * when you add an order with a brand-new category (the composer's
+   * "➕ Custom material…" option), addOrder remembers the name here so it
+   * appears in the picker on every project afterward. Absent = none yet.
+   */
+  customOrderCategories?: string[]
+  /**
    * The MODEL LIBRARY (📐 Models tab), keyed by model key ('A'…'E2'…).
    * Each model gets a shareable plans locker (same signed-link mechanics as
    * project files) plus editable facts the roster can't hold.

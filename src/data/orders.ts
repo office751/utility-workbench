@@ -15,6 +15,7 @@ export const ORDER_CATEGORIES: string[] = [
   'Slab package',
   'Block',
   'Lintels', // sand ships bundled IN the lintels package — no separate Sand order
+  'Windows', // installed at dry-in; a common long-lead item (see LEAD_TIME_DAYS)
   'Flooring',
   'Cabinets',
   'Lighting package',
@@ -59,6 +60,7 @@ export const SITE_SERVICES: string[] = [
 export const LEAD_TIME_DAYS: Record<string, number> = {
   Trusses: 21, // engineered + built to order — the classic schedule-killer
   Cabinets: 28, // longest lead in the house; FGT builds per order
+  Windows: 35, // made-to-size for new construction — often 5–6 weeks; tune to your supplier
   'Garage door': 21, // sized/ordered per opening
   Flooring: 14,
   'Lighting package': 14,
@@ -89,6 +91,7 @@ export const STANDARD_ORDER_CATEGORIES: string[] = [
   'Framing package',
   'Block',
   'Lintels',
+  'Windows',
   'Slab package',
   'Cabinets',
   'Flooring',
@@ -139,6 +142,7 @@ export const CATEGORY_KEYWORDS: Record<string, string> = {
   light: 'Lighting package',
   tile: 'Bathroom tile',
   'garage door': 'Garage door',
+  window: 'Windows',
   dumpster: 'Dumpster',
   porta: 'Porta-potty',
   'ports potty': 'Porta-potty',

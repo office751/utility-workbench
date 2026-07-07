@@ -7,6 +7,13 @@
       "runtimeArgs": ["run", "dev"],
       "port": 5173,
       "autoPort": true
+    },
+    {
+      "name": "workbench-isolation",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "--mode", "isolation", "--port", "5199"],
+      "port": 5199,
+      "autoPort": true
     }
   ]
 }

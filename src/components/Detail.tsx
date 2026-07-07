@@ -119,6 +119,8 @@ interface Props extends Updaters {
   /** Per-model takeoff status + order lists (⚙️ Settings → Takeoffs). */
   modelTakeoffs?: import('../types').WorkbenchState['modelTakeoffs']
   modelOrderLists?: import('../types').WorkbenchState['modelOrderLists']
+  /** Owner-added custom material categories — extends the Materials picker. */
+  customOrderCategories?: string[]
   /** Owner-editable Selections catalog (Settings → Selections setup). */
   selectionsCatalog?: SelectionsCatalog
   /** Owner-editable vendors directory (Settings → Vendor setup). */
@@ -449,6 +451,7 @@ function Detail(props: Props) {
               templates={props.templates}
               modelTakeoffs={props.modelTakeoffs}
               modelOrderLists={props.modelOrderLists}
+              customCategories={props.customOrderCategories ?? []}
               vendors={props.vendors}
               addOrder={props.addOrder}
               updateOrder={props.updateOrder}

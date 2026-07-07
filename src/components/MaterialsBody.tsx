@@ -24,6 +24,8 @@ interface Props {
   /** Per-model takeoff status + order lists (⚙️ Settings → Takeoffs). */
   modelTakeoffs?: WorkbenchState['modelTakeoffs']
   modelOrderLists?: WorkbenchState['modelOrderLists']
+  /** Owner-added custom material names — shown in the picker under "Your materials". */
+  customCategories: string[]
   /** The effective vendors directory (owner-editable; from the blob, defaults seeded). */
   vendors: Vendor[]
   addOrder: (id: number, order: { category: string; status: OrderStatus; orderedOn?: string }) => void
@@ -40,10 +42,18 @@ function today(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLists, vendors, addOrder, updateOrder, removeOrder, seedStandardOrders }: Props) {
+function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLists, customCategories, vendors, addOrder, updateOrder, removeOrder, seedStandardOrders }: Props) {
   const orders = ordersOf(ps)
-  const [newCategory, setNewCategory] = useState(MATERIAL_CATEGORIES[0])
+  const [newCategory, setNewCategory] = useState<string>(MATERIAL_CATEGORIES[0])
+  const [customName, setCustomName] = useState('')
   const [newDate, setNewDate] = useState(today())
+  // The composer's "type your own material" sentinel. Picking it swaps the
+  // category dropdown for a free-text box; the typed name becomes the order's
+  // category and useProjects.addOrder remembers it for next time.
+  const CUSTOM = '__custom__'
+  // The material name we'll actually file: the typed one in custom mode, else
+  // the dropdown pick. Trimmed so a stray space can't create a blank order.
+  const resolvedCategory = newCategory === CUSTOM ? customName.trim() : newCategory
   const missing = missingTakeoffs(modelTakeoffs, p.model)
   const mk = modelKey(p.model) // '' when the model is unknown/TBD
   const lists = modelOrderLists?.[mk]
@@ -236,19 +246,56 @@ function MaterialsBody({ project: p, ps, templates, modelTakeoffs, modelOrderLis
               <option key={c}>{c}</option>
             ))}
           </optgroup>
+          {/* Anything added by hand before — remembered in the blob so it shows
+              up here on every house (see useProjects.addOrder). */}
+          {customCategories.length > 0 && (
+            <optgroup label="Your materials">
+              {customCategories.map((c) => (
+                <option key={c}>{c}</option>
+              ))}
+            </optgroup>
+          )}
           <optgroup label="Site services (Florida Express)">
             {SITE_SERVICES.map((c) => (
               <option key={c}>{c}</option>
             ))}
           </optgroup>
+          {/* Escape hatch: order something not in the lists (gutters, HVAC, a
+              one-off). Picking this reveals a name box below. */}
+          <optgroup label="Something else">
+            <option value={CUSTOM}>➕ Custom material…</option>
+          </optgroup>
         </select>
+
+        {/* Custom mode only: type the material's name. It becomes the order's
+            category and is remembered for next time. */}
+        {newCategory === CUSTOM && (
+          <input
+            className="order-add-custom"
+            value={customName}
+            onChange={(e) => setCustomName(e.target.value)}
+            placeholder="Material name (e.g. Windows, Gutters, HVAC)"
+            autoFocus
+          />
+        )}
+
         <label className="order-add-date">
           Ordered
           <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} />
         </label>
         <button
           className="mini"
-          onClick={() => addOrder(p.id, { category: newCategory, status: 'toOrder', orderedOn: newDate || undefined })}
+          disabled={!resolvedCategory}
+          title={!resolvedCategory ? 'Type the material name first' : undefined}
+          onClick={() => {
+            addOrder(p.id, { category: resolvedCategory, status: 'toOrder', orderedOn: newDate || undefined })
+            // Back to the list so the just-added custom name (now saved) shows
+            // under "Your materials" and the text box collapses.
+            if (newCategory === CUSTOM) {
+              setCustomName('')
+              setNewCategory(MATERIAL_CATEGORIES[0])
+            }
+          }}
         >
           ＋ Add order
         </button>
