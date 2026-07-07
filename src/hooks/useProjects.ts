@@ -449,6 +449,27 @@ export function useProjects() {
      
   }, [state])
 
+  /** Apply a state that arrived FROM the cloud (realtime event or a manual
+   *  re-read). If we hold unsaved local edits, 3-way merge instead of
+   *  clobbering them (edits to different houses both survive; a same-entity
+   *  clash converges on the committed remote). Otherwise adopt it as-is. */
+  function applyRemote(next: WorkbenchState & { __origin?: string }) {
+    const remoteState = migrate(next as Partial<WorkbenchState>)
+    if (dirtyRef.current && baseRef.current) {
+      // We have UNSAVED local edits. Don't clobber them: merge the remote
+      // write into ours against the last-synced ancestor. Leave it 'dirty'
+      // so the merged union saves up.
+      const merged = mergeWorkbench(baseRef.current, stateRef.current, remoteState)
+      baseRef.current = remoteState // remote is the new common ancestor
+      setState(merged)
+    } else {
+      // Nothing unsaved locally → just adopt the remote state as-is.
+      skipNextSave.current = true // applying remote — don't bounce it back up
+      baseRef.current = remoteState
+      setState(remoteState)
+    }
+  }
+
   // 3) Live-sync: when ANOTHER device writes, apply that change here in real
   //    time (Supabase Realtime). We ignore the echo of our OWN writes by the
   //    `__origin` tag — robust to jsonb key-reordering and to several of our
@@ -465,27 +486,57 @@ export function useProjects() {
           const next = (payload.new as { data?: WorkbenchState & { __origin?: string } } | null)?.data
           if (!next) return
           if (next.__origin === clientId.current) return // our own write echoed back — ignore it
-          const remoteState = migrate(next as Partial<WorkbenchState>)
-          if (dirtyRef.current && baseRef.current) {
-            // We have UNSAVED local edits. Don't clobber them: 3-way merge the
-            // remote write into ours against the last-synced ancestor (edits to
-            // different houses both survive; a same-entity clash converges on the
-            // committed remote). Leave it 'dirty' so the merged union saves up.
-            const merged = mergeWorkbench(baseRef.current, stateRef.current, remoteState)
-            baseRef.current = remoteState // remote is the new common ancestor
-            setState(merged)
-          } else {
-            // Nothing unsaved locally → just adopt the remote state as-is.
-            skipNextSave.current = true // applying remote — don't bounce it back up
-            baseRef.current = remoteState
-            setState(remoteState)
-          }
+          applyRemote(next)
         },
       )
       .subscribe()
     return () => {
       sb.removeChannel(channel)
     }
+  }, [])
+
+  // 3.5) STALE-TAB GUARD (the July 7 2026 data-loss incident). Realtime does
+  //    NOT replay messages a tab missed while the machine was asleep or the
+  //    connection was down — so a tab left open overnight can sit on HOURS-old
+  //    state while believing it's current. When such a tab was touched again,
+  //    it used to write that old state over everyone's day of work.
+  //    The guard: the moment this tab is USED again (window focus, becomes
+  //    visible, or comes back online), re-READ the cloud row and reconcile
+  //    through the same applyRemote path as a realtime event — merge if we
+  //    hold real unsaved edits, adopt the cloud otherwise. Throttled so
+  //    ordinary tab-switching doesn't hammer the network.
+  useEffect(() => {
+    if (!supabase) return
+    const sb = supabase
+    let lastCheck = 0
+    const resync = async () => {
+      if (!cloudReady.current) return // first load is effect (1)'s job
+      const now = Date.now()
+      if (now - lastCheck < 10_000) return
+      lastCheck = now
+      try {
+        const { data, error } = await sb.from('workbench').select('data').eq('id', 'main').maybeSingle()
+        if (error || !data?.data) return // transient failure — never block on this
+        const next = data.data as WorkbenchState & { __origin?: string }
+        if (next.__origin === clientId.current) return // cloud already holds OUR latest
+        applyRemote(next)
+      } catch {
+        // Offline / fetch aborted — best effort; realtime will catch up.
+      }
+    }
+    const onFocus = () => void resync()
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void resync()
+    }
+    window.addEventListener('focus', onFocus)
+    window.addEventListener('online', onFocus)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      window.removeEventListener('online', onFocus)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+
   }, [])
 
   // 4) Save-on-exit: the cloud save in (2) is debounced 600ms, so a change made
@@ -497,6 +548,11 @@ export function useProjects() {
     const sb = supabase
     const flush = () => {
       if (!cloudReady.current) return
+      // STALE-TAB GUARD (July 7 2026 incident): only flush when we hold a REAL
+      // unsaved edit. A tab with nothing pending has nothing to say — and if
+      // it slept through hours of other devices' changes, writing its whole
+      // (stale) copy here is exactly how a day of work got erased.
+      if (!dirtyRef.current) return
       sb.from('workbench')
         .upsert({ id: 'main', data: { ...stateRef.current, __origin: clientId.current }, updated_at: new Date().toISOString() })
         .then(() => {}) // fire-and-forget; best effort on the way out
