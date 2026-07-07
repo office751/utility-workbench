@@ -4,8 +4,8 @@
   Morning digest email. Reads the Workbench blob (READ-ONLY) and emails each
   enabled recipient in scanner/digest.config.json their morning digest from
   office@ — company fires for everyone, tasks filtered per person.
-  Runs 6:30 AM: after the 5:30 permit scan and the 6:00 SharePoint sync, so
-  the digest reports on the freshest data.
+  Runs 5:50 AM: after the 5:30 permit scan (which writes the blob), INSIDE the
+  5:25-am wake window — the Mac was found asleep again by 6:30 (Jul 7 2026).
 
   ⚠ DO NOT LOAD until the one-time Mail.Send grant is done (see the header of
   scripts/send-digest.ts) and a manual `npm run digest:send` has succeeded.
@@ -34,9 +34,9 @@
   <key>StartCalendarInterval</key>
   <dict>
     <key>Hour</key>
-    <integer>6</integer>
+    <integer>5</integer>
     <key>Minute</key>
-    <integer>30</integer>
+    <integer>50</integer>
   </dict>
   <key>RunAtLoad</key>
   <false/>
