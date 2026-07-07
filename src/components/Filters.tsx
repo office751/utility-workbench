@@ -14,6 +14,7 @@ export interface FilterState {
 }
 
 /** Default: finished (C.O.) homes hidden so active work isn't cluttered. */
+// eslint-disable-next-line react-refresh/only-export-components -- deliberately colocated with its component; only costs hot-reload speed on this file
 export const NO_FILTERS: FilterState = {
   hideCO: true,
   needsActionOnly: false,
@@ -23,6 +24,7 @@ export const NO_FILTERS: FilterState = {
 
 /** How many *extra* filters are active (shown on the ▾ button). hideCO is the
  *  default, so toggling it OFF counts as an active choice too. */
+// eslint-disable-next-line react-refresh/only-export-components -- deliberately colocated with its component
 export function countActive(f: FilterState): number {
   let n = 0
   if (f.needsActionOnly) n++

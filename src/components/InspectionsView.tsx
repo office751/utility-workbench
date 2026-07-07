@@ -18,6 +18,7 @@ interface Props {
 }
 
 /** red = failed outright · amber = passed-with-strings / partial */
+// eslint-disable-next-line react-refresh/only-export-components -- deliberately colocated with its component
 export function inspectionSeverity(status: string): 'fail' | 'partial' {
   return /disapprov|fail|reject|denied/i.test(status) ? 'fail' : 'partial'
 }

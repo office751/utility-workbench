@@ -31,7 +31,8 @@ const LINK_TTL_SECONDS = 60 * 60 * 24 * 365
 
 /** Strip characters that don't belong in a storage path; cap the length. */
 function safeName(name: string): string {
-  return name.replace(/[^\w.\-]+/g, '_').slice(0, 120) || 'file'
+  // (`-` last inside a character class is a literal dash — no escape needed.)
+  return name.replace(/[^\w.-]+/g, '_').slice(0, 120) || 'file'
 }
 
 /**

@@ -156,7 +156,7 @@ function TemplateCard({
     if (commitTimer.current) return
     setSubject(eff.subject)
     setBody(eff.body)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [eff.subject, eff.body])
 
   function schedule(patch: Partial<TemplateOverride>) {

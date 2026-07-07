@@ -547,7 +547,7 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField, templ
       await navigator.clipboard.writeText(text)
       copied = true
     } catch {
-      copied = false // clipboard refused — portal still opens
+      // clipboard refused — `copied` stays false; portal still opens
     }
     window.open(DUKE_PORTAL_URL, '_blank', 'noopener')
     setDukeState(copied ? 'opened' : 'noclip')

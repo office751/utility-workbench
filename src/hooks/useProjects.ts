@@ -446,7 +446,7 @@ export function useProjects() {
     saveTimer.current = timer
     return () => clearTimeout(timer)
     // doSave reads the latest state via stateRef, so it's safe to omit here.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [state])
 
   // 3) Live-sync: when ANOTHER device writes, apply that change here in real

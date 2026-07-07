@@ -38,6 +38,7 @@ function TaskRow({
   assigneeOptions?: string[]
 }) {
   const due = dueLabel(t)
+  // eslint-disable-next-line react-hooks/purity -- deadline math needs the real clock; any re-render refreshes it, which is plenty for a day-granularity flag
   const overdue = !t.done && t.dueDate ? new Date(t.dueDate + 'T00:00:00').getTime() < Date.now() : false
   const hat = hatOf(t.category)
 

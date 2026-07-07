@@ -112,7 +112,9 @@ function SelectionsView({
       setActionNote('Long list — if the draft looks cut off, use Copy and paste it in instead.')
       setTimeout(() => setActionNote(null), 4500)
     }
-    window.location.href = mailto
+    // .assign() = same navigation as `location.href = …`, phrased as a method
+    // call (the lint's immutability rule flags assigning to a global).
+    window.location.assign(mailto)
   }
 
   function doLock() {
