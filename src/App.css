@@ -4349,3 +4349,36 @@ a.map-btn {
 .cme-builtins { margin-top: 16px; font-size: var(--text-sm); }
 .cme-builtins summary { cursor: pointer; color: var(--muted); }
 .cme-builtins-list { margin-top: 6px; }
+
+/* ---- Tasks → "Orders to place" section ---- */
+/* A rust left-accent marks this block as the time-sensitive one (order or the
+   schedule slips), distinct from the calmer hat groups below it. */
+.otask-section .tcard { border-left: 3px solid var(--rust); }
+.otask-group { padding: 2px 0; }
+.otask-group + .otask-group { border-top: 1px solid var(--border); margin-top: 4px; padding-top: 6px; }
+.otask-proj {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 6px;
+  text-align: left;
+  border-radius: var(--radius-sm);
+}
+.otask-proj:hover { background: var(--surface); }
+.otask-addr { font-weight: var(--weight-semibold); color: var(--ink); }
+.otask-meta { flex: 1 1 auto; font-size: var(--text-xs); color: var(--muted); }
+.otask-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 4px 6px 4px 20px;
+}
+.otask-cat { font-weight: var(--weight-semibold); color: var(--text); }
+.otask-spacer { flex: 1 1 auto; }
+.otask-send,
+.otask-done { white-space: nowrap; }

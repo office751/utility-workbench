@@ -12,6 +12,7 @@
  */
 import { useState } from 'react'
 import type { Task } from '../types'
+import type { PendingOrder } from '../lib/orders'
 import { HATS, hatOf } from '../data/hats'
 import { assigneesInUse, dueLabel, isUnassigned, openTasks, parseTaskLines, sameName, tasksByHat } from '../lib/tasks'
 import Icon from './Icon'
@@ -174,7 +175,17 @@ function TaskRow({
   )
 }
 
-function TasksView({ tasks, addTask, updateTask, removeTask, me = '', assignees = [] }: Props) {
+function TasksView({
+  tasks,
+  addTask,
+  updateTask,
+  removeTask,
+  me = '',
+  assignees = [],
+  pendingOrders = [],
+  onOpenOrder,
+  onMarkOrdered,
+}: Props) {
   // Capture-form state (local to this view).
   const [text, setText] = useState('')
   const [category, setCategory] = useState('it')
@@ -267,6 +278,23 @@ function TasksView({ tasks, addTask, updateTask, removeTask, me = '', assignees 
   const starred = shown.filter((t) => t.focus && !t.done)
   const done = shown.filter((t) => t.done)
   const unassignedCount = openTasks(tasks).filter(isUnassigned).length
+
+  // "Orders to place" — group the cross-project to-order list by house so a
+  // project with several pending materials reads as one block, not loose rows.
+  // pendingOrders arrives already sorted most-urgent-first, so first-seen order
+  // ranks the groups too (a house with an overdue order floats to the top).
+  const orderGroups = (() => {
+    const map = new Map<number, { address: string; meta: string; items: PendingOrderView[] }>()
+    for (const po of pendingOrders) {
+      let g = map.get(po.projectId)
+      if (!g) {
+        g = { address: po.address, meta: po.meta, items: [] }
+        map.set(po.projectId, g)
+      }
+      g.items.push(po)
+    }
+    return [...map.entries()]
+  })()
 
   return (
     <section className="tasks-view tasks-stack">
@@ -405,8 +433,63 @@ function TasksView({ tasks, addTask, updateTask, removeTask, me = '', assignees 
       )}
 
       {/* empty state */}
-      {openTasks(tasks).length === 0 && (
+      {openTasks(tasks).length === 0 && pendingOrders.length === 0 && (
         <p className="tasks-empty">No open tasks — capture one above and get it out of your head.</p>
+      )}
+
+      {/* Orders to place — every "to order" material across all houses, most
+          urgent first, grouped by house. These are time-sensitive (a late
+          truss stalls a job), so they sit up top with a one-click order email
+          and a "mark ordered" that drops the line once it's placed. */}
+      {pendingOrders.length > 0 && (
+        <section className="tg-section otask-section">
+          <div className="tg-head">
+            <Icon name="shopping_cart" size={18} color="var(--rust)" />
+            <span className="tg-label">Orders to place</span>
+            <span className="tg-count">{pendingOrders.length}</span>
+          </div>
+          <div className="tcard">
+            {orderGroups.map(([pid, g]) => (
+              <div className="otask-group" key={pid}>
+                <button className="otask-proj" onClick={() => onOpenOrder?.(pid)} title={`Open ${g.address} — Materials tab`}>
+                  <span className="otask-addr">{g.address}</span>
+                  <span className="otask-meta">{g.meta}</span>
+                  <Icon name="chevron_right" size={16} color="var(--ink-3)" />
+                </button>
+                {g.items.map((po) => (
+                  <div className="otask-row" key={po.orderId}>
+                    <span className="otask-cat">{po.category}</span>
+                    {po.lead && (
+                      <span
+                        className={`order-by ob-${po.lead.status}`}
+                        title={`${po.lead.leadTimeDays}-day lead, needed ${po.lead.neededByLabel} — order by ${po.lead.orderByLabel}`}
+                      >
+                        {po.lead.status === 'late' ? 'order NOW' : `order by ${po.lead.orderByLabel}`}
+                      </span>
+                    )}
+                    <span className="otask-spacer" />
+                    {po.mailto && (
+                      <a
+                        className="mini otask-send"
+                        href={po.mailto}
+                        title={`Draft the ${po.category} order${po.vendorName ? ` to ${po.vendorName}` : ''} — just press Send`}
+                      >
+                        ✉️ Order{po.vendorName ? ` from ${po.vendorName}` : ''}
+                      </a>
+                    )}
+                    <button
+                      className="mini otask-done"
+                      onClick={() => onMarkOrdered?.(po.projectId, po.orderId)}
+                      title="Mark this material ordered — moves it out of this list"
+                    >
+                      ✓ Ordered
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       {/* Today's Focus (C) — starred tasks float to the top */}
@@ -462,6 +545,14 @@ function TasksView({ tasks, addTask, updateTask, removeTask, me = '', assignees 
   )
 }
 
+/** A pending order enriched (in App) with its one-click order email + vendor. */
+export interface PendingOrderView extends PendingOrder {
+  /** mailto: draft for this order's vendor, or null when no vendor covers it. */
+  mailto: string | null
+  /** The covering vendor's name, for the button label (null when none). */
+  vendorName: string | null
+}
+
 interface Props {
   tasks: Task[]
   addTask: (t: Omit<Task, 'id' | 'createdAt' | 'done' | 'doneAt'>) => void
@@ -471,6 +562,12 @@ interface Props {
   me?: string
   /** The editable team list (⚙️ Settings) — names offered in the "Assign to" dropdown. */
   assignees?: string[]
+  /** Cross-project "to order" materials (lib/orders.collectPendingOrders → enriched). */
+  pendingOrders?: PendingOrderView[]
+  /** Open a house's Materials tab to act on its orders. */
+  onOpenOrder?: (projectId: number) => void
+  /** Advance one order to "ordered" (it then drops off this list). */
+  onMarkOrdered?: (projectId: number, orderId: string) => void
 }
 
 export default TasksView

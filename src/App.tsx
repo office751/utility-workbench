@@ -45,7 +45,9 @@ import { ROLES, type AppRole } from './data/roles'
 const PeopleView = lazy(() => import('./components/PeopleView'))
 const VendorsView = lazy(() => import('./components/VendorsView'))
 const VendorsEditor = lazy(() => import('./components/VendorsEditor'))
-import { VENDORS } from './data/vendors'
+import { VENDORS, orderMailto } from './data/vendors'
+import { collectPendingOrders } from './lib/orders'
+import { modelKey } from './data/models'
 const UtilitiesEditor = lazy(() => import('./components/UtilitiesEditor'))
 const CustomMaterialsEditor = lazy(() => import('./components/CustomMaterialsEditor'))
 const GuideView = lazy(() => import('./components/GuideView'))
@@ -355,9 +357,35 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
         </>
       )}
 
-      {tab === 'tasks' && (
-        <TasksView tasks={state.tasks} addTask={addTask} updateTask={updateTask} removeTask={removeTask} me={me} assignees={state.assignees ?? []} />
-      )}
+      {tab === 'tasks' &&
+        (() => {
+          // Build the cross-project "to order" list and enrich each with its
+          // one-click order email (same draft as the Materials tab's ✉️ button).
+          // Computed here (only when the Tasks tab is open) so TasksView stays a
+          // dumb renderer. projById avoids an O(n²) find per pending order.
+          const projById = new Map(projects.map((p) => [p.id, p]))
+          const pending = collectPendingOrders(projects, getProjectState).map((po) => {
+            const proj = projById.get(po.projectId)
+            const ps = getProjectState(po.projectId)
+            const draft = proj
+              ? orderMailto(vendors, po.category, proj, ps, state.templates, state.modelOrderLists?.[modelKey(proj.model)])
+              : null
+            return { ...po, mailto: draft?.href ?? null, vendorName: draft?.vendor.name ?? null }
+          })
+          return (
+            <TasksView
+              tasks={state.tasks}
+              addTask={addTask}
+              updateTask={updateTask}
+              removeTask={removeTask}
+              me={me}
+              assignees={state.assignees ?? []}
+              pendingOrders={pending}
+              onOpenOrder={(id) => openProject(id, 'materials')}
+              onMarkOrdered={(id, orderId) => updateOrder(id, orderId, { status: 'ordered' })}
+            />
+          )
+        })()}
 
       {tab === 'models' && (
         <ModelsView

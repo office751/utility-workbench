@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isMaterialsDone, ordersSummary, parseQuickAdd, toOrderCount } from './orders'
+import { collectPendingOrders, isMaterialsDone, ordersSummary, parseQuickAdd, toOrderCount } from './orders'
 import { emptyProjectState } from '../data/seed'
 import { makeProject } from './testUtils'
 import type { OrderItem, OrderStatus } from '../types'
@@ -85,5 +85,49 @@ describe('parseQuickAdd', () => {
     const r = parseQuickAdd('call the county about the fence', roster)
     expect(r.matches).toHaveLength(0)
     expect(r.categories).toHaveLength(0)
+  })
+})
+
+// The Tasks tab's "Orders to place" list: every to-order material across all
+// live houses, most-urgent first. Ordering to the wrong priority (or leaking a
+// finished house) matters, so pin the collection + sort here.
+describe('collectPendingOrders', () => {
+  const withOrders = (id: number, address: string, orders: OrderItem[], over: object = {}) => {
+    const p = makeProject({ id, address, ...over })
+    const ps = emptyProjectState()
+    ps.orders = orders
+    return { p, ps }
+  }
+
+  it('gathers only to-order items, most-urgent first, skipping CO/Hold homes', () => {
+    // Far-past needed-by → order-by long gone → 'late' (sorts first). Far-future
+    // → 'ok' (sorts after). No needed-by → no deadline → sinks to the bottom.
+    const past = withOrders(1, 'Past House', [
+      { id: 'a', category: 'Trusses', status: 'toOrder', neededBy: '2020-01-01', createdAt: '' },
+    ])
+    const future = withOrders(2, 'Future House', [
+      { id: 'b', category: 'Cabinets', status: 'toOrder', neededBy: '2099-01-01', createdAt: '' },
+      { id: 'c', category: 'Block', status: 'ordered', createdAt: '' }, // already ordered → excluded
+    ])
+    const undated = withOrders(3, 'Undated House', [
+      { id: 'd', category: 'Windows', status: 'toOrder', createdAt: '' }, // no needed-by
+    ])
+    const done = withOrders(4, 'Done House', [{ id: 'e', category: 'Flooring', status: 'toOrder', createdAt: '' }], {
+      listStatus: 'CO', // finished house → skipped entirely
+    })
+
+    const roster = [future.p, undated.p, past.p, done.p]
+    const byId = new Map([
+      [1, past.ps],
+      [2, future.ps],
+      [3, undated.ps],
+      [4, done.ps],
+    ])
+    const pending = collectPendingOrders(roster, (id) => byId.get(id)!)
+
+    expect(pending.map((o) => o.category)).toEqual(['Trusses', 'Cabinets', 'Windows'])
+    expect(pending[0].projectId).toBe(1)
+    expect(pending[0].lead?.status).toBe('late')
+    expect(pending[2].lead).toBeNull() // undated sinks last
   })
 })

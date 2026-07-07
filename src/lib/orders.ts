@@ -7,6 +7,7 @@
  */
 import type { OrderItem, Project, ProjectState } from '../types'
 import { CATEGORY_KEYWORDS } from '../data/orders'
+import { orderLeadInfo, type LeadInfo } from './leadTimes'
 
 /** A project's orders (never undefined). */
 export function ordersOf(ps: ProjectState): OrderItem[] {
@@ -110,4 +111,53 @@ export function parseQuickAdd(text: string, projects: Project[]): QuickAddParse 
     scored.length === 1 || (scored.length > 1 && scored[0].score > scored[1].score)
 
   return { matches, confident, categories }
+}
+
+/* ---------------- pending orders (the Tasks "Orders to place" list) ------- */
+
+/** One still-"to order" material, flattened out of its project for the
+ *  cross-project Orders list on the Tasks tab. `lead` is the order-by math
+ *  (null when the order has no needed-by date). */
+export interface PendingOrder {
+  projectId: number
+  orderId: string
+  category: string
+  address: string
+  meta: string // "F-LH · Silver Springs Shores" — same context line as Today
+  lead: LeadInfo | null
+}
+
+/**
+ * Every material still waiting to be ordered, across all live projects,
+ * most-urgent first — the data behind the Tasks tab's "Orders to place"
+ * section. Finished (C.O.) and parked (Hold) homes are skipped, exactly like
+ * the Today command center, so the list stays focused on active work.
+ *
+ * Sort: orders WITH a needed-by date rank by their order-by urgency (a passed
+ * order-by date is negative → floats to the very top); undated to-order lines
+ * (no deadline math) fall to the bottom. Stable, so ties keep roster order.
+ */
+export function collectPendingOrders(
+  projects: Project[],
+  getProjectState: (id: number) => ProjectState,
+): PendingOrder[] {
+  const out: PendingOrder[] = []
+  for (const p of projects) {
+    if (p.listStatus === 'CO' || p.listStatus === 'Hold') continue
+    const ps = getProjectState(p.id)
+    for (const o of ordersOf(ps)) {
+      if (o.status !== 'toOrder') continue
+      out.push({
+        projectId: p.id,
+        orderId: o.id,
+        category: o.category,
+        address: p.address,
+        meta: `${p.model} · ${p.subdivision}`,
+        lead: orderLeadInfo(o),
+      })
+    }
+  }
+  const rank = (x: PendingOrder) => (x.lead ? x.lead.daysLeft : Infinity)
+  out.sort((a, b) => rank(a) - rank(b))
+  return out
 }
