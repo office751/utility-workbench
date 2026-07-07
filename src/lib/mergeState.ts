@@ -77,6 +77,14 @@ function mergeStringSet(local: string[] = [], remote: string[] = []): string[] {
 export function mergeWorkbench(base: WorkbenchState, local: WorkbenchState, remote: WorkbenchState): WorkbenchState {
   const rec = <V>(sel: (s: WorkbenchState) => Record<string, V> | undefined) =>
     mergeRecord(sel(base), sel(local), sel(remote))
+  // ⚠ COMPLETENESS RULE: every WorkbenchState field must appear in this return.
+  // A field left off is silently DROPPED whenever two operators save at the
+  // same moment — exactly how customOrderCategories / utilities / scanMeta /
+  // vendorCatalogsSeeded were lost until July 2026 (they were added to types.ts
+  // after this merge was written, and nothing forced the two to stay in sync).
+  // The safety net now lives in mergeState.test.ts: its fixture is typed
+  // Required<WorkbenchState>, so adding a field to types.ts won't even compile
+  // there until the fixture — and the completeness test — cover it.
   return {
     roster: mergeById(base.roster, local.roster, remote.roster, 'id'),
     // projects is keyed by numeric id; JS object keys are strings either way.
@@ -86,15 +94,32 @@ export function mergeWorkbench(base: WorkbenchState, local: WorkbenchState, remo
       remote.projects as never,
     ) as WorkbenchState['projects'],
     tasks: mergeById(base.tasks, local.tasks, remote.tasks, 'id'),
+    // One-time markers are monotonic: once ANY device has done the one-time
+    // work, stay true forever so it's never redone (deleted rows stay deleted,
+    // backfills don't re-run).
     extrasSeeded: !!(local.extrasSeeded || remote.extrasSeeded),
     inspectionsMigrated: !!(local.inspectionsMigrated || remote.inspectionsMigrated),
+    vendorCatalogsSeeded: !!(local.vendorCatalogsSeeded || remote.vendorCatalogsSeeded),
     templates: rec((s) => s.templates),
     selectionsCatalog: pick3(base.selectionsCatalog, local.selectionsCatalog, remote.selectionsCatalog),
     modelTakeoffs: rec((s) => s.modelTakeoffs),
     modelOrderLists: rec((s) => s.modelOrderLists),
     models: rec((s) => s.models),
     stepOverrides: rec((s) => s.stepOverrides),
+    // Custom material-category names → union, same bias-to-preserve as
+    // assignees (losing one silently hides that category from the Materials
+    // "＋ Add an order" picker on every project).
+    customOrderCategories: mergeStringSet(local.customOrderCategories, remote.customOrderCategories),
     assignees: mergeStringSet(local.assignees, remote.assignees),
     vendors: mergeById(base.vendors ?? [], local.vendors ?? [], remote.vendors ?? [], 'id'),
+    // Owner-added utility companies — same owner-editable-directory pattern
+    // (and the same by-id merge) as vendors above.
+    utilities: mergeById(base.utilities ?? [], local.utilities ?? [], remote.utilities ?? [], 'id'),
+    // Scanner heartbeat: one small object stamped by the Mac's scan job.
+    // pick3 keeps whichever side moved; if BOTH moved, the committed remote
+    // wins — which is usually the fresher completed-scan stamp, and dropping
+    // the local side's pending "Scan now" request in that case is correct
+    // (a completed scan is exactly what clears the request everywhere).
+    scanMeta: pick3(base.scanMeta, local.scanMeta, remote.scanMeta),
   }
 }

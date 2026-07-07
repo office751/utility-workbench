@@ -178,6 +178,13 @@ distinct projects, `fire` = any attention item in that stream.
 
 - Two operators editing concurrently merge 3-way (never last-write-wins
   clobber) — see `mergeState.test.ts`.
+- **`mergeWorkbench` must return EVERY `WorkbenchState` field.** A field left
+  off its return object is silently dropped on every concurrent save (July
+  2026 bug: `customOrderCategories` / `utilities` / `scanMeta` /
+  `vendorCatalogsSeeded` — all added to types.ts after the merge was written).
+  Enforced twice: the test fixture is typed `Required<WorkbenchState>` (a new
+  field won't compile until the fixture has it) and the COMPLETENESS test
+  asserts the merge's output keys equal the fixture's.
 - Every state-shape change goes through `migrate()` in `useProjects.ts`
   (tested round-trip in `hooks/migrate.test.ts`). The June 2026 data-loss bug
   (dropped `assignees`) lives in test form there — don't repeat it.
