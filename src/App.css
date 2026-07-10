@@ -4306,7 +4306,13 @@ a.map-btn {
 }
 .selcat-photos-toggle:hover { color: var(--rust); }
 .selcat-photo-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
-.selcat-photo-row { display: flex; align-items: center; gap: 8px; }
+.selcat-photo-row { display: flex; align-items: center; gap: 8px; border-radius: var(--radius-sm); }
+/* Lit up while a photo (file or web image) is dragged over the row. */
+.selcat-photo-row.is-dragover {
+  outline: 2px dashed var(--rust);
+  outline-offset: 2px;
+  background: var(--rust-tint);
+}
 .selcat-thumb {
   width: 34px; height: 34px; flex: 0 0 auto;
   object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface-2);

@@ -39,6 +39,7 @@ function SelectionsCatalogEditor({ catalog, onSave, vendors }: Props) {
   const [photoOpen, setPhotoOpen] = useState<Set<string>>(new Set()) // category ids with the Photos panel expanded
   const [uploading, setUploading] = useState<Set<string>>(new Set()) // "catId::label" rows mid-upload
   const [uploadErr, setUploadErr] = useState<string | null>(null)
+  const [dragKey, setDragKey] = useState<string | null>(null) // photo row currently dragged over (highlight)
   const finVendors = finishVendors(vendors)
   const modelKeys = Object.keys(MODELS_DEFAULT)
 
@@ -98,7 +99,7 @@ function SelectionsCatalogEditor({ catalog, onSave, vendors }: Props) {
       const url = await uploadSelectionImage(file)
       setOptionImage(sid, cid, label, url)
     } catch {
-      setUploadErr('Upload failed — apply supabase/setup-selection-images.sql once, or paste an image URL instead.')
+      setUploadErr('Upload failed — check your internet and try again, or paste an image URL instead. (First-time setup: supabase/setup-selection-images.sql.)')
       setTimeout(() => setUploadErr(null), 6000)
     } finally {
       setUploading((p) => {
@@ -108,6 +109,56 @@ function SelectionsCatalogEditor({ catalog, onSave, vendors }: Props) {
       })
     }
   }
+  // --- drag & drop onto a photo row ---
+  // A drag can carry two things we accept: a real file (from Finder / the
+  // desktop) or an image dragged straight off a website (arrives as a URL in
+  // 'text/uri-list', not a file). Anything else is ignored so the browser
+  // shows the "no drop" cursor.
+  const dragHasImage = (e: React.DragEvent) =>
+    e.dataTransfer.types.includes('Files') || e.dataTransfer.types.includes('text/uri-list')
+  function photoDragOver(e: React.DragEvent, key: string) {
+    if (!dragHasImage(e)) return
+    e.preventDefault() // required — without it the browser refuses the drop
+    e.dataTransfer.dropEffect = 'copy'
+    setDragKey(key)
+  }
+  function photoDragLeave(e: React.DragEvent) {
+    // dragleave also fires when the pointer moves onto a CHILD of the row —
+    // only un-highlight when it truly left the row.
+    if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node | null)) setDragKey(null)
+  }
+  // Safety net on the whole editor: a photo dropped OUTSIDE a row would make
+  // the browser navigate to the image file — wiping unsaved edits. Swallow
+  // stray drops (rows mark theirs handled via preventDefault, so we skip those).
+  function editorDragOver(e: React.DragEvent) {
+    if (e.defaultPrevented || !dragHasImage(e)) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'none' // cursor says "not here" between the rows
+  }
+  function editorDrop(e: React.DragEvent) {
+    if (!e.defaultPrevented) e.preventDefault()
+  }
+  function photoDrop(e: React.DragEvent, sid: string, cid: string, label: string) {
+    e.preventDefault()
+    setDragKey(null)
+    const file = Array.from(e.dataTransfer.files).find((f) => f.type.startsWith('image/'))
+    if (file) {
+      uploadFor(sid, cid, label, file)
+      return
+    }
+    // No file — maybe an image dragged from a web page: take its address.
+    const uri = e.dataTransfer
+      .getData('text/uri-list')
+      .split('\n')
+      .find((l) => l.trim() && !l.startsWith('#')) // per spec, lines starting with # are comments
+    if (uri && /^https?:\/\//.test(uri.trim())) {
+      setOptionImage(sid, cid, label, uri.trim())
+    } else {
+      setUploadErr('That didn’t look like an image — drop a photo file or an image from a website.')
+      setTimeout(() => setUploadErr(null), 6000)
+    }
+  }
+
   /** The distinct, non-blank option labels of a category (for the photo rows). */
   const optionLabels = (opts: string[]) => {
     const seen = new Set<string>()
@@ -184,7 +235,7 @@ function SelectionsCatalogEditor({ catalog, onSave, vendors }: Props) {
   const modelHidden = new Set(perModel?.hidden ?? [])
 
   return (
-    <section className="selcat-editor">
+    <section className="selcat-editor" onDragOver={editorDragOver} onDrop={editorDrop}>
       <h3 className="tpl-section-h">Selections setup</h3>
       <p className="muted">
         The finish choices clients pick on a project's <b>Selections</b> tab. Edit the <b>base catalog</b> (shared by
@@ -303,7 +354,13 @@ function SelectionsCatalogEditor({ catalog, onSave, vendors }: Props) {
                           const url = cat.optionImages?.[label]
                           const key = `${cat.id}::${label}`
                           return (
-                            <div className="selcat-photo-row" key={label}>
+                            <div
+                              className={'selcat-photo-row' + (dragKey === key ? ' is-dragover' : '')}
+                              key={label}
+                              onDragOver={(e) => photoDragOver(e, key)}
+                              onDragLeave={photoDragLeave}
+                              onDrop={(e) => photoDrop(e, sec.id, cat.id, label)}
+                            >
                               {url ? (
                                 <img className="selcat-thumb" src={url} alt="" />
                               ) : (
@@ -315,7 +372,7 @@ function SelectionsCatalogEditor({ catalog, onSave, vendors }: Props) {
                               <input
                                 className="selcat-photo-url"
                                 value={url ?? ''}
-                                placeholder="Image URL, or upload →"
+                                placeholder="Image URL, drop a photo here, or upload →"
                                 onChange={(e) => setOptionImage(sec.id, cat.id, label, e.target.value)}
                               />
                               <label className="btn btn-secondary btn-sm selcat-upload">
