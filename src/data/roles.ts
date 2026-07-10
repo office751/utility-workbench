@@ -85,9 +85,11 @@ export const ROLES: Record<AppRole, RoleConfig> = {
   },
   coworker: {
     label: 'Coworker',
-    description: 'Day-to-day operations across all jobs (tasks, project progress, inspections) — no financials.',
+    description: 'Day-to-day operations across all jobs (tasks, projects, models, inspections) — no financials.',
     usesInvestorPortal: false,
-    tabs: ['today', 'tasks', 'projects', 'inspections'],
+    // Adam (July 10 2026): coworkers get 📐 Models too — Carey chases takeoffs
+    // herself instead of routing them through Adam.
+    tabs: ['today', 'tasks', 'projects', 'models', 'inspections'],
     scopedToAssignedProjects: false,
     canSeeFinancials: false,
     canManageSettings: false,
