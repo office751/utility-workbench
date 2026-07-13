@@ -11,11 +11,13 @@ import {
   nextSepticAction,
   nextWaterAction,
   permitNeedsAction,
+  permitStatus,
   serviceTypeOf,
 } from './nextAction'
 import { emptyProjectState } from '../data/seed'
 import { makeProject } from './testUtils'
 import { applyStepOverrides } from '../data/lifecycles'
+import { PERMIT_DATES } from '../data/permitDates'
 
 // nextAction decides "what's the next move" per stream — it feeds the Today
 // command center, the detail banners, and the project-list dots. These tests
@@ -209,5 +211,72 @@ describe('serviceTypeOf — override → roster → subdivision default', () => 
     expect(serviceTypeOf(makeProject({ subdivision: 'Rainbow Lakes Estates' }), emptyProjectState())).toBe('UG')
     expect(serviceTypeOf(makeProject({ subdivision: 'Regal Park' }), emptyProjectState())).toBe('OH')
     expect(serviceTypeOf(makeProject(), emptyProjectState())).toBe('') // unknown
+  })
+})
+
+describe('permitStatus — the coarse bucket behind the Projects permit filter', () => {
+  // Dynamic county keys so a snapshot refresh can't silently break these:
+  // one permit the county says is issued, one still working its way through.
+  const issuedNo = Object.keys(PERMIT_DATES).find((k) => PERMIT_DATES[k].issued !== '')!
+  const pendingNo = Object.keys(PERMIT_DATES).find((k) => PERMIT_DATES[k].issued === '')
+
+  it('a C.O. house is co, no matter what the checklist says', () => {
+    expect(permitStatus(makeProject({ listStatus: 'CO', permit: '' }), emptyProjectState())).toBe('co')
+  })
+
+  it('issued: final step checked, a typed date, or the county snapshot', () => {
+    const byStep = emptyProjectState()
+    byStep.steps.permit = { issued: { done: true } }
+    expect(permitStatus(makeProject({ permit: '' }), byStep)).toBe('issued')
+
+    const byDate = emptyProjectState()
+    byDate.permitIssuedDate = '2026-05-01'
+    expect(permitStatus(makeProject({ permit: '' }), byDate)).toBe('issued')
+
+    // Nothing ticked in the app, but the county says issued — believe the county.
+    expect(permitStatus(makeProject({ permit: issuedNo }), emptyProjectState())).toBe('issued')
+  })
+
+  it('blanking the issued date un-says the county (the blank-out escape hatch)', () => {
+    const ps = emptyProjectState()
+    ps.permitIssuedDate = '' // typed then cleared → county issued date is silenced
+    expect(permitStatus(makeProject({ permit: issuedNo }), ps)).toBe('in-review')
+  })
+
+  it("Owner/GC lots read not-ours until issued — then they're just issued", () => {
+    const ps = emptyProjectState()
+    ps.permitResponsible = 'Owner'
+    expect(permitStatus(makeProject(), ps)).toBe('not-ours') // even with a permit # on file
+    ps.permitIssuedDate = '2026-05-01'
+    expect(permitStatus(makeProject(), ps)).toBe('issued')
+  })
+
+  it('any evidence of an application means in-review, not not-applied', () => {
+    // A checked step…
+    const byStep = emptyProjectState()
+    byStep.steps.permit = { submitted: { done: true } }
+    expect(permitStatus(makeProject({ permit: '' }), byStep)).toBe('in-review')
+
+    // …a permit # on file (the county assigns numbers AT application)…
+    expect(permitStatus(makeProject({ permit: 'X-NONE' }), emptyProjectState())).toBe('in-review')
+
+    // …or a county record that isn't issued yet.
+    if (pendingNo) {
+      expect(permitStatus(makeProject({ permit: pendingNo }), emptyProjectState())).toBe('in-review')
+    }
+  })
+
+  it('no permit #, no steps, no county record → not applied', () => {
+    expect(permitStatus(makeProject({ permit: '' }), emptyProjectState())).toBe('not-applied')
+  })
+
+  it('follows an owner-customized permit list (last step = issued)', () => {
+    applyStepOverrides({ permit: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }] })
+    const ps = emptyProjectState()
+    expect(permitStatus(makeProject({ permit: '' }), ps)).toBe('not-applied')
+    ps.steps.permit = { a: { done: true } }
+    expect(permitStatus(makeProject({ permit: '' }), ps)).toBe('in-review')
+    ps.steps.permit = { a: { done: true }, b: { done: true } }
+    expect(permitStatus(makeProject({ permit: '' }), ps)).toBe('issued')
   })
 })

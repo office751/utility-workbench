@@ -296,3 +296,40 @@ export function permitNeedsAction(ps: ProjectState): boolean {
   const who = permitResponsibleOf(ps)
   return who !== 'Owner' && who !== 'GC'
 }
+
+/**
+ * Where the building permit stands, as ONE coarse bucket — powers the Projects
+ * list's permit filter chips and each row's status pill.
+ *
+ * Deliberately fail-open toward the county's data: most of the roster predates
+ * this app, so checklists were never ticked — but a county issued date or a
+ * permit number on file is proof enough of where things really stand. Order:
+ *   1. C.O. house           → 'co'         (closed out; outranks everything)
+ *   2. issued               → 'issued'     (final step checked, a typed/county
+ *                                           issued date — believe the county)
+ *   3. Owner/GC responsible → 'not-ours'   (tracked, but not ours to push)
+ *   4. any evidence of an application — a checked step, a county record, or a
+ *      permit # on file (the county assigns numbers AT application)
+ *                           → 'in-review'
+ *   5. otherwise            → 'not-applied'
+ */
+export type PermitStatus = 'co' | 'issued' | 'not-ours' | 'in-review' | 'not-applied'
+
+/** Display labels for the buckets (chips + row pills use these verbatim). */
+export const PERMIT_STATUS_LABEL: Record<PermitStatus, string> = {
+  co: 'C.O.',
+  issued: 'Issued',
+  'not-ours': 'Owner/GC',
+  'in-review': 'In review',
+  'not-applied': 'Not applied',
+}
+
+export function permitStatus(p: Project, ps: ProjectState): PermitStatus {
+  if (p.listStatus === 'CO') return 'co'
+  if (isPermitDone(ps) || permitIssuedOf(p, ps) !== '') return 'issued'
+  const who = permitResponsibleOf(ps)
+  if (who === 'Owner' || who === 'GC') return 'not-ours'
+  const anyStepDone = Object.values(ps.steps.permit).some((s) => s?.done)
+  if (anyStepDone || p.permit !== '' || PERMIT_DATES[p.permit]) return 'in-review'
+  return 'not-applied'
+}

@@ -91,6 +91,15 @@ files (`npx vitest run`, ~250 ms).
 - **Permit**: `corrections` skipped in the walk; `issued` checked = done even
   if earlier boxes weren't ticked (believe the county). `permitNeedsAction`
   only while WE are responsible (`Owner`/`GC` lots are tracked, not on us).
+- **`permitStatus` — the coarse bucket** behind the Projects-list permit
+  filter chips and row pills. Precedence: `listStatus 'CO'` → **co** ›
+  done/typed-or-county issued date → **issued** (blanking the typed date
+  silences the county, same escape hatch as expiry) › `Owner`/`GC`
+  responsible → **not-ours** › ANY application evidence (a checked step, a
+  county record, or a permit # on file — the county assigns numbers at
+  application) → **in-review** › else **not-applied**. Deliberately fail-open
+  toward county data: most of the roster predates the app, so unchecked
+  boxes must not read as "not applied".
 - **Customized lists** (owner edited a checklist in Settings): the hand-coded
   walks step aside; next action = first pending step of THEIR list, and any
   pending step counts as our move (invariant 2).
