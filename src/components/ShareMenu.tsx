@@ -1,7 +1,10 @@
 /**
- * ShareMenu.tsx — the 📤 Share button on the Projects landing.
+ * ShareMenu.tsx — the ⋯ Actions menu on the Projects landing.
  *
- * Three ways to hand the list to someone:
+ * One button for every secondary list action (June 2026 declutter — three
+ * separate toolbar buttons collapsed into this):
+ *   ⚡ Batch apply     — draft electric applications for every house that needs one
+ *   📋 Status report   — build an update for one, several, or all houses
  *   📊 Excel (.xlsx)  — every column; current view or all projects
  *   🖨 Print view     — YOU pick which columns, then a clean printable page
  *                       opens (no more export → hide rows → set print area)
@@ -20,9 +23,13 @@ interface Props {
   /** The whole roster (for "all projects" export). */
   all: Project[]
   getProjectState: (id: number) => ProjectState
+  /** Open the ⚡ batch electric-application screen. */
+  onBatchApply: () => void
+  /** Open the 📋 status-report builder. */
+  onStatusReport: () => void
 }
 
-function ShareMenu({ visible, all, getProjectState }: Props) {
+function ShareMenu({ visible, all, getProjectState, onBatchApply, onStatusReport }: Props) {
   const [open, setOpen] = useState(false)
   const [choosing, setChoosing] = useState(false) // the print column-chooser
   const [cols, setCols] = useState<string[]>(loadPrintCols)
@@ -73,14 +80,32 @@ function ShareMenu({ visible, all, getProjectState }: Props) {
       <button
         className="btn btn-secondary btn-sm share-btn"
         onClick={() => setOpen((o) => !o)}
-        title="Export / print / share this list"
+        title="Batch apply · status report · export / print this list"
       >
-        <Icon name="ios_share" size={16} />
-        Share {busy && '…'}
+        <Icon name="more_horiz" size={16} />
+        Actions {busy && '…'}
       </button>
 
       {open && !choosing && (
         <div className="share-pop">
+          <button
+            className="share-opt"
+            onClick={() => {
+              setOpen(false)
+              onBatchApply()
+            }}
+          >
+            ⚡ Batch apply <span className="muted">draft electric applications</span>
+          </button>
+          <button
+            className="share-opt"
+            onClick={() => {
+              setOpen(false)
+              onStatusReport()
+            }}
+          >
+            📝 Status report <span className="muted">build an update to send</span>
+          </button>
           <button className="share-opt" onClick={() => setChoosing(true)}>
             🖨 Print view… <span className="muted">pick columns → clean printout</span>
           </button>

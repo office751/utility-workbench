@@ -3526,15 +3526,73 @@ a.map-btn {
   white-space: nowrap;
 }
 
-/* the 5-stream status strip, right-aligned so statuses line up down the list */
-.sstrip { display: flex; gap: 6px; flex: 0 0 auto; }
-.sstrip-cell { display: inline-flex; align-items: center; gap: 3px; background: var(--surface-3); border-radius: var(--radius); padding: 4px 7px; }
-.sstrip-cell.attn { background: var(--warn-tint); }
-.sstrip-na { font-size: calc(13px * var(--font-scale)); line-height: 1; color: var(--ink-3); width: 9px; text-align: center; }
+/* ── The ONE right-side row detail (replaced the 5-icon stream strip, June 2026
+   declutter): a permit-status pill by default, the owner or permit # when a
+   filter changes the lens. Right-aligned so the pills line up down the list. */
+.pstatus {
+  flex: 0 0 auto;
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+  background: var(--surface-3);
+  color: var(--ink-2);
+}
+.pstatus--issued { background: var(--success-bg); color: var(--success); }
+.pstatus--in-review { background: var(--info-bg); color: var(--info); }
+.pstatus--not-applied { background: var(--warn-bg); color: var(--warn); }
+.pstatus--co { background: var(--success-bg); color: var(--success); }
+/* not-ours keeps the quiet default gray */
+.prow-owner {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: calc(12.5px * var(--font-scale));
+  font-weight: 600;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.prow-permitno { flex: 0 0 auto; font-size: calc(12.5px * var(--font-scale)); color: var(--ink-3); white-space: nowrap; }
+
+/* ── Permit-status filter chips above the rows (one-tap; share state with the
+   Filter panel's dropdown). Styled after the header nav pills, quieter. */
+.pl-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--divider);
+}
+.pl-chip {
+  border: 1px solid var(--divider);
+  background: transparent;
+  color: var(--ink-2);
+  font-size: calc(12.5px * var(--font-scale));
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+.pl-chip:hover { background: var(--surface-2); }
+.pl-chip.act { background: var(--rust-tint); border-color: transparent; color: var(--rust-tint-ink); }
+.pl-chip-n { opacity: 0.65; font-weight: 700; margin-left: 2px; }
+
+/* the Filter panel's permit dropdown */
+.filter-select {
+  margin-left: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: calc(13px * var(--font-scale));
+}
 
 @media (max-width: 640px) {
   /* Project rows stack: address + next-action on top (address wraps instead of
-     truncating), the 5-stream status strip full-width below with cells spread. */
+     truncating), the right-side detail dropping underneath. */
   .prow {
     flex-direction: column;
     align-items: stretch;
@@ -3543,8 +3601,7 @@ a.map-btn {
   }
   .prow-main { flex: 1 1 auto; width: 100%; } /* definite width so the nowrap sub-line clips instead of widening the row */
   .prow-addr { white-space: normal; }
-  .sstrip { width: 100%; justify-content: space-between; }
-  .sstrip-cell { flex: 1 1 auto; justify-content: center; }
+  .pstatus, .prow-owner, .prow-permitno { align-self: flex-start; }
 }
 
 /* ── Mobile structure pass (batch 2): screens that had no phone layout ── */
