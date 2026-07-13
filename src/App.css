@@ -1004,6 +1004,24 @@ textarea:focus {
   font-size: calc(13px * var(--font-scale));
 }
 
+/* ---------- utility closeout (disconnect at sale) ----------
+   The disconnect/transfer action group on the Electric + Water tabs. A quiet
+   dashed separator sets it apart from the apply/start-service flow above. */
+.closeout {
+  margin: 4px 0 16px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+.closeout-h {
+  margin: 0 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 700;
+  color: var(--text);
+}
+
 /* ---------- notes ---------- */
 
 .notes-label textarea {

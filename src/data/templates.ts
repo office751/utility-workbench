@@ -13,6 +13,8 @@ import {
   DEFAULT_APPLY_DUKE_SUBJECT,
   DEFAULT_APPLY_SECO_BODY,
   DEFAULT_APPLY_SECO_SUBJECT,
+  DEFAULT_DISCONNECT_WATER_BODY,
+  DEFAULT_DISCONNECT_WATER_SUBJECT,
   DEFAULT_METERNOTIFY_BODY,
   DEFAULT_METERNOTIFY_SUBJECT,
   DEFAULT_PERMIT_HANDOFF_BODY,
@@ -67,6 +69,14 @@ const APPLY_VARS: TemplateVar[] = [
 const METERNOTIFY_VARS: TemplateVar[] = [
   { token: '{{site}}', desc: 'full site line — address, city, FL zip' },
   { token: '{{utility}}', desc: 'the utility — SECO or Duke' },
+]
+
+const DISCONNECT_VARS: TemplateVar[] = [
+  { token: '{{address}}', desc: 'street address' },
+  { token: '{{site}}', desc: 'full site line — address, city, FL zip' },
+  { token: '{{parcel}}', desc: 'parcel number' },
+  { token: '{{permit}}', desc: 'permit number' },
+  { token: '{{closing}}', desc: "the sale's closing date (or a [closing date] placeholder until it's set)" },
 ]
 
 // The SUBJECT line understands these (whole-report); the BODY is one block per
@@ -177,6 +187,17 @@ export function templateSpecs(): TemplateSpec[] {
       vars: METERNOTIFY_VARS,
       subject: DEFAULT_METERNOTIFY_SUBJECT,
       body: DEFAULT_METERNOTIFY_BODY,
+    },
+    {
+      id: 'water:disconnect',
+      group: 'Disconnect / closeout emails',
+      icon: '💧',
+      name: 'Water disconnect — MCU (at sale)',
+      description:
+        'Drafted by "✉️ Draft MCU disconnect" on a project\'s 💧 Water tab once the home sells — asks Marion County Utilities to close the Iron Shield water/sewer account. You attach the completed disconnection request form + the notarized warranty deed before sending (a draft can\'t carry attachments; the button reminds you).',
+      vars: DISCONNECT_VARS,
+      subject: DEFAULT_DISCONNECT_WATER_SUBJECT,
+      body: DEFAULT_DISCONNECT_WATER_BODY,
     },
     ...VENDORS.map((v) => ({
       id: `vendor:${v.id}`,

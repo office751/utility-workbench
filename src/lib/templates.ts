@@ -94,6 +94,29 @@ export const DEFAULT_METERNOTIFY_BODY = [
 ].join('\n')
 // ^ No sign-off — the mail client appends Adam's real signature.
 
+/**
+ * Water/sewer DISCONNECT (closeout) email. Drafted by "✉️ Draft MCU disconnect"
+ * on a project's 💧 Water tab once the home has sold. Marion County Utilities
+ * wants a completed disconnection request form + proof of sale (a notarized
+ * warranty deed) ATTACHED — the body says so, and the button reminds you to
+ * attach them, because a mailto can't. Routes to Utilities@MarionFL.org (the
+ * county's closeout inbox), CC office. */
+export const DEFAULT_DISCONNECT_WATER_SUBJECT = 'Disconnect Water/Sewer Service – {{site}}'
+export const DEFAULT_DISCONNECT_WATER_BODY = [
+  'Hello,',
+  '',
+  'This home has sold and closed. Please schedule disconnection of the Marion County Utilities water/sewer account currently held by Iron Shield Construction LLC for the property below.',
+  '',
+  'Service address: {{site}}',
+  'Parcel ID: {{parcel}}',
+  'Effective / closing date: {{closing}}',
+  '',
+  'Attached: the completed disconnection request form and the notarized warranty deed (proof of sale).',
+  '',
+  'Please confirm the final bill amount and the scheduled disconnection date.',
+].join('\n')
+// ^ No sign-off — the mail client appends Adam's real signature.
+
 /** Default wording for the permit-package handoff email to Jennifer's
  *  Permitting Service ("📨 Email Jennifer" on the Permit tab). Built from her
  *  own checklist (her email, May 13 2026): location, job cost, subs, AC/energy

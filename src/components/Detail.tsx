@@ -57,6 +57,9 @@ import { grantedProjectIds, shareFileToInvestor } from '../lib/investor'
 import { writeRichClipboard } from '../lib/richCopy'
 import { isMaterialsDone, ordersSummary } from '../lib/orders'
 import { GEORGES } from '../data/contacts'
+// Utility CLOSEOUT (disconnect-at-sale) — the mirror of the apply flow:
+// stop-service links for SECO/Duke, and the MCU water disconnect email draft.
+import { ELECTRIC_DISCONNECT, MCU_WATER_DISCONNECT, waterDisconnectDraft } from '../data/disconnect'
 // SECO's real load form, pre-filled from this project — same helper Batch
 // Apply uses (lib/secoForm.ts); this just adds a second place to download it.
 import { SECO_BLANK_FORM_URL, fillSecoLoadForm } from '../lib/secoForm'
@@ -511,6 +514,9 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField, templ
   const shutoff = shutoffFor(ps)
   const u = utilityOf(p, ps)
   const eng = engineerOf(p, ps)
+  // Stop-service link for this utility (SECO/Duke), shown in the closeout box
+  // below. undefined for Clay/custom/unknown → no disconnect button yet.
+  const disc = u ? ELECTRIC_DISCONNECT[u] : undefined
   // ⚡ Duke web application:
   //   building → computing directions from the map services
   //   opened   → portal launched + fill-data copied; now waiting on Claude
@@ -767,15 +773,60 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField, templ
           </label>
         )}
       </div>
+
+      {/* Closeout: the button that actually schedules the disconnect/transfer
+          with the utility when the house sells — the action the shut-off
+          reminder above points to. Only SECO/Duke have a link for now. */}
+      {disc && (
+        <div className="closeout">
+          <h4 className="closeout-h">
+            <Icon name="power_settings_new" size={14} /> Disconnect / transfer at sale
+          </h4>
+          <div className="contact-row">
+            <a className="contact" href={disc.url} target="_blank" rel="noopener noreferrer">
+              <Icon name="bolt" size={15} /> Stop {u} service
+            </a>
+            {disc.phone && (
+              <a className="contact" href={`tel:+1${disc.phone.replace(/\D/g, '')}`}>
+                <Icon name="call" size={15} /> {u} — {disc.phone}
+              </a>
+            )}
+          </div>
+          {disc.note && <p className="provider">{disc.note}</p>}
+        </div>
+      )}
     </>
   )
 }
 
 /* ===================== WATER ===================== */
 
-function WaterBody({ project: p, ps, toggleStep, setStepNote }: Props) {
+function WaterBody({ project: p, ps, toggleStep, setStepNote, templates }: Props) {
   const source = waterSourceOf(p, ps)
   const next = nextWaterAction(p, ps)
+  // Municipal water (Marion County Utilities) is the only water the builder
+  // holds an account on — a private well has nothing to disconnect — so the
+  // closeout tools show only for City / City-with-water-main sources.
+  const municipal = source === 'City' || source === 'CityWM'
+  const [discBusy, setDiscBusy] = useState(false)
+
+  /** Open the MCU disconnect-request email. A mailto can't attach files, so the
+   *  confirm dialog spells out what to attach (the form + notarized deed)
+   *  before it opens the draft. */
+  function draftDisconnect() {
+    const draft = waterDisconnectDraft(p, ps, templates)
+    if (
+      !confirmSend(`Draft the Marion County Utilities disconnect request for ${p.address}?`, [
+        "This email can't attach files — attach these to the draft yourself before sending:",
+        ...draft.attachments.map((a) => `• ${a}`),
+      ])
+    )
+      return
+    setDiscBusy(true)
+    window.location.href = draft.mailto
+    // Clear the busy flag after the mail client has had a moment to open.
+    setTimeout(() => setDiscBusy(false), 1500)
+  }
 
   return (
     <>
@@ -809,6 +860,30 @@ function WaterBody({ project: p, ps, toggleStep, setStepNote }: Props) {
             setStepNote={setStepNote}
           />
         </>
+      )}
+
+      {/* Closeout: when the home sells, stop the MCU water/sewer account.
+          A link to the county's disconnect form + a pre-addressed email draft
+          (you attach the completed form + notarized deed before sending). */}
+      {municipal && (
+        <div className="closeout">
+          <h4 className="closeout-h">
+            <Icon name="water_drop" size={14} /> Disconnect at sale — Marion County Utilities
+          </h4>
+          <div className="contact-row">
+            <a className="contact" href={MCU_WATER_DISCONNECT.formUrl} target="_blank" rel="noopener noreferrer">
+              <Icon name="description" size={15} /> MCU disconnect form
+            </a>
+            <button className="contact" onClick={draftDisconnect} disabled={discBusy}>
+              <Icon name={discBusy ? 'hourglass_top' : 'mail'} size={15} />
+              {discBusy ? ' Drafting…' : ' Draft MCU disconnect email'}
+            </button>
+            <a className="contact" href={`tel:+1${MCU_WATER_DISCONNECT.phone.replace(/\D/g, '')}`}>
+              <Icon name="call" size={15} /> MCU — {MCU_WATER_DISCONNECT.phone}
+            </a>
+          </div>
+          <p className="provider">{MCU_WATER_DISCONNECT.note}</p>
+        </div>
       )}
     </>
   )
