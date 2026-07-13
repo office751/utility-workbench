@@ -2,43 +2,33 @@
  * Today.tsx — the command center: "okay, what's the goal today?"
  *
  * Visual direction: "Calm Canvas" (from the Claude Design system) — a rust
- * greeting banner with glass stat chips, then consistent section headers
- * (icon + uppercase label + count) over grouped inset cards of rows.
+ * greeting banner, then consistent section headers (icon + uppercase label +
+ * count) over grouped inset cards of rows.
  *
- * Top to bottom:
+ * SLIMMED July 2026 (Adam: "I don't want to see all of that on my Today
+ * screen") — this screen now carries ONLY what's time-critical today:
  *   - ⭐ Today's Focus     — the few tasks you starred; your chosen priorities.
- *   - 🔥 Needs attention   — time fires: overdue/due-soon TASKS + construction
- *                            deadlines (permit expiry, shut-offs, blocked takeoffs).
- *   - ⚠ Gone quiet         — projects parked past the expected duration for
- *                            their current step (the stale-status flags).
+ *   - 🔥 Needs attention   — time fires: overdue/due-soon TASKS + hard
+ *                            construction deadlines (permit expiry, shut-offs,
+ *                            blocked takeoffs). Deliberately KEPT here: a
+ *                            "permit expires Friday" buried inside a project
+ *                            you don't open that week is a missed deadline.
  *   - ⏳ Waiting on you     — open tasks where someone's blocked on you.
- *   - ✅ Ready for your move — the construction backlog, grouped by action.
+ * Everything portfolio-shaped moved to where the work happens: gone-quiet
+ * stalls and "ready for your move" now show on each project's Overview
+ * (Detail's alerts card + status grid), and the Projects list's next-action
+ * line + permit chips are the working queue.
  *
  * Tasks "bubble up" on their own: a due date or a who's-waiting tag is enough to
  * surface a task here without you having to star it (that's the auto-urgency).
  */
-import { useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import type { Stream, Task } from '../types'
 import type { ActionCenter, ActionItem } from '../lib/actionCenter'
 import { daysUntilDue, dueLabel, dueSoonTasks, focusTasks, forOperator, unassignedOpen, waitingOnTasks } from '../lib/tasks'
 import { hatOf } from '../data/hats'
 import { scanHealth, scanPending } from '../lib/scanHealth'
-import Icon from './Icon'
-
-/** Action-center items carry EMOJI icons (so the status-report text keeps them);
- *  on the Today screen we render them as Material Symbols glyphs instead. */
-const MI_FOR: Record<string, string> = {
-  '⚡': 'bolt',
-  '💧': 'water_drop',
-  '🚽': 'plumbing',
-  '📋': 'description',
-  '🛒': 'shopping_cart',
-  '🧩': 'extension',
-  '⏰': 'schedule',
-  '⚠': 'warning',
-  '⚠️': 'warning',
-}
-const miFor = (emoji: string): string => MI_FOR[emoji] ?? 'task_alt'
+import Icon, { miForEmoji as miFor } from './Icon'
 
 interface Props {
   /**
@@ -72,16 +62,6 @@ function greeting(): string {
 }
 
 type BadgeTone = 'danger' | 'warn' | 'neutral' | 'accent'
-
-/** A glass metric chip on the rust greeting banner. */
-function StatChip({ n, l }: { n: number; l: string }) {
-  return (
-    <div className="t-stat">
-      <span className="t-stat-n">{n}</span>
-      <span className="t-stat-l">{l}</span>
-    </div>
-  )
-}
 
 /** The consistent header above every section: Material Symbol + uppercase label
  *  + count. `icon` is a Material Symbols ligature name. */
@@ -181,47 +161,6 @@ function AttnRow({ item, onOpen }: { item: ActionItem; onOpen: (id: number, s: S
   )
 }
 
-/** A collapsible group of same-action construction to-dos (the "Ready" lane). */
-function MoveGroup({
-  icon,
-  label,
-  items,
-  onOpen,
-}: {
-  icon: string
-  label: string
-  items: ActionItem[]
-  onOpen: (id: number, s: Stream) => void
-}) {
-  const [open, setOpen] = useState(false)
-  return (
-    <>
-      <button className="t-row t-row--link t-move-head" onClick={() => setOpen((o) => !o)}>
-        <span className="t-move-caret">{open ? '▾' : '▸'}</span>
-        <span className="t-row-icon ready">
-          <Icon name={miFor(icon)} size={18} color="var(--ready-icon)" />
-        </span>
-        <span className="t-row-body">
-          <span className="t-row-title">{label}</span>
-        </span>
-        <b className="t-move-n">{items.length}</b>
-        <span className="t-chev">{open ? '' : '›'}</span>
-      </button>
-      {open &&
-        items.map((it, i) => (
-          <button key={i} className="t-row t-row--link t-move-item" onClick={() => onOpen(it.projectId, it.stream)}>
-            <span className="t-row-body">
-              <span className="t-row-meta">
-                {it.address} · {it.meta}
-              </span>
-            </span>
-            <span className="t-chev">›</span>
-          </button>
-        ))}
-    </>
-  )
-}
-
 function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks, me, scanMeta, onRequestScan }: Props) {
   // YOUR queue = tasks assigned to you PLUS every unassigned task (fail-open, so
   // a to-do never disappears from both people's screens). Carey's assigned tasks
@@ -234,13 +173,10 @@ function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks, me, scanMeta, onR
   // mixed into the sections below, never hidden).
   const upForGrabs = me ? unassignedOpen(tasks).length : 0
 
-  // Split the construction attention list for display: hard DEADLINES (🔥 —
-  // permit expiry, shut-offs, blocked takeoffs) vs projects that simply went
-  // QUIET at a stage (⚠ — the stale flags from lib/staleness.ts). Same
-  // prioritized list underneath, two sections so a wall of stalled projects
-  // can't bury a real deadline.
+  // Only hard DEADLINES stay on Today (🔥 — permit expiry, shut-offs, blocked
+  // takeoffs). Gone-quiet stalls moved to each project's Overview alerts card
+  // (July 2026 slim-down) — they're background pressure, not today's fires.
   const fires = ac.attention.filter((i) => i.kind !== 'stale')
-  const stalled = ac.attention.filter((i) => i.kind === 'stale')
 
   // Auto-urgency: time fires first (overdue floats to the top), then the people
   // you're holding up (excluding any already shown as a time fire), oldest first.
@@ -255,11 +191,11 @@ function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks, me, scanMeta, onR
     .filter((t) => !attnIds.has(t.id) && !focusIds.has(t.id))
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
 
-  // The hero number = everything urgent: due tasks + both construction
-  // sections below (🔥 deadlines AND ⚠ gone-quiet — ac.stats.attention is their sum).
-  const attentionCount = ac.stats.attention + attnTasks.length
+  // "Clear" now means clear OF WHAT THIS SCREEN SHOWS: no deadline fires, no
+  // due tasks, nobody waiting, nothing starred. Project backlogs don't count —
+  // they live on the Projects list and each house's Overview now.
   const everythingClear =
-    ac.stats.allClear && attnTasks.length === 0 && waiting.length === 0 && focus.length === 0
+    fires.length === 0 && attnTasks.length === 0 && waiting.length === 0 && focus.length === 0
 
   // Scanner heartbeat → ok / warn / crit (null until the scanner first stamps).
   // ok shows as a quiet "portal scan ✓" note in the greeting; warn/crit render
@@ -269,25 +205,18 @@ function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks, me, scanMeta, onR
   const pending = scanPending(scanMeta)
 
   const today = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
-  // Just the date here — the stat chips carry the numbers, so we don't say the
-  // same counts twice (audit finding, June 2026).
+  // Just the date — the section counts below carry the numbers (and since the
+  // July 2026 slim-down there are no banner stat chips to repeat them).
   const summary = everythingClear ? `${today} · all clear — nice.` : today
-
-  // Group "your move" by action so it reads as intel, not a 150-row wall.
-  const groups = new Map<string, { icon: string; items: ActionItem[] }>()
-  for (const m of ac.moves) {
-    const key = m.kind === 'order' ? 'Materials to order' : m.text
-    if (!groups.has(key)) groups.set(key, { icon: m.icon, items: [] })
-    groups.get(key)!.items.push(m)
-  }
-  const moveGroups = [...groups.entries()].sort((a, b) => b[1].items.length - a[1].items.length)
 
   // A task fire is critical (danger) if already overdue, otherwise a warning.
   const taskTone = (t: Task): BadgeTone => ((daysUntilDue(t) ?? 0) < 0 ? 'danger' : 'warn')
 
   return (
     <section className="today">
-      {/* Rust greeting banner with the four command-center stats as glass chips. */}
+      {/* Rust greeting banner — just the greeting and the date since the July
+          2026 slim-down (the old glass stat chips shouted numbers the sections
+          below already carry). */}
       <header className="t-banner">
         <div className="t-banner-text">
           <h2>{greeting()}{me ? `, ${me.split(' ')[0]}` : ''}</h2>
@@ -304,12 +233,6 @@ function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks, me, scanMeta, onR
               <Icon name="refresh" size={14} /> Scan now
             </button>
           )}
-        </div>
-        <div className="t-stats">
-          <StatChip n={focus.length} l="Focus" />
-          <StatChip n={attentionCount} l="Attention" />
-          <StatChip n={waiting.length} l="Waiting" />
-          <StatChip n={ac.stats.moves} l="To move" />
         </div>
       </header>
 
@@ -331,7 +254,7 @@ function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks, me, scanMeta, onR
       {everythingClear && (
         <div className="t-clear">
           <Icon name="celebration" size={18} color="var(--success)" />
-          You're all caught up — nothing needs you across {ac.stats.projects} projects and your task list.
+          No deadlines, nothing due, nobody waiting — open Projects to push the next house forward.
         </div>
       )}
 
@@ -382,24 +305,6 @@ function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks, me, scanMeta, onR
         </section>
       )}
 
-      {/* ⚠ Gone quiet — parked past the expected duration for their current step */}
-      {stalled.length > 0 && (
-        <section className="t-sec">
-          <SecHead
-            icon="warning"
-            label="Gone quiet — overdue at a stage"
-            count={stalled.length}
-            color="var(--warn)"
-            hint="These have sat at their current step longer than expected — time for a nudge."
-          />
-          <div className="t-card">
-            {stalled.map((it, i) => (
-              <AttnRow key={`s${i}`} item={it} onOpen={onOpen} />
-            ))}
-          </div>
-        </section>
-      )}
-
       {/* ⏳ Waiting on you — people you're holding up */}
       {waiting.length > 0 && (
         <section className="t-sec">
@@ -431,24 +336,6 @@ function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks, me, scanMeta, onR
         </section>
       )}
 
-      {/* ✅ Ready for your move — construction backlog, grouped by action */}
-      {moveGroups.length > 0 && (
-        <section className="t-sec">
-          <SecHead
-            icon="check_circle"
-            label="Ready for your move"
-            count={ac.stats.moves}
-            color="var(--success)"
-            fill
-            hint="Grouped by action — open a group, then a project."
-          />
-          <div className="t-card">
-            {moveGroups.map(([label, g]) => (
-              <MoveGroup key={label} icon={g.icon} label={label} items={g.items} onOpen={onOpen} />
-            ))}
-          </div>
-        </section>
-      )}
     </section>
   )
 }

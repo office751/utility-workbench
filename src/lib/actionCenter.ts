@@ -157,8 +157,10 @@ export function buildActionCenter(
           detail: `${info.daysAtStage}d at this stage`,
           // Past the threshold = warn; parked at least TWICE the expected
           // duration = crit (a project quiet for months shouldn't look the
-          // same as one a day over the line). Crit also turns the 🏠 tab
-          // badge red — see todayBadge in App.tsx.
+          // same as one a day over the line). Since the July 2026 Today
+          // slim-down, stale items render on each project's Overview alerts
+          // card, not on Today — so they don't count toward the 🏠 badge
+          // (deadline fires only; see todayBadge in App.tsx).
           severity: info.overdueDays >= info.threshold ? 'crit' : 'warn',
           sortDays: -info.overdueDays, // the more overdue, the higher it floats
         })

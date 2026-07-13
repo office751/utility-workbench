@@ -227,12 +227,15 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
     // and the calendar day the math is relative to.
     [state, dayKey], // eslint-disable-line react-hooks/exhaustive-deps
   )
-  // The 🏠 Today tab badge: construction fires — deadlines (permit expiry,
-  // shut-offs, blocked takeoffs) + stages gone quiet. Tasks have their own
-  // badge above, so the two never double-count. Red when anything is critical.
+  // The 🏠 Today tab badge: hard construction DEADLINES only (permit expiry,
+  // shut-offs, blocked takeoffs) — matching what the slimmed Today screen
+  // actually shows (July 2026). Gone-quiet stalls surface on each project's
+  // Overview instead. Tasks have their own badge above, so the two never
+  // double-count. Red when anything is critical.
+  const todayFires = ac.attention.filter((i) => i.kind !== 'stale')
   const todayBadge = {
-    count: ac.stats.attention,
-    fire: ac.attention.some((i) => i.severity === 'crit'),
+    count: todayFires.length,
+    fire: todayFires.some((i) => i.severity === 'crit'),
   }
 
   return (
@@ -492,6 +495,9 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
             key={selected.id}
             project={selected}
             ps={getProjectState(selected.id)}
+            // THIS house's attention items (deadlines + gone-quiet stalls) —
+            // the per-project home of what the slimmed Today no longer lists.
+            alerts={ac.attention.filter((i) => i.projectId === selected.id)}
             // Whether this login's role can open 📐 Models — the Materials
             // missing-takeoffs banner words its advice differently for a
             // coworker, whose tab set doesn't include that screen.

@@ -75,7 +75,7 @@ import InvestorCuration from './InvestorCuration'
 import ProjectSettings from './ProjectSettings'
 import MaterialsBody from './MaterialsBody'
 import SelectionsView from './SelectionsView'
-import Icon from './Icon'
+import Icon, { miForEmoji } from './Icon'
 import GuideCallout from './GuideCallout'
 
 /** The updater functions every body needs — grouped to avoid repetition. */
@@ -136,6 +136,11 @@ interface Props extends Updaters {
   utilities: import('../data/utilities').UtilityCompany[]
   /** Stream tab to open on (from a Today/Tasks deep-link). Default: Overview. */
   initialStream?: Stream
+  /** THIS house's attention items (deadlines + gone-quiet stalls) from the
+   *  action center — rendered as the Overview's alerts card. Since the July
+   *  2026 Today slim-down, this is where portfolio noise became per-project
+   *  signal. */
+  alerts: import('../lib/actionCenter').ActionItem[]
   onBack: () => void
   /** Permanently remove this project (App deletes + returns to the list). */
   onDelete: () => void
@@ -365,6 +370,31 @@ function Detail(props: Props) {
       {/* ---- OVERVIEW: at-a-glance status + project-wide things (files, delete) ---- */}
       {activeTab === 'overview' && (
         <div className="overview">
+          {/* ⚠ THIS house's alerts (deadlines + gone-quiet stalls). The slimmed
+              Today screen only carries hard deadlines now — the full picture
+              for a house lives here, next to the work. Click one to jump to
+              the stream it's about. */}
+          {props.alerts.length > 0 && (
+            <div className="pd-alerts">
+              {props.alerts.map((a, i) => (
+                <button
+                  key={i}
+                  className={`pd-alert pd-alert--${a.severity}`}
+                  onClick={() => setActiveTab(a.stream)}
+                >
+                  <Icon
+                    name={miForEmoji(a.icon)}
+                    size={17}
+                    color={a.severity === 'crit' ? 'var(--danger)' : a.severity === 'warn' ? 'var(--warn)' : 'var(--ink-2)'}
+                  />
+                  <span className="pd-alert-text">{a.text}</span>
+                  {a.detail && <span className="pd-alert-detail">{a.detail}</span>}
+                  <span className="pd-alert-chev">›</span>
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Status grid — ONE card per stream, the single source of truth.
               (The tabs above are navigation only — no duplicate status marks.) */}
           <div className="pd-status-grid">

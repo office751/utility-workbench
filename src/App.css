@@ -1833,36 +1833,7 @@ button.danger:hover {
   opacity: 0.85;
   margin: 5px 0 0;
 }
-.t-stats {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.t-stat {
-  text-align: center;
-  min-width: 66px;
-  padding: 8px 12px;
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.15);
-}
-.t-stat-n {
-  display: block;
-  font-size: var(--text-xl);
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  color: #fff;
-  line-height: 1.1;
-}
-.t-stat-l {
-  display: block;
-  font-size: var(--text-xs);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.85);
-  margin-top: 3px;
-}
+/* (the banner's glass stat chips were removed in the July 2026 slim-down) */
 
 .t-clear {
   margin-top: 16px;
@@ -2010,25 +1981,8 @@ button.danger:hover {
 .t-badge--accent { background: var(--rust-tint); color: var(--rust-tint-ink); }
 .t-badge--neutral { background: var(--surface-3); color: var(--muted); }
 
-/* "Ready for your move" collapsible group */
-.t-move-head {
-  align-items: center;
-}
-.t-move-caret {
-  flex: none;
-  width: 12px;
-  color: var(--ink-3);
-  font-size: calc(11px * var(--font-scale));
-}
-.t-move-n {
-  flex: none;
-  font-variant-numeric: tabular-nums;
-  font-size: var(--text-sm);
-  color: var(--muted);
-}
-.t-move-item {
-  padding-left: 44px;
-}
+/* ("Ready for your move" moved off Today in the July 2026 slim-down — the
+   Projects list's next-action lines and each house's Overview carry it now) */
 
 /* ---------- Tasks tab + Today's Focus ---------- */
 
@@ -3690,6 +3644,44 @@ a.map-btn {
 }
 .pd-tab:hover { color: var(--ink); }
 .pd-tab.active { color: var(--rust); font-weight: 700; border-bottom-color: var(--rust); }
+
+/* ── The Overview alerts card: THIS house's deadlines + gone-quiet stalls
+   (the per-project home of what the slimmed Today no longer lists). */
+.pd-alerts {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.pd-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: calc(13.5px * var(--font-scale));
+  color: var(--ink);
+}
+.pd-alert + .pd-alert { border-top: 1px solid var(--divider); }
+.pd-alert:hover { background: var(--surface-3); }
+.pd-alert--crit { box-shadow: inset 3px 0 0 var(--danger); }
+.pd-alert--warn { box-shadow: inset 3px 0 0 var(--warn); }
+.pd-alert-text { flex: 1 1 auto; min-width: 0; font-weight: 600; }
+.pd-alert-detail {
+  flex: 0 0 auto;
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.pd-alert-chev { flex: 0 0 auto; color: var(--ink-3); }
 
 .pd-status-grid {
   display: grid;

@@ -29,6 +29,25 @@ interface Props {
   title?: string
 }
 
+/**
+ * Action-center items carry EMOJI icons (so status-report TEXT keeps them —
+ * see the calm-canvas design note); anywhere we RENDER them (Today, a
+ * project's alerts card) we translate to Material Symbols glyphs instead.
+ */
+const MI_FOR_EMOJI: Record<string, string> = {
+  '⚡': 'bolt',
+  '💧': 'water_drop',
+  '🚽': 'plumbing',
+  '📋': 'description',
+  '🛒': 'shopping_cart',
+  '🧩': 'extension',
+  '⏰': 'schedule',
+  '⚠': 'warning',
+  '⚠️': 'warning',
+}
+// eslint-disable-next-line react-refresh/only-export-components -- tiny icon helper, deliberately colocated with the icon primitive
+export const miForEmoji = (emoji: string): string => MI_FOR_EMOJI[emoji] ?? 'task_alt'
+
 function Icon({ name, size = 20, fill = false, weight = 400, color = 'currentColor', className, style, title }: Props) {
   return (
     <span
