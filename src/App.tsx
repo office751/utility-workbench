@@ -58,12 +58,14 @@ type View = 'today' | 'tasks' | 'projects' | 'models' | 'inspections' | 'setting
 
 // The top nav tabs. Pure config. `label` is the pill text (no emoji — the
 // Calm Canvas header keeps the nav clean); `icon` is kept for reference.
+// Inspections was demoted OUT of the top nav (July 2026 declutter — Adam
+// checks the county portal for that); the screen still exists behind the
+// More menu, so nothing was lost, just quieted.
 const TABS: { key: View; label: string }[] = [
   { key: 'today', label: 'Today' },
   { key: 'tasks', label: 'Tasks' },
   { key: 'projects', label: 'Projects' },
   { key: 'models', label: 'Models' },
-  { key: 'inspections', label: 'Inspections' },
 ]
 
 /**
@@ -303,6 +305,19 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
                 }}
               >
                 🛠 Templates &amp; settings
+              </button>
+            )}
+            {/* Demoted from the top nav (July 2026) — the cross-project
+                inspection feed, one click away for whoever still wants it. */}
+            {roleCfg.tabs.includes('inspections') && (
+              <button
+                className="menu-item"
+                onClick={() => {
+                  setTab('inspections')
+                  setSelectedId(null)
+                }}
+              >
+                🔍 Inspections
               </button>
             )}
             <button
