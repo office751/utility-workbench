@@ -15,6 +15,8 @@ import {
   DEFAULT_APPLY_SECO_SUBJECT,
   DEFAULT_DISCONNECT_WATER_BODY,
   DEFAULT_DISCONNECT_WATER_SUBJECT,
+  DEFAULT_DRAW_REQUEST_BODY,
+  DEFAULT_DRAW_REQUEST_SUBJECT,
   DEFAULT_METERNOTIFY_BODY,
   DEFAULT_METERNOTIFY_SUBJECT,
   DEFAULT_PERMIT_HANDOFF_BODY,
@@ -105,6 +107,17 @@ const STATUS_BODY_VARS: TemplateVar[] = [
   { token: '{{nextAction}}', desc: "the project's #1 priority (same as Today)" },
 ]
 
+const DRAW_REQUEST_VARS: TemplateVar[] = [
+  { token: '{{label}}', desc: 'the draw\'s name ("3rd Draw", "Completion of Dry In"…)' },
+  { token: '{{amount}}', desc: 'the draw amount ("$45,000" — a [FILL IN] marker until set)' },
+  { token: '{{address}}', desc: 'street address' },
+  { token: '{{city}}', desc: 'city' },
+  { token: '{{site}}', desc: 'full site line — address, city, FL zip' },
+  { token: '{{parcel}}', desc: 'parcel number' },
+  { token: '{{loan_line}}', desc: 'a "Loan #…" line when the project has a loan number, blank otherwise' },
+  { token: '{{evidence}}', desc: 'bulleted list of the draw\'s CHECKED-OFF checklist items' },
+]
+
 // What the permit-handoff email to Jennifer can auto-fill. Job cost and
 // financing are deliberately NOT tokens — the app doesn't know them, so the
 // default body carries [FILL IN — …] markers instead.
@@ -187,6 +200,17 @@ export function templateSpecs(): TemplateSpec[] {
       vars: METERNOTIFY_VARS,
       subject: DEFAULT_METERNOTIFY_SUBJECT,
       body: DEFAULT_METERNOTIFY_BODY,
+    },
+    {
+      id: 'draw:request',
+      group: 'Draws / financing',
+      icon: '💵',
+      name: 'Draw request — lender',
+      description:
+        'Drafted by "📨 Request draw" on a project\'s 💵 Draws tab — the official draw request to the construction lender, listing what\'s completed. Attach the supporting proof (inspection approvals, the C.O.) before sending; a draft can\'t carry files.',
+      vars: DRAW_REQUEST_VARS,
+      subject: DEFAULT_DRAW_REQUEST_SUBJECT,
+      body: DEFAULT_DRAW_REQUEST_BODY,
     },
     {
       id: 'water:disconnect',

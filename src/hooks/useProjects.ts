@@ -20,6 +20,8 @@ import { useEffect, useRef, useState } from 'react'
 import type {
   OrderItem,
   Project,
+  ProjectDraw,
+  ProjectFinancials,
   ProjectState,
   SelectionChoice,
   SelectionsCatalog,
@@ -34,6 +36,7 @@ import { buildInitialState, emptyProjectState, inferPermitSteps, seedStateFor } 
 import { defaultCatalog, defaultSelections } from '../data/selections'
 import { VENDORS, type Vendor } from '../data/vendors'
 import { UTILITIES, type UtilityCompany } from '../data/utilities'
+import { DRAW_TEMPLATES_DEFAULT, type DrawTemplate } from '../data/drawTemplates'
 import { ESTABLISHED_MODELS, TAKEOFF_TYPES } from '../data/takeoffs'
 import { ORDER_CATEGORIES, SITE_SERVICES, standardOrdersFor } from '../data/orders'
 import { modelKey } from '../data/models'
@@ -112,7 +115,12 @@ function normalize(ps: ProjectState): ProjectState {
   const selections = ps.selections
     ? { ...ps.selections, interior: ps.selections.interior ?? {}, exterior: ps.selections.exterior ?? {} }
     : defaultSelections()
-  return { ...ps, steps, notes, orders, docs, selections }
+  // Draw tracking (💵 Draws) is optional per house — but when present, its
+  // `draws` must be an array or the tab crashes reading a malformed save.
+  const financials = ps.financials
+    ? { ...ps.financials, draws: Array.isArray(ps.financials.draws) ? ps.financials.draws : [] }
+    : undefined
+  return { ...ps, steps, notes, orders, docs, selections, financials }
 }
 
 /**
@@ -211,6 +219,9 @@ export function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
     // pattern as vendors above. Array-guarded so a malformed/missing field
     // never crashes a load; falls back to the (empty) code default.
     utilities: Array.isArray(parsed.utilities) ? parsed.utilities : UTILITIES,
+    // Draw-schedule templates (💵 Draws tab) — same seed-then-blob-owns
+    // pattern as vendors above (edited in Settings → Draw schedule templates).
+    drawTemplates: Array.isArray(parsed.drawTemplates) ? parsed.drawTemplates : DRAW_TEMPLATES_DEFAULT,
     // Heartbeat stamped by the nightly permit scanner (scanner/scan.mjs
     // --write). Absent until the scanner's first stamped run. Like assignees:
     // MUST be carried here or every load/sync strips it and the Today
@@ -1214,6 +1225,64 @@ export function useProjects() {
     setState((prev) => ({ ...prev, utilities }))
   }
 
+  /** Replace the whole draw-schedule template list (Settings → Draw schedule
+   *  templates). Same working-copy-then-save-in-one-shot shape as setVendors. */
+  function setDrawTemplates(drawTemplates: DrawTemplate[]) {
+    setState((prev) => ({ ...prev, drawTemplates }))
+  }
+
+  /** Set / replace / clear one project's draw tracking (💵 Draws tab):
+   *  "Start draw tracking" writes the whole object, the header card edits
+   *  lender fields, and `undefined` removes tracking entirely. */
+  function setFinancials(id: number, financials: ProjectFinancials | undefined) {
+    setState((prev) => ({
+      ...prev,
+      projects: {
+        ...prev.projects,
+        [id]: { ...(prev.projects[id] ?? emptyProjectState()), financials },
+      },
+    }))
+  }
+
+  /**
+   * Patch ONE draw on one project (check an item off, stamp requestedOn/
+   * fundedOn, edit the amount, replace the items list). One setState so two
+   * quick edits can't clobber each other (the addOrder lesson). Passing
+   * `null` as the patch REMOVES the draw from the schedule.
+   */
+  function updateDraw(id: number, drawId: string, patch: Partial<ProjectDraw> | null) {
+    setState((prev) => {
+      const ps = prev.projects[id]
+      if (!ps?.financials) return prev // no tracking started — nothing to patch
+      const draws =
+        patch === null
+          ? ps.financials.draws.filter((d) => d.id !== drawId)
+          : ps.financials.draws.map((d) => (d.id === drawId ? { ...d, ...patch } : d))
+      return {
+        ...prev,
+        projects: {
+          ...prev.projects,
+          [id]: { ...ps, financials: { ...ps.financials, draws } },
+        },
+      }
+    })
+  }
+
+  /** Append one draw to a project's schedule (the "＋ Add draw" button). */
+  function addDraw(id: number, draw: ProjectDraw) {
+    setState((prev) => {
+      const ps = prev.projects[id]
+      if (!ps?.financials) return prev
+      return {
+        ...prev,
+        projects: {
+          ...prev.projects,
+          [id]: { ...ps, financials: { ...ps.financials, draws: [...ps.financials.draws, draw] } },
+        },
+      }
+    })
+  }
+
   /**
    * Replace the owner's custom material list (🛠 Settings → Custom materials:
    * add/remove). Built-in categories live in data/orders.ts and are NOT stored
@@ -1355,6 +1424,10 @@ export function useProjects() {
     setSelectionsCatalog,
     setVendors,
     setUtilities,
+    setDrawTemplates,
+    setFinancials,
+    updateDraw,
+    addDraw,
     setCustomOrderCategories,
     renameCustomCategory,
     setModelTakeoff,

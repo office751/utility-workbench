@@ -75,6 +75,7 @@ import InvestorCuration from './InvestorCuration'
 import ProjectSettings from './ProjectSettings'
 import MaterialsBody from './MaterialsBody'
 import SelectionsView from './SelectionsView'
+import FinancialsBody from './FinancialsBody'
 import Icon, { miForEmoji } from './Icon'
 import GuideCallout from './GuideCallout'
 import ClosingCard from './ClosingCard'
@@ -121,10 +122,10 @@ interface Updaters {
   updateProjectFacts: (id: number, patch: Partial<Project>) => void
 }
 
-/** A tab in the project workspace: Overview, the homeowner Selections, or one
- *  stream. 'selections' is deliberately NOT a Stream (it has no checklist /
- *  notes bucket), so it's rendered in its own branch below. */
-type DetailTab = 'overview' | 'selections' | Stream
+/** A tab in the project workspace: Overview, the homeowner Selections, the
+ *  loan Draws, or one stream. 'selections'/'financials' are deliberately NOT
+ *  Streams (no checklist/notes bucket), so each renders in its own branch. */
+type DetailTab = 'overview' | 'selections' | 'financials' | Stream
 
 interface Props extends Updaters {
   project: Project
@@ -142,6 +143,15 @@ interface Props extends Updaters {
   /** Whether this role's tabs include 📐 Models — decides how the Materials
    *  missing-takeoffs banner phrases its "go gather them" advice. */
   canSeeModels: boolean
+  /** Whether this role may see money (data/roles.ts canSeeFinancials —
+   *  admin + business owner). Gates the 💵 Draws tab pill AND its body. */
+  canSeeFinancials: boolean
+  /** Owner-editable draw-schedule templates (Settings → Draw schedule
+   *  templates) — the 💵 Draws tab's "start tracking" picker. */
+  drawTemplates: import('../data/drawTemplates').DrawTemplate[]
+  setFinancials: (id: number, fin: import('../types').ProjectFinancials | undefined) => void
+  updateDraw: (id: number, drawId: string, patch: Partial<import('../types').ProjectDraw> | null) => void
+  addDraw: (id: number, draw: import('../types').ProjectDraw) => void
   /** Owner-editable vendors directory (Settings → Vendor setup). */
   vendors: import('../data/vendors').Vendor[]
   /** Owner-editable EXTRA utility companies (Settings → Utility companies setup) —
@@ -380,6 +390,16 @@ function Detail(props: Props) {
         >
           Selections
         </button>
+        {/* 💵 Draws — money, so admin + business owner only (canSeeFinancials).
+            Other roles never see the pill, and the body below is gated too. */}
+        {props.canSeeFinancials && (
+          <button
+            className={'pd-tab' + (activeTab === 'financials' ? ' active' : '')}
+            onClick={() => setActiveTab('financials')}
+          >
+            Draws
+          </button>
+        )}
       </div>
 
       {/* The gear panel: all editable config for the whole project. */}
@@ -537,8 +557,22 @@ function Detail(props: Props) {
         />
       )}
 
+      {/* ---- DRAWS: construction-loan draw tracking. Its OWN branch — NOT a
+              Stream — and double-gated on canSeeFinancials (money). ---- */}
+      {activeTab === 'financials' && props.canSeeFinancials && (
+        <FinancialsBody
+          project={p}
+          ps={ps}
+          drawTemplates={props.drawTemplates}
+          templates={props.templates}
+          setFinancials={props.setFinancials}
+          updateDraw={props.updateDraw}
+          addDraw={props.addDraw}
+        />
+      )}
+
       {/* ---- STREAM tabs: contacts + the stream body + that stream's notes ---- */}
-      {activeTab !== 'overview' && activeTab !== 'selections' && (
+      {activeTab !== 'overview' && activeTab !== 'selections' && activeTab !== 'financials' && (
         <>
           <ContactLinks stream={activeTab} p={p} ps={ps} utilities={props.utilities} />
 

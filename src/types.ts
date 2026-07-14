@@ -341,6 +341,51 @@ export interface ProjectState {
 
   /** Free-text notes, one per stream. */
   notes: Record<Stream, string>
+
+  /** Construction-loan draw tracking (💵 Draws tab) — the lender, and this
+   *  contract's OWN copy of a draw schedule (started from a template, then
+   *  tuned per contract). Absent until "Start draw tracking" is pressed.
+   *  ⚠ Dollar-denominated → only rendered for roles with canSeeFinancials. */
+  financials?: ProjectFinancials
+}
+
+/** One checklist line inside a draw — what must be true (and usually attached
+ *  as proof) before this draw is requested. */
+export interface ProjectDrawItem {
+  id: string
+  text: string
+  done?: boolean
+}
+
+/** One draw on one project — a template stage COPIED here, then owned by the
+ *  project (edits never touch the template). */
+export interface ProjectDraw {
+  id: string
+  /** How Adam & the lender name it: "3rd Draw", "Completion of Dry In"… */
+  label: string
+  /** Free text: "$45,000" or "10%" — a display hint, not accounting. */
+  amount?: string
+  items: ProjectDrawItem[]
+  /** YYYY-MM-DD the request email went out — set by "Request draw". */
+  requestedOn?: string
+  /** YYYY-MM-DD the money arrived — set by "Mark funded". */
+  fundedOn?: string
+}
+
+/** A project's loan/draw facts. Deliberately LIGHT — this is a request
+ *  tracker, not a ledger (amounts are display strings, no math is done). */
+export interface ProjectFinancials {
+  /** Which template seeded the schedule (display only — the copy is owned
+   *  by the project; later template edits don't flow back in). */
+  templateId?: string
+  lender?: string
+  /** Where "📨 Request draw" emails go. */
+  lenderEmail?: string
+  /** The lender's loan/file number (FACO subjects carry it, e.g. [126863]). */
+  loanNumber?: string
+  /** Display string ("$255,685") shown on the summary card. */
+  contractPrice?: string
+  draws: ProjectDraw[]
 }
 
 /**
@@ -491,6 +536,14 @@ export interface WorkbenchState {
    * Settings → Utility companies setup). Same pattern as `vendors` above.
    */
   utilities?: import('./data/utilities').UtilityCompany[]
+  /**
+   * Owner-editable draw-schedule TEMPLATES (💵 Draws tab) — each lender/
+   * contract style gets one; starting a project's draw tracking copies a
+   * template onto that project. Seeded from data/drawTemplates.ts defaults on
+   * first run; after that the blob owns it (edited in 🛠 Settings → Draw
+   * schedule templates). Same pattern as `vendors` above.
+   */
+  drawTemplates?: import('./data/drawTemplates').DrawTemplate[]
   /**
    * Heartbeat from the nightly permit scanner: scanner/scan.mjs (--write)
    * stamps this on every successful sync. 🏠 Today turns a stale stamp into a

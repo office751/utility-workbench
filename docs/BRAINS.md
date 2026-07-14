@@ -7,7 +7,7 @@ change a rule on purpose, change its test AND this doc in the same commit;
 if a test fails and you didn't mean to change behavior, your change is wrong,
 not the test.
 
-Written July 2026 as part of the brains-coverage pass. Tests: 169 across 14
+Written July 2026 as part of the brains-coverage pass. Tests: 203 across 16
 files (`npx vitest run`, ~350 ms).
 
 ## Global invariants (break these and real houses get hurt)
@@ -293,6 +293,33 @@ filtered `WATER='Yes'` (the layer mixes water and sewer rows).
 - `waterProviderCode`: only /marion county utilities/i → 'MCU'; every other
   company → null → one-click set only via a matching Settings roster entry
   (kind 'water'), same never-guess rule as electric.
+
+## draws.ts — construction-loan draw tracking (July 2026)
+
+The 💵 Draws tab's brain. A project's `financials.draws` is that CONTRACT's
+own copy of a schedule (copied from a `data/drawTemplates.ts` template when
+tracking starts — every lender slices stages differently, so per-contract
+tuning is the design, not an exception).
+
+- **Status is derived, never stored**: funded (has `fundedOn`) > requested
+  (has `requestedOn`) > ready (≥1 item, ALL checked) > upcoming.
+- **An empty checklist can never be 'ready'** — no items means we can't tell
+  ("can't tell" beats guessing). But nothing hard-blocks requesting: the
+  Request button always works (fail open — whether to bill is Adam's call,
+  the chip is advice).
+- `instantiateDraws` must mint FRESH ids for draws AND items — two houses
+  started from one template may never alias each other or the template.
+- `drawRequestDraft` renders the 'draw:request' template (defaults in
+  `lib/templates.ts`, matched to Adam's real sent mail: subject
+  `<label> Request - <address>, <city>`, "official draw request" body).
+  Evidence lists ONLY checked items (never claim unfinished work to a
+  lender); a missing amount becomes `[FILL IN — amount]` (loud beats blank);
+  `{{loan_line}}` renders only when a loan # exists; CCs office@; no
+  sign-off (the mail client appends it).
+- UI gate: the Draws tab pill AND body render only for
+  `roleConfig.canSeeFinancials` (admin + business owner). Note: the data
+  still lives in the shared blob — ROADMAP "Decision A→B" tracks whether
+  money moves to its own RLS table.
 
 ## mergeState.ts / migrate() — concurrency + shape changes
 

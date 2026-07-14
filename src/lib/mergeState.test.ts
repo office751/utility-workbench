@@ -31,6 +31,7 @@ function baseState(): Required<WorkbenchState> {
     assignees: ['Adam'],
     vendors: [{ id: 'v1', name: 'V1', email: '', icon: '📦', supplies: '' } as never],
     utilities: [{ id: 'u1', kind: 'electric', name: 'SECO' } as never],
+    drawTemplates: [{ id: 'dt1', name: 'Numbered', stages: [{ id: 's1', label: '1st Draw', items: ['Slab poured'] }] }],
     scanMeta: { lastScanAt: '2026-07-01T05:31:00.000Z', permitsRead: 44 },
     portalDates: {
       '2025082884': { status: 'Issued', issued: '2025-10-21', expires: '2026-11-02', checkedAt: '2026-07-14T10:52:00.000Z' },

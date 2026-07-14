@@ -31,6 +31,10 @@ the details.
       coworker = Carey) can fetch job-cost fields from the blob via the API even
       though the UI hides them. If that's not acceptable, move financials to their
       own RLS table. Decide before/when Carey is in daily.
+      ⚠ NOW LIVE, not hypothetical (Jul 14 2026): the 💵 Draws tab stores draw
+      amounts + contract price in the blob (`ps.financials`), UI-gated to
+      admin/business_owner via canSeeFinancials. First structured dollar data —
+      this is the moment to decide.
 
 **Dev items — DONE:**
 - [x] **Scanner heartbeat** *(July 1 2026 — born from the 19-day silent scanner

@@ -50,6 +50,8 @@ import { VENDORS, orderMailto } from './data/vendors'
 import { collectPendingOrders } from './lib/orders'
 import { modelKey } from './data/models'
 const UtilitiesEditor = lazy(() => import('./components/UtilitiesEditor'))
+const DrawTemplatesEditor = lazy(() => import('./components/DrawTemplatesEditor'))
+import { DRAW_TEMPLATES_DEFAULT } from './data/drawTemplates'
 const CustomMaterialsEditor = lazy(() => import('./components/CustomMaterialsEditor'))
 const GuideView = lazy(() => import('./components/GuideView'))
 
@@ -143,6 +145,10 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
     setSelectionsCatalog,
     setVendors,
     setUtilities,
+    setDrawTemplates,
+    setFinancials,
+    updateDraw,
+    addDraw,
     setCustomOrderCategories,
     renameCustomCategory,
     replaceState,
@@ -459,6 +465,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
           <SelectionsCatalogEditor catalog={state.selectionsCatalog} onSave={setSelectionsCatalog} vendors={vendors} />
           <VendorsEditor vendors={vendors} onSave={setVendors} />
           <UtilitiesEditor utilities={utilities} onSave={setUtilities} />
+          <DrawTemplatesEditor drawTemplates={state.drawTemplates ?? DRAW_TEMPLATES_DEFAULT} onSave={setDrawTemplates} />
           <CustomMaterialsEditor
             categories={state.customOrderCategories ?? []}
             projects={state.projects}
@@ -514,6 +521,13 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
             // missing-takeoffs banner words its advice differently for a
             // coworker, whose tab set doesn't include that screen.
             canSeeModels={roleCfg.tabs.includes('models')}
+            // 💵 Draws (money) — admin + business owner only; other roles
+            // never see the tab pill (data/roles.ts canSeeFinancials).
+            canSeeFinancials={roleCfg.canSeeFinancials}
+            drawTemplates={state.drawTemplates ?? DRAW_TEMPLATES_DEFAULT}
+            setFinancials={setFinancials}
+            updateDraw={updateDraw}
+            addDraw={addDraw}
             tasks={state.tasks}
             templates={state.templates}
             modelTakeoffs={state.modelTakeoffs}

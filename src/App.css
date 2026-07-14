@@ -4576,3 +4576,91 @@ a.map-btn {
 .otask-spacer { flex: 1 1 auto; }
 .otask-send,
 .otask-done { white-space: nowrap; }
+
+/* ==================== 💵 Draws (FinancialsBody + DrawTemplatesEditor) ====
+   Loan draw tracking. Cards reuse .vend-card; everything money-specific is
+   fin-*. Status colors ride the shared tokens (success/warn) so light and
+   dark themes both work. */
+.fin-title { margin: 0 0 6px; font-size: var(--text-md); }
+.fin-tpl-desc { margin: -2px 0 10px; }
+.fin-head-row { display: flex; align-items: center; gap: 10px; justify-content: space-between; flex-wrap: wrap; }
+.fin-head-lender { font-weight: var(--weight-semibold); }
+
+.fin-draw-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+/* The label/amount are quiet inline inputs — they read as text until focused,
+   so the card doesn't look like a form (same trick as the vendor editor). */
+.fin-draw-label,
+.fin-draw-amount {
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  padding: 4px 6px;
+  font: inherit;
+  color: var(--text);
+}
+.fin-draw-label { font-weight: var(--weight-semibold); flex: 1 1 160px; min-width: 0; }
+.fin-draw-amount { width: 110px; text-align: right; }
+.fin-draw-label:hover, .fin-draw-amount:hover { border-color: var(--border); }
+.fin-draw-label:focus, .fin-draw-amount:focus { border-color: var(--accent); outline: none; background: var(--panel); }
+
+.fin-chip {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+  background: var(--surface-3); /* the neutral-chip token — themed both ways */
+  color: var(--muted);
+}
+.fin-chip--ready { background: var(--warn-bg); color: var(--warn); }
+.fin-chip--requested { background: var(--accent-2-bg, var(--warn-bg)); color: var(--accent-2, var(--warn)); }
+.fin-chip--funded { background: var(--success-bg); color: var(--success); }
+.fin-draw--funded { opacity: 0.75; }
+
+.fin-items { list-style: none; margin: 0 0 8px; padding: 0; }
+.fin-items li { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+.fin-item { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; cursor: pointer; }
+.fin-item-done { text-decoration: line-through; color: var(--muted); }
+.fin-item-x { flex: 0 0 auto; }
+.fin-item-add input {
+  width: 100%;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  padding: 4px 8px;
+  font-size: var(--text-sm);
+  color: var(--text);
+}
+.fin-item-add input:focus { border-color: var(--accent); outline: none; }
+
+.fin-draw-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.fin-funded { color: var(--success); font-weight: var(--weight-semibold); }
+.fin-attach-note { margin: 6px 0 0; font-size: var(--text-xs); }
+.fin-foot { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+.fin-stop { color: var(--danger); }
+
+/* A mailto "button" with no address yet — visibly present but inert. */
+.btn-disabled { opacity: 0.5; cursor: not-allowed; pointer-events: auto; }
+
+/* Setup + template editor bits. */
+.fin-setup select,
+.vend-f select {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--text);
+  padding: 6px 8px;
+  font: inherit;
+}
+.fin-tpl-stage { border-top: 1px dashed var(--border); padding-top: 8px; margin-top: 8px; }
+.fin-tpl-items { width: 100%; }
+.fin-tpl-items textarea {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--text);
+  padding: 6px 8px;
+  font: inherit;
+  font-size: var(--text-sm);
+  resize: vertical;
+}

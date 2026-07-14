@@ -115,6 +115,9 @@ export function mergeWorkbench(base: WorkbenchState, local: WorkbenchState, remo
     // Owner-added utility companies — same owner-editable-directory pattern
     // (and the same by-id merge) as vendors above.
     utilities: mergeById(base.utilities ?? [], local.utilities ?? [], remote.utilities ?? [], 'id'),
+    // Draw-schedule templates (💵 Draws) — same owner-editable-directory
+    // pattern (and the same by-id merge) as vendors/utilities above.
+    drawTemplates: mergeById(base.drawTemplates ?? [], local.drawTemplates ?? [], remote.drawTemplates ?? [], 'id'),
     // Scanner heartbeat: one small object stamped by the Mac's scan job.
     // pick3 keeps whichever side moved; if BOTH moved, the committed remote
     // wins — which is usually the fresher completed-scan stamp, and dropping

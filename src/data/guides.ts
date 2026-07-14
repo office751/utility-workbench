@@ -180,6 +180,21 @@ export const GUIDES: Guide[] = [
     ],
     tip: 'The Quick add bar works on ANY device you\'re signed in on — phone, Windows laptop, anywhere. (Separately, Adam\'s office Mac runs an automatic "Scan Josh" button that reads Messages directly and files orders without typing — but that is Mac-only, so the Quick add bar is the way everyone else captures orders.)',
   },
+  {
+    id: 'request-draw',
+    icon: '💵',
+    title: 'Request a construction-loan draw',
+    when: 'A build stage finishes (foundation, framing, dry-in…) and the lender owes the next draw payment.',
+    steps: [
+      { who: 'you', text: 'Open the house → 💵 Draws tab. (First time on a house? Pick the draw schedule that matches this contract, fill in the lender\'s email + loan #, and Start draw tracking. Every stage, amount, and checklist can then be tuned for THIS deal.)' },
+      { who: 'you', text: 'On the current draw\'s card, check off the checklist as the work completes. When everything\'s checked, the card flips to "Ready to request".' },
+      { who: 'you', text: 'Click "📨 Request draw…". An email opens in the lender\'s required wording — the official draw request with the amount, the address, and what\'s completed.' },
+      { who: 'you', text: 'ATTACH the proof before sending — inspection approvals, surveys, the C.O. Lenders bounce draw requests that arrive without the supporting documents, and a draft can\'t attach files for you.' },
+      { who: 'app', text: 'The draw is stamped "Requested" with today\'s date the moment the draft opens (hit "undo" if you didn\'t send it).' },
+      { who: 'wait', text: 'When the money lands, come back and click "Mark funded" — the header card keeps the running "X of Y funded" tally.' },
+    ],
+    tip: 'The Draws tab only exists for the admin and business-owner logins — coworkers and investors never see dollar amounts. Email wording is editable in 🛠 Settings → Templates ("Draw request — lender"); the schedules themselves in Settings → Draw schedule templates.',
+  },
 ]
 
 /** Look one up by id (for the inline callouts). */

@@ -89,6 +89,7 @@ describe('migrate() round-trip', () => {
       'assignees',
       'vendors',
       'utilities',
+      'drawTemplates',
       'scanMeta',
       'customOrderCategories',
       'vendorCatalogsSeeded',

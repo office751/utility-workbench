@@ -180,6 +180,30 @@ export const DEFAULT_STATUS_DETAILED_BODY = [
   '   ➡  Next:      {{nextAction}}',
 ].join('\n')
 
+/**
+ * Construction-loan DRAW REQUEST email — drafted by "📨 Request draw" on a
+ * project's 💵 Draws tab. Wording matched to Adam's real sends ("5th Draw
+ * Request - 4 Fisher Lane Trak, Ocklawaha", Jan 2025–Jul 2026): subject =
+ * "<Nth> Draw Request - <address>, <city>", body = the "official draw request"
+ * line with the amount, plus what's completed (lenders bounce requests that
+ * arrive without the supporting info — the evidence list is the fix). */
+export const DEFAULT_DRAW_REQUEST_SUBJECT = '{{label}} Request - {{address}}, {{city}}'
+export const DEFAULT_DRAW_REQUEST_BODY = [
+  'Good morning,',
+  '',
+  'Here is my official draw request for:',
+  '',
+  '{{amount}} as the {{label}} on {{site}}.',
+  '{{loan_line}}',
+  'Completed for this draw:',
+  '{{evidence}}',
+  '',
+  'Supporting documents are attached. Please let me know if you need anything else to process it, thank you!',
+].join('\n')
+// ^ No sign-off — the mail client appends Adam's real signature.
+// ^ {{loan_line}} renders "Loan #126863" + newline only when the project has
+//   a loan number (FACO-style), so other lenders never see an empty line.
+
 /** A template's effective subject+body: your override where set, default otherwise. */
 export function effectiveTemplate(
   overrides: Record<string, TemplateOverride> | undefined,
