@@ -82,6 +82,8 @@ import GuideCallout from './GuideCallout'
 interface Updaters {
   toggleStep: (id: number, stream: Stream, stepId: string, done: boolean) => void
   setStepNote: (id: number, stream: Stream, stepId: string, note: string) => void
+  /** ⏩ Catch-up batch writer (mark earlier steps done / undo) — see lib/catchup.ts. */
+  catchUpSteps: (id: number, stream: Stream, stepIds: string[], done: boolean) => void
   setNote: (id: number, stream: Stream, text: string) => void
   setField: <K extends keyof ProjectState>(id: number, field: K, value: ProjectState[K]) => void
   addProjectFiles: (id: number, files: File[]) => Promise<{ ok: number; failed: string[] }>
@@ -539,7 +541,7 @@ function Detail(props: Props) {
 
 /* ==================== ELECTRIC ==================== */
 
-function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField, templates }: Props) {
+function ElectricBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps, setField, templates }: Props) {
   const next = nextElectricAction(p, ps)
   const shutoff = shutoffFor(ps)
   const u = utilityOf(p, ps)
@@ -771,6 +773,7 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField, templ
         ps={ps}
         toggleStep={toggleStep}
         setStepNote={setStepNote}
+        catchUpSteps={catchUpSteps}
       />
 
       {/* Closing date + shut-off reminder stay here — they're sale workflow,
@@ -831,7 +834,7 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, setField, templ
 
 /* ===================== WATER ===================== */
 
-function WaterBody({ project: p, ps, toggleStep, setStepNote, templates }: Props) {
+function WaterBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps, templates }: Props) {
   const source = waterSourceOf(p, ps)
   const next = nextWaterAction(p, ps)
   // Municipal water (Marion County Utilities) is the only water the builder
@@ -888,6 +891,7 @@ function WaterBody({ project: p, ps, toggleStep, setStepNote, templates }: Props
             ps={ps}
             toggleStep={toggleStep}
             setStepNote={setStepNote}
+            catchUpSteps={catchUpSteps}
           />
         </>
       )}
@@ -921,7 +925,7 @@ function WaterBody({ project: p, ps, toggleStep, setStepNote, templates }: Props
 
 /* ================= SEPTIC / SEWER ================= */
 
-function SepticBody({ project: p, ps, toggleStep, setStepNote }: Props) {
+function SepticBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps }: Props) {
   const source = septicSourceOf(ps)
   const system = septicSystemOf(ps)
   const next = nextSepticAction(ps)
@@ -961,6 +965,7 @@ function SepticBody({ project: p, ps, toggleStep, setStepNote }: Props) {
         ps={ps}
         toggleStep={toggleStep}
         setStepNote={setStepNote}
+        catchUpSteps={catchUpSteps}
       />
     </>
   )
@@ -968,7 +973,7 @@ function SepticBody({ project: p, ps, toggleStep, setStepNote }: Props) {
 
 /* ===================== PERMITTING ===================== */
 
-function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, updateTask, removeTask, dismissNotification, dismissInspection, templates }: Props) {
+function PermitBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps, tasks, addTask, updateTask, removeTask, dismissNotification, dismissInspection, templates }: Props) {
   // 📨 Email Jennifer needs a moment to mint download links for the project's
   // files (a cloud call per file), so it's a button with a busy state rather
   // than a plain link.
@@ -1148,6 +1153,7 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, tasks, addTask, u
         ps={ps}
         toggleStep={toggleStep}
         setStepNote={setStepNote}
+        catchUpSteps={catchUpSteps}
       />
 
       <PermitReviewItems

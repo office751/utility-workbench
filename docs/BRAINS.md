@@ -7,8 +7,8 @@ change a rule on purpose, change its test AND this doc in the same commit;
 if a test fails and you didn't mean to change behavior, your change is wrong,
 not the test.
 
-Written July 2026 as part of the brains-coverage pass. Tests: 127 across 12
-files (`npx vitest run`, ~250 ms).
+Written July 2026 as part of the brains-coverage pass. Tests: 159 across 14
+files (`npx vitest run`, ~350 ms).
 
 ## Global invariants (break these and real houses get hurt)
 
@@ -68,6 +68,30 @@ files (`npx vitest run`, ~250 ms).
   overrides e.g. electric `engineer` 30, permit `review` 30). Tune numbers
   there, not here.
 - Materials isn't a lifecycle → always `null`.
+
+## catchup.ts — one-click backfill for pre-app houses
+
+- Why: many houses predate the app — the real-world work happened but the
+  boxes were never ticked, so first-unchecked-step consumers (nextAction,
+  staleness, Today's moves) overstate remaining work. When a LATER step is
+  checked while EARLIER ones aren't, Checklist.tsx shows a quiet "catch up"
+  row; `catchUpPlan` decides what it would tick.
+- **Anchor = the LAST checked step** of the effective (possibly owner-edited)
+  list; **targets = every unchecked step before it**. Nothing checked, or a
+  normally-progressing list (checked prefix, unchecked tail) → `null` — the
+  row must never nag ordinary houses.
+- **Permit `corrections` is never a target** — optional "if any" aside, same
+  treatment staleness gives it. (Only for the permit stream; a custom list
+  elsewhere may use the id freely.)
+- Caught-up steps carry the **`'(caught up)'` sentinel date and NO `doneAt`**
+  (invariant 3: we know the work is behind us, not when it happened — so
+  staleness never times it). The sentinel is deliberately unparseable
+  (backfillDoneAt won't mint a timestamp) and deliberately counts as a
+  MANUAL edit to `hasManualPermitEdits` (a human decided; the county
+  re-derive keeps its hands off).
+- The write is `useProjects.catchUpSteps` — the whole batch in ONE setState
+  (the markApplied lesson); `done=false` is the undo, unchecking exactly the
+  caught-up steps while keeping notes.
 
 ## nextAction.ts — "what's the next move" per stream
 

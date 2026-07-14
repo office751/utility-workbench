@@ -978,6 +978,46 @@ textarea:focus {
   border-color: var(--accent);
 }
 
+/* ⏩ catch-up: quiet one-liner atop a checklist whose later steps are ✓ while
+   earlier ones aren't (houses that predate the app). One click ticks the
+   earlier steps; a `.caught` variant of the same row offers Undo. */
+.catchup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  margin-bottom: 4px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  font-size: calc(12px * var(--font-scale));
+  color: var(--muted);
+}
+
+.catchup-text {
+  flex: 1;
+  min-width: 0; /* lets the ellipsis actually happen inside flex */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.catchup-btn {
+  font: inherit;
+  font-size: calc(12px * var(--font-scale));
+  color: var(--accent);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.catchup-btn:hover {
+  border-color: var(--accent);
+  background: var(--bg);
+}
+
 /* ---------- closing / shut-off row ---------- */
 
 .closing {

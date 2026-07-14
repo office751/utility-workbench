@@ -41,6 +41,7 @@ import { supabase } from '../lib/supabase'
 import { deleteProjectFile, uploadModelFile, uploadProjectFile } from '../lib/files'
 import { mergeWorkbench } from '../lib/mergeState'
 import { applyFactsPatch, hasManualPermitEdits } from '../lib/projectFacts'
+import { CAUGHT_UP_DATE } from '../lib/catchup'
 
 /** The key our data is filed under in the browser's localStorage. */
 const STORAGE_KEY = 'isc_workbench_v1'
@@ -649,6 +650,48 @@ export function useProjects() {
     })
   }
 
+  /**
+   * ⏩ "Catch up": mark several EARLIER checklist steps done — or undo exactly
+   * that — in ONE state update. This is the writer behind the catch-up row on
+   * checklists (Checklist.tsx); WHICH steps qualify is decided by the pure
+   * lib/catchup.ts brain, not here.
+   *
+   * Why it exists: many houses predate the app — the real-world work happened
+   * but the boxes were never ticked, so "next action" and staleness overstate
+   * the remaining work. Caught-up steps get the '(caught up)' sentinel as
+   * their display date and NO doneAt: we know the work is behind us, not WHEN
+   * it happened, so the stale-status math must not start timing from today
+   * (same honesty rule as the '(county)'/'(inferred)' markers).
+   *
+   * done=false is the UNDO: uncheck those same steps again, clearing the
+   * sentinel but keeping any notes — the same clearing rule as toggleStep.
+   *
+   * One setState for the whole batch, per the one-setState rule — a loop of
+   * toggleStep calls would clobber itself (same lesson as markApplied above).
+   */
+  function catchUpSteps(id: number, stream: Stream, stepIds: string[], done: boolean) {
+    setState((prev) => {
+      const cur = prev.projects[id] ?? emptyProjectState()
+      const bucket = { ...cur.steps[stream] }
+      for (const stepId of stepIds) {
+        const existing: StepState = bucket[stepId] ?? { done: false }
+        bucket[stepId] = {
+          ...existing,
+          done,
+          date: done ? CAUGHT_UP_DATE : undefined,
+          doneAt: undefined, // never a machine timestamp — see the doc comment
+        }
+      }
+      return {
+        ...prev,
+        projects: {
+          ...prev.projects,
+          [id]: { ...cur, steps: { ...cur.steps, [stream]: bucket } },
+        },
+      }
+    })
+  }
+
   /** Save the small note attached to ONE checklist step. */
   function setStepNote(id: number, stream: Stream, stepId: string, note: string) {
     const ps = getProjectState(id)
@@ -1185,6 +1228,7 @@ export function useProjects() {
     getProjectState,
     toggleStep,
     markApplied,
+    catchUpSteps,
     setStepNote,
     setNote,
     setField,

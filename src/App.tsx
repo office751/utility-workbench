@@ -104,6 +104,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
     getProjectState,
     toggleStep,
     markApplied,
+    catchUpSteps,
     setStepNote,
     setNote,
     setField,
@@ -513,6 +514,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
             initialStream={openStream}
             toggleStep={toggleStep}
             setStepNote={setStepNote}
+            catchUpSteps={catchUpSteps}
             setNote={setNote}
             setField={setField}
             addProjectFiles={addProjectFiles}
