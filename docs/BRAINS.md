@@ -250,6 +250,30 @@ distinct projects, `fire` = any attention item in that stream.
   scan AND under 30 minutes old — the Mac watcher uses the same 30-minute
   clock so the two sides can't disagree.
 
+## territoryLookup.ts — "which electric company serves this lot?" (July 2026)
+
+Asks Marion County's own GIS instead of researching per property (born the day
+SECO disclaimed 14845 SW 77th Ave — Marion Oaks' western edge is Duke).
+
+- **Locate by parcel FIRST, address second.** The county ParcelCentroids layer
+  is exact and knows vacant/TBD lots; the address locator is the fallback, and
+  TBD/blank addresses are never sent to it (`isLocatableAddress`).
+- **Weak geocodes are a miss, not an answer**: candidates scoring
+  `< MIN_GEOCODE_SCORE` (80) return null — a wrong rooftop would verify the
+  wrong utility ("can't tell" beats guessing).
+- **Only SECO / DUKE / CLAY come back as codes** (`providerCode`) — they're the
+  built-ins with automation. Ocala Electric / Central Florida Electric map to
+  `null`: the UI reports the NAME but never invents a code (fail open).
+- **Seam caution**: other providers within `SEAM_METERS` (1609 = 1 mile) are
+  returned as `neighbors` — the UI shows "double-check" but still allows the
+  set. Overlapping polygons AT the point = `{ok:false}`, verify by phone.
+- **`lookupTerritory()` never throws** — every failure is `{ok:false, reason}`
+  phrased for the banner. The seam check is advisory: its failure must not
+  sink a solid answer.
+- Both hosts send CORS for the app origin (verified July 2026); public data,
+  no key. If the county ever renames layer fields (`PARCEL`, `SITUS_1`,
+  `NAME`, `candidates[].score`), the parsers return null → honest misses.
+
 ## mergeState.ts / migrate() — concurrency + shape changes
 
 - Two operators editing concurrently merge 3-way (never last-write-wins

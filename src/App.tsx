@@ -105,6 +105,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
     getProjectState,
     toggleStep,
     markApplied,
+    applyVerifiedUtility,
     catchUpSteps,
     setClosingStep,
     setStepNote,
@@ -527,6 +528,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
             setClosingStep={setClosingStep}
             setNote={setNote}
             setField={setField}
+            applyVerifiedUtility={applyVerifiedUtility}
             addProjectFiles={addProjectFiles}
             removeProjectFile={removeProjectFile}
             addOrder={addOrder}

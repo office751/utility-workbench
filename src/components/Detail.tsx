@@ -12,7 +12,7 @@
  * stay hidden until you open settings.
  */
 import { useEffect, useState } from 'react'
-import type { OrderItem, OrderStatus, Project, ProjectState, SelectionChoice, SelectionsCatalog, Stream, Task } from '../types'
+import type { OrderItem, OrderStatus, Project, ProjectState, SelectionChoice, SelectionsCatalog, Stream, Task, Utility } from '../types'
 import {
   type StepDef,
   electricSteps,
@@ -77,6 +77,7 @@ import SelectionsView from './SelectionsView'
 import Icon, { miForEmoji } from './Icon'
 import GuideCallout from './GuideCallout'
 import ClosingCard from './ClosingCard'
+import TerritoryCheck from './TerritoryCheck'
 
 /** The updater functions every body needs — grouped to avoid repetition. */
 interface Updaters {
@@ -89,6 +90,9 @@ interface Updaters {
   setClosingStep: (id: number, stepId: string, done: boolean) => void
   setNote: (id: number, stream: Stream, text: string) => void
   setField: <K extends keyof ProjectState>(id: number, field: K, value: ProjectState[K]) => void
+  /** 🗺️ Territory check's "Set X + mark verified" — utility + verify step in
+   *  ONE update (see useProjects.applyVerifiedUtility / TerritoryCheck.tsx). */
+  applyVerifiedUtility: (id: number, code: Utility, providerName: string) => void
   addProjectFiles: (id: number, files: File[]) => Promise<{ ok: number; failed: string[] }>
   removeProjectFile: (id: number, index: number) => void
   addOrder: (id: number, order: { category: string; status: OrderStatus; orderedOn?: string }) => void
@@ -597,7 +601,16 @@ function Detail(props: Props) {
 
 /* ==================== ELECTRIC ==================== */
 
-function ElectricBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps, templates }: Props) {
+function ElectricBody({
+  project: p,
+  ps,
+  toggleStep,
+  setStepNote,
+  catchUpSteps,
+  templates,
+  utilities,
+  applyVerifiedUtility,
+}: Props) {
   const next = nextElectricAction(p, ps)
   const u = utilityOf(p, ps)
   const eng = engineerOf(p, ps)
@@ -714,11 +727,12 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps, t
 
   return (
     <>
+      {/* Unverified territory? The banner now ANSWERS the question itself:
+          one click asks Marion County's electric-territory GIS (see
+          TerritoryCheck.tsx / lib/territoryLookup.ts), a second click writes
+          utility + verify-step in one update. */}
       {needsVerify(p, ps) && (
-        <div className="banner">
-          <Icon name="warning" size={15} color="var(--warn)" /> Territory not verified — confirm SECO vs Duke before
-          applying (subdivision: {p.subdivision}). Set the utility in Settings.
-        </div>
+        <TerritoryCheck p={p} utilities={utilities} applyVerifiedUtility={applyVerifiedUtility} />
       )}
 
       {/* Read-only config summary — edit these in Settings. */}

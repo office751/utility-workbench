@@ -357,6 +357,39 @@
   white-space: nowrap;
 }
 
+/* Territory check (TerritoryCheck.tsx) — the county-GIS lookup that lives
+   INSIDE the "territory not verified" warning banner. */
+.banner .tc-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.banner .tc-result {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+  line-height: 1.5;
+}
+/* The "you're near the seam" note — calmer panel-on-banner, not more red. */
+.banner .tc-caution {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  font-size: calc(13px * var(--font-scale));
+  color: var(--text);
+}
+/* The commit button gets the accent so the eye lands on the payoff. */
+button.contact.tc-apply {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
 /* settings row: utility / OH-UG / engineer */
 .settings {
   display: flex;

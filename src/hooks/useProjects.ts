@@ -27,6 +27,7 @@ import type {
   Stream,
   Task,
   TemplateOverride,
+  Utility,
   WorkbenchState,
 } from '../types'
 import { buildInitialState, emptyProjectState, inferPermitSteps, seedStateFor } from '../data/seed'
@@ -666,6 +667,37 @@ export function useProjects() {
   }
 
   /**
+   * 🗺️ The Territory-check button's "Set SECO/DUKE + mark verified": write the
+   * looked-up utility AND check the electric 'verify' step in ONE state update
+   * (two separate setField + toggleStep calls would clobber each other — same
+   * lesson as markApplied above). The step note records WHERE the answer came
+   * from ("County GIS · Duke Energy · 7/14/2026") so a verified utility is
+   * never a mystery later.
+   */
+  function applyVerifiedUtility(id: number, code: Utility, providerName: string) {
+    setState((prev) => {
+      const cur = prev.projects[id] ?? emptyProjectState()
+      const electric = {
+        ...cur.steps.electric,
+        verify: {
+          ...cur.steps.electric.verify,
+          done: true,
+          date: new Date().toLocaleDateString(),
+          doneAt: new Date().toISOString(),
+          note: `County GIS · ${providerName} · ${new Date().toLocaleDateString()}`,
+        },
+      }
+      return {
+        ...prev,
+        projects: {
+          ...prev.projects,
+          [id]: { ...cur, electricCo: code, steps: { ...cur.steps, electric } },
+        },
+      }
+    })
+  }
+
+  /**
    * ⏩ "Catch up": mark several EARLIER checklist steps done — or undo exactly
    * that — in ONE state update. This is the writer behind the catch-up row on
    * checklists (Checklist.tsx); WHICH steps qualify is decided by the pure
@@ -1272,6 +1304,7 @@ export function useProjects() {
     getProjectState,
     toggleStep,
     markApplied,
+    applyVerifiedUtility,
     catchUpSteps,
     setClosingStep,
     setStepNote,
