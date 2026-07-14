@@ -130,7 +130,7 @@ function ProjectList({ projects, onSelect, onAdd, onBatchApply, onStatusReport, 
       status: permitStatus(p, ps),
       // A house under contract isn't "completed" until its closing checklist
       // is walked — keep it visible under the Hide-completed filter.
-      allDone: cells.every((c) => c.state === 'done') && !closingPending(ps),
+      allDone: cells.every((c) => c.state === 'done') && !closingPending(p, ps),
       anyFire: cells.some((c) => c.state === 'fire') || closingFire,
       next: so ? `Shut off / transfer electric by ${so.date}` : nextLine(p, ps, cells),
     }

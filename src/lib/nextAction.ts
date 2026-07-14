@@ -195,17 +195,32 @@ export function closingStepDone(ps: ProjectState, stepId: string): boolean {
   return Boolean(ps.closingSteps?.[stepId]?.done)
 }
 
-/** Checked/total across the EFFECTIVE closing list (owner override aware) —
- *  powers the "3/8" progress on the Closing card and header pill. */
-export function closingProgress(ps: ProjectState): { done: number; total: number } {
-  const steps = closingSteps()
+/**
+ * The effective closing list for THIS house. Starts from the (possibly
+ * owner-edited) closing list, then resolves the water variant the same way
+ * the water checklist does: the 'wstop' MCU-disconnect step exists only when
+ * the builder actually holds a municipal water account (City / CityWM) — a
+ * private well has no account to disconnect, so the step (and its slot in
+ * the n/n progress) simply isn't there. Matched by id, so an owner-renamed
+ * 'wstop' keeps the behavior.
+ */
+export function closingStepsFor(p: Project, ps: ProjectState): StepDef[] {
+  const source = waterSourceOf(p, ps)
+  const municipal = source === 'City' || source === 'CityWM'
+  return closingSteps().filter((s) => municipal || s.id !== 'wstop')
+}
+
+/** Checked/total across THIS house's effective closing list — powers the
+ *  "3/8" progress on the Closing card and header pill. */
+export function closingProgress(p: Project, ps: ProjectState): { done: number; total: number } {
+  const steps = closingStepsFor(p, ps)
   return { done: steps.filter((s) => closingStepDone(ps, s.id)).length, total: steps.length }
 }
 
 /** Under contract with closing steps still unchecked — the working state. */
-export function closingPending(ps: ProjectState): boolean {
+export function closingPending(p: Project, ps: ProjectState): boolean {
   if (!ps.underContract) return false
-  const { done, total } = closingProgress(ps)
+  const { done, total } = closingProgress(p, ps)
   return done < total
 }
 

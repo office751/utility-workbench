@@ -7,7 +7,7 @@ change a rule on purpose, change its test AND this doc in the same commit;
 if a test fails and you didn't mean to change behavior, your change is wrong,
 not the test.
 
-Written July 2026 as part of the brains-coverage pass. Tests: 168 across 14
+Written July 2026 as part of the brains-coverage pass. Tests: 169 across 14
 files (`npx vitest run`, ~350 ms).
 
 ## Global invariants (break these and real houses get hurt)
@@ -147,9 +147,14 @@ files (`npx vitest run`, ~350 ms).
   `'closing'`. Rules: `closingStepDone` is the ONLY reader — the `'xfer'`
   step ("account transferred / shut off") MIRRORS `ps.transferred` (the
   field shutoff.ts reads) instead of living in the bucket, one source of
-  truth. `closingPending` only while `underContract` with steps left.
-  `closingNeedsAction` = shut-off deadline ≤ 10 days (the threshold that
-  moved here from electric).
+  truth. `closingStepsFor` resolves the per-house variant: **`'wstop'` (MCU
+  water disconnect) exists only for municipal water (City/CityWM)** — a well
+  has no account to disconnect, so the step and its slot in n/n progress
+  vanish (id-matched, so it survives an owner rename). `closingPending` only
+  while `underContract` with steps left. `closingNeedsAction` = shut-off
+  deadline ≤ 10 days (the threshold that moved here from electric). UI note:
+  the Overview's alerts card hides `shutoff` items — the Closing card beside
+  it shows the same countdown (Today still alerts).
 - **Permit**: `corrections` skipped in the walk; `issued` checked = done even
   if earlier boxes weren't ticked (believe the county). `permitNeedsAction`
   only while WE are responsible (`Owner`/`GC` lots are tracked, not on us).

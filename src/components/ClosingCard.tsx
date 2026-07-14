@@ -21,7 +21,7 @@
 import { useState } from 'react'
 import type { Project, ProjectState, TemplateOverride } from '../types'
 import { type StepDef, closingSteps, isStepListCustomized } from '../data/lifecycles'
-import { closingProgress, closingStepDone, utilityOf, waterSourceOf } from '../lib/nextAction'
+import { closingProgress, closingStepDone, closingStepsFor, utilityOf } from '../lib/nextAction'
 import { shutoffFor } from '../lib/shutoff'
 import { ELECTRIC_DISCONNECT, MCU_WATER_DISCONNECT, waterDisconnectDraft } from '../data/disconnect'
 import { confirmSend } from '../lib/confirmSend'
@@ -41,19 +41,17 @@ interface Props {
 }
 
 function ClosingCard({ project: p, ps, setField, setClosingStep, templates, setStepList, resetStepList }: Props) {
-  const steps = closingSteps()
-  const { done, total } = closingProgress(ps)
+  // THIS house's effective list — a well house has no 'wstop' step at all
+  // (nothing to disconnect), so its checklist and n/n progress are one shorter.
+  const steps = closingStepsFor(p, ps)
+  const { done, total } = closingProgress(p, ps)
   const shutoff = shutoffFor(ps)
   const [editing, setEditing] = useState(false)
   const [discBusy, setDiscBusy] = useState(false)
 
-  // Which inline actions apply to THIS house (same rules the stream tabs used):
-  // stop-service link exists for SECO/Duke only; MCU closeout only when the
-  // builder actually holds a municipal water account.
+  // Stop-service link exists for SECO/Duke only (Clay/custom = phone call).
   const u = utilityOf(p, ps)
   const disc = u ? ELECTRIC_DISCONNECT[u] : undefined
-  const source = waterSourceOf(p, ps)
-  const municipal = source === 'City' || source === 'CityWM'
 
   /** Open the MCU disconnect-request email (moved from the Water tab). A
    *  mailto can't attach files, so the confirm dialog spells out what to
@@ -88,7 +86,9 @@ function ClosingCard({ project: p, ps, setField, setClosingStep, templates, setS
         </span>
       )
     }
-    if (stepId === 'wstop' && municipal) {
+    // 'wstop' only exists in the effective list for municipal-water houses
+    // (closingStepsFor filtered it otherwise), so no extra gate needed here.
+    if (stepId === 'wstop') {
       return (
         <span className="cc-actions">
           <a className="contact" href={MCU_WATER_DISCONNECT.formUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
@@ -162,7 +162,10 @@ function ClosingCard({ project: p, ps, setField, setClosingStep, templates, setS
       {editing && (
         <StepEditor
           streamLabel="Closing"
-          current={steps}
+          // Edit the GLOBAL list (unfiltered) — `steps` above is this house's
+          // variant (wstop dropped on wells); saving that would delete the MCU
+          // step for every house.
+          current={closingSteps()}
           isCustomized={isStepListCustomized('closing')}
           onSave={(next) => {
             setStepList('closing', next)

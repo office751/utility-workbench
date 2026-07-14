@@ -267,7 +267,7 @@ function Detail(props: Props) {
               {p.listStatus === 'Hold' && <span className="prow-pill hold">HOLD</span>}
               {ps.underContract && p.listStatus !== 'CO' && (
                 <span className="prow-pill uc" title="Under contract — closing checklist on the Overview">
-                  UNDER CONTRACT · {closingProgress(ps).done}/{closingProgress(ps).total}
+                  UNDER CONTRACT · {closingProgress(p, ps).done}/{closingProgress(p, ps).total}
                 </span>
               )}
               {ps.isInvestorProject ? (
@@ -385,10 +385,14 @@ function Detail(props: Props) {
           {/* ⚠ THIS house's alerts (deadlines + gone-quiet stalls). The slimmed
               Today screen only carries hard deadlines now — the full picture
               for a house lives here, next to the work. Click one to jump to
-              the stream it's about. */}
-          {props.alerts.length > 0 && (
+              the stream it's about. Shut-off items are EXCLUDED: the Closing
+              card right below shows the same countdown, and saying it twice on
+              one screen read as noise (Adam, July 2026). Today still alerts. */}
+          {(() => {
+            const shown = props.alerts.filter((a) => a.kind !== 'shutoff')
+            return shown.length > 0 && (
             <div className="pd-alerts">
-              {props.alerts.map((a, i) => (
+              {shown.map((a, i) => (
                 <button
                   key={i}
                   className={`pd-alert pd-alert--${a.severity}`}
@@ -405,7 +409,7 @@ function Detail(props: Props) {
                 </button>
               ))}
             </div>
-          )}
+          )})()}
 
           {/* 🏁 The sale workflow. The card appears once the house is marked
               under contract (or already has a closing date from before this

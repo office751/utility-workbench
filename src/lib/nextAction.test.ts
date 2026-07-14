@@ -4,6 +4,7 @@ import {
   closingPending,
   closingProgress,
   closingStepDone,
+  closingStepsFor,
   confirmedUtility,
   electricNeedsAction,
   isElectricDone,
@@ -102,30 +103,42 @@ describe('closing helpers — the sale workflow bucket', () => {
   })
 
   it('progress counts the effective list, xfer included via transferred', () => {
+    const city = makeProject({ waterSource: 'CityWM' }) // municipal → full 8 steps
     const ps = emptyProjectState()
-    expect(closingProgress(ps)).toEqual({ done: 0, total: 8 })
+    expect(closingProgress(city, ps)).toEqual({ done: 0, total: 8 })
     ps.closingSteps = { contract: { done: true }, cdate: { done: true } }
     ps.transferred = true
-    expect(closingProgress(ps)).toEqual({ done: 3, total: 8 })
+    expect(closingProgress(city, ps)).toEqual({ done: 3, total: 8 })
+  })
+
+  it("a well house has NO 'wstop' step — nothing to disconnect", () => {
+    const well = makeProject({ waterSource: 'Well' })
+    const ps = emptyProjectState()
+    expect(closingStepsFor(well, ps).some((s) => s.id === 'wstop')).toBe(false)
+    expect(closingProgress(well, ps)).toEqual({ done: 0, total: 7 })
+    // …and a user override of the source wins over the roster, as everywhere.
+    ps.waterSource = 'City'
+    expect(closingProgress(well, ps).total).toBe(8)
   })
 
   it('follows an owner-edited closing list (override key "closing")', () => {
     applyStepOverrides({ closing: [{ id: 'a', label: 'A' }, { id: 'xfer', label: 'X' }] })
     const ps = emptyProjectState()
     ps.transferred = true
-    expect(closingProgress(ps)).toEqual({ done: 1, total: 2 })
+    expect(closingProgress(makeProject({ waterSource: 'City' }), ps)).toEqual({ done: 1, total: 2 })
   })
 
   it('pending ONLY while under contract with steps left', () => {
+    const city = makeProject({ waterSource: 'City' })
     const ps = emptyProjectState()
-    expect(closingPending(ps)).toBe(false) // not under contract → never pending
+    expect(closingPending(city, ps)).toBe(false) // not under contract → never pending
     ps.underContract = true
-    expect(closingPending(ps)).toBe(true)
+    expect(closingPending(city, ps)).toBe(true)
     ps.closingSteps = {}
     for (const id of ['contract', 'cdate', 'walkthrough', 'estop', 'wstop', 'handoff', 'deedclosed'])
       ps.closingSteps[id] = { done: true }
     ps.transferred = true // = 'xfer'
-    expect(closingPending(ps)).toBe(false) // all 8 done
+    expect(closingPending(city, ps)).toBe(false) // all 8 done
   })
 
   it('fires when the shut-off deadline is 10 days out or closer', () => {
