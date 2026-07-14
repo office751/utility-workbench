@@ -6,7 +6,7 @@
  * drives the "expiring soon" alerts on the Permit tab.
  */
 import type { Project, ProjectState } from '../types'
-import { PERMIT_DATES } from '../data/permitDates'
+import { permitInfoOf } from '../data/permitDates'
 
 export interface ExpiryInfo {
   /** The expiration date, formatted for display. */
@@ -15,9 +15,12 @@ export interface ExpiryInfo {
   daysLeft: number
 }
 
-/** The effective expiration date: a typed-in value wins over the live data. */
+/** The effective expiration date: typed-in value → county (live scanner data
+ *  over the baked snapshot — see permitInfoOf) → none. Blanking the typed
+ *  field to '' still silences the alert (the ?? keeps ''), even when the
+ *  county reports a date — the deliberate escape hatch. */
 export function permitExpiresOf(p: Project, ps: ProjectState): string {
-  return ps.permitExpiresDate ?? PERMIT_DATES[p.permit]?.expires ?? ''
+  return ps.permitExpiresDate ?? permitInfoOf(p.permit)?.expires ?? ''
 }
 
 /** Days until the permit expires, or null if no expiration date is known. */

@@ -18,6 +18,7 @@ import './App.css'
 import type { Stream } from './types'
 import { useProjects } from './hooks/useProjects'
 import { applyStepOverrides } from './data/lifecycles'
+import { applyPortalDates } from './data/permitDates'
 import { supabase, hasSupabase } from './lib/supabase'
 import { buildActionCenter } from './lib/actionCenter'
 import { daysUntilDue, dueSoonTasks, waitingOnTasks } from './lib/tasks'
@@ -156,6 +157,11 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
   // Sync the global step-list overrides into the lifecycles resolver BEFORE any
   // child computes a next-action / checklist (pure step getters read this).
   applyStepOverrides(state.stepOverrides)
+  // Same pattern for the scanner-recorded LIVE county permit dates: sync them
+  // into the permitDates resolver so expiry countdowns / county status / the
+  // permit-status chips all read tonight's portal data, not just the baked
+  // snapshot. (migrate() also applies them on load, before first render.)
+  applyPortalDates(state.portalDates)
 
   // Dark mode (persists per device — see hooks/useTheme.ts).
   const { theme, toggle: toggleTheme } = useTheme()

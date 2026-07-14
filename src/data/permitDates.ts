@@ -17,6 +17,45 @@ export interface PermitInfo {
   expires: string // YYYY-MM-DD, or '' if not issued
 }
 
+/* ===================================================================
+   LIVE PORTAL DATES (July 2026)
+   The nightly permit scanner now records each permit's summary fields
+   (status / issue date / EXPIRE date) into the saved blob
+   (WorkbenchState.portalDates) on every run — so an extension approved at
+   the county updates the app's expiry countdown by itself, no snapshot
+   regeneration needed. The static PERMIT_DATES below stays as the baked
+   fallback (and the scanner's day-one comparison baseline).
+
+   Same module-global pattern as lifecycles.ts step overrides: App.tsx (and
+   migrate(), which runs before first render) call applyPortalDates() so the
+   pure getters everywhere — permitExpiry, nextAction, seed's checklist
+   inference — see live data without threading state through every signature.
+   =================================================================== */
+let LIVE: Record<string, Partial<PermitInfo>> = {}
+
+/** Sync the module copy from saved state. Call before anything reads dates. */
+export function applyPortalDates(d: Record<string, Partial<PermitInfo>> | undefined): void {
+  LIVE = d ?? {}
+}
+
+/**
+ * The EFFECTIVE county record for a permit: live scanner data merged over the
+ * baked snapshot, FIELD BY FIELD with non-empty-wins. A live field the scanner
+ * couldn't read ('' or absent) must never erase baked knowledge — same
+ * fail-open-toward-county-data bias as permitStatus. Returns undefined only
+ * when neither source knows the permit at all.
+ */
+export function permitInfoOf(permit: string): PermitInfo | undefined {
+  const live = LIVE[permit]
+  const base = PERMIT_DATES[permit]
+  if (!live) return base
+  return {
+    status: live.status || base?.status || '',
+    issued: live.issued || base?.issued || '',
+    expires: live.expires || base?.expires || '',
+  }
+}
+
 export const PERMIT_DATES: Record<string, PermitInfo> = {
   '2025020809': { status: 'Issued', issued: '2025-08-21', expires: '2026-08-10' },
   '2025070284': { status: 'Issued', issued: '2025-12-29', expires: '2026-07-06' },

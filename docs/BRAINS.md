@@ -7,7 +7,7 @@ change a rule on purpose, change its test AND this doc in the same commit;
 if a test fails and you didn't mean to change behavior, your change is wrong,
 not the test.
 
-Written July 2026 as part of the brains-coverage pass. Tests: 159 across 14
+Written July 2026 as part of the brains-coverage pass. Tests: 163 across 14
 files (`npx vitest run`, ~350 ms).
 
 ## Global invariants (break these and real houses get hurt)
@@ -50,11 +50,37 @@ files (`npx vitest run`, ~350 ms).
 
 ## permitExpiry.ts — permit expiration countdown
 
-- Effective date precedence: **typed-in `ps.permitExpiresDate` → county
-  snapshot (`data/permitDates.ts`) → none**.
+- Effective date precedence: **typed-in `ps.permitExpiresDate` → county data
+  (live scanner record over the baked snapshot — see below) → none**.
 - **Escape hatch (deliberate):** blanking the field to `''` silences the alert
   for that house even when county data exists (`''` is a value, `??` keeps it).
 - "Expiring soon" = **within 7 days** (7 counts, 8 doesn't) or already expired.
+
+## permitDates.ts — LIVE county dates + expiry-change detection (July 2026)
+
+- The nightly scanner (scanner/scan.mjs --write) reads each permit's portal
+  SUMMARY (status / issue date / expire date) and records it in
+  `WorkbenchState.portalDates`, keyed by permit #. So an **extension approved
+  at the county moves the app's expiry countdown by itself** — no snapshot
+  regeneration, no redeploy.
+- `permitInfoOf(permit)` is the single resolver every consumer uses
+  (permitExpiry, nextAction's issued/status/permitStatus, seed's checklist
+  inference): **live over baked, FIELD BY FIELD, non-empty-wins** — an empty
+  live field (the scanner couldn't read it) never erases baked knowledge.
+- Module-global synced via `applyPortalDates()` — called by migrate() (before
+  checklist inference) and App.tsx each render. Same pattern and the SAME
+  TESTING GOTCHA as lifecycles' step overrides: reset with
+  `applyPortalDates(undefined)` in `afterEach`.
+- **Expiry-change events**: the scanner compares tonight's expire date against
+  the last known one (previous recording, else the baked snapshot on day one)
+  and raises a permit 🔔 notification "expiration date CHANGED: old → new".
+  Never-guess rule: a first sighting or an unparseable read is NOT a change —
+  both dates must exist and differ. Event notifications use the
+  **`portal-evt:` sourceKey prefix** so the scanner's `portal:`-prefix prune
+  reconcile can never clear them; they live until dismissed (history kept).
+- Scanner recording is fail-quiet: if the summary panel never rendered
+  (`summaryOk` false), that permit's record is left completely untouched —
+  same never-wipe rule as the Holds/Inspections tabs.
 
 ## staleness.ts — "has this project gone quiet?"
 
@@ -230,6 +256,8 @@ distinct projects, `fire` = any attention item in that stream.
 - `data/lifecycles.ts` keeps owner step-edits in a **module-global**
   (`applyStepOverrides`). Any test that customizes a list MUST reset with
   `applyStepOverrides(undefined)` in `afterEach` or it poisons later tests.
+  **Same for `data/permitDates.ts`** live dates: reset with
+  `applyPortalDates(undefined)`.
 - Clock-dependent brains are tested with `vi.useFakeTimers()` +
   `vi.setSystemTime(...)` — never against the real clock.
 - `src/lib/testUtils.ts` builds fixtures that stay OUT of the data files

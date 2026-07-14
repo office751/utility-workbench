@@ -14,7 +14,7 @@
 import type { Project, ProjectState, StepState, WorkbenchState } from '../types'
 import { PROJECTS, WELL_INSTALLED } from './projects'
 import { defaultSelections } from './selections'
-import { PERMIT_DATES } from './permitDates'
+import { permitInfoOf } from './permitDates'
 import {
   ELECTRIC_STEPS,
   PERMIT_STEPS,
@@ -43,7 +43,7 @@ export function emptyProjectState(): ProjectState {
  * starting point you can adjust per project.
  */
 export function inferPermitSteps(permit: string): Record<string, StepState> {
-  const info = PERMIT_DATES[permit]
+  const info = permitInfoOf(permit)
   if (info) {
     const stamp: StepState = { done: true, date: '(county)' }
     return info.issued

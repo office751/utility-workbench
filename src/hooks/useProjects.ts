@@ -42,6 +42,7 @@ import { deleteProjectFile, uploadModelFile, uploadProjectFile } from '../lib/fi
 import { mergeWorkbench } from '../lib/mergeState'
 import { applyFactsPatch, hasManualPermitEdits } from '../lib/projectFacts'
 import { CAUGHT_UP_DATE } from '../lib/catchup'
+import { applyPortalDates } from '../data/permitDates'
 
 /** The key our data is filed under in the browser's localStorage. */
 const STORAGE_KEY = 'isc_workbench_v1'
@@ -122,6 +123,11 @@ function normalize(ps: ProjectState): ProjectState {
  * older version?" — this is ours.)
  */
 export function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
+  // Live county permit dates (scanner-recorded) feed the pure date getters via
+  // a module global — sync it BEFORE the inferPermitSteps loop below, so a
+  // permit the county newly reports as issued completes its checklist on this
+  // very load (App.tsx re-applies every render for realtime updates).
+  applyPortalDates(parsed.portalDates)
   const savedRoster = Array.isArray(parsed.roster) ? parsed.roster : PROJECTS
   // FACT CORRECTIONS: the saved roster wins over PROJECTS, so typos found in
   // the original import have to be patched here too (idempotent).
@@ -217,6 +223,15 @@ export function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
     // and realtime sync strips it and writes the blob back empty, so your custom
     // materials vanish on reload (the blob-clobber failure mode). Array-guarded.
     customOrderCategories: Array.isArray(parsed.customOrderCategories) ? parsed.customOrderCategories : [],
+    // Live county permit dates recorded by the nightly scanner. Like scanMeta
+    // above: MUST be carried through migrate, or every app load/realtime sync
+    // strips the scanner's record and writes the blob back without it (the
+    // blob-clobber failure mode) — and expiry-change detection loses its
+    // baseline. Shape-guarded; absent until the scanner's first recording run.
+    portalDates:
+      parsed.portalDates && typeof parsed.portalDates === 'object' && !Array.isArray(parsed.portalDates)
+        ? parsed.portalDates
+        : undefined,
   }
 
   // ONE-TIME (June 2026): the scanner used to turn inspection RESULTS into

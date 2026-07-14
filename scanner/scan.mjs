@@ -17,6 +17,7 @@ import { chromium } from 'playwright'
 import { createClient } from '@supabase/supabase-js'
 import 'dotenv/config'
 import fs from 'node:fs'
+import { expiryChange, parseSummary, readBakedDates } from './portal-dates.mjs'
 
 const BASE = 'https://selfservice.marionfl.org/energov_prod/selfservice'
 const PROFILE_DIR = process.env.PROFILE_DIR || './profile'
@@ -144,7 +145,24 @@ async function scrapePermit(page, guid) {
     .waitForFunction(() => /Permit Number/i.test(document.body.innerText), { timeout: 30000 })
     .then(() => true)
     .catch(() => false)
-  if (!loaded) return { holds: [], rejections: [], fyi: [], holdsOk: false, inspOk: false, tableCount: 0 }
+  if (!loaded)
+    return { holds: [], rejections: [], fyi: [], holdsOk: false, inspOk: false, tableCount: 0, summary: null, summaryOk: false }
+
+  // SUMMARY (the landing view): status / issue date / EXPIRE date — read
+  // BEFORE any tab click, because the SPA swaps the panel out. GOTCHA (cost a
+  // debug pass): the summary LABELS render before their VALUES fill in, so
+  // waiting for "Expire Date:" alone reads an all-empty panel. Poll the parse
+  // until the Status value is in (every permit has one — labels-only parses
+  // as ''), same stability idea as readTab's row polling. If values never
+  // fill, we parse empties — and the sync's non-empty-wins recording plus the
+  // never-guess change rule mean an empty read can't erase or false-flag
+  // anything.
+  let summary = { status: '', issued: '', expires: '', found: false }
+  for (let i = 0; i < 20; i++) {
+    summary = parseSummary(await page.evaluate(() => document.body.innerText))
+    if (summary.status) break
+    await page.waitForTimeout(500)
+  }
 
   // HOLDS tab — holds + FYI notes live here. (Every permit has at least the
   // standard "Final Hold", so this table is reliably present.)
@@ -164,6 +182,8 @@ async function scrapePermit(page, guid) {
     holdsOk: holdsTab.ok,
     inspOk: inspTab.ok,
     tableCount: holdsTab.tables.length + inspTab.tables.length,
+    summary,
+    summaryOk: summary.found,
   }
 }
 
@@ -324,10 +344,61 @@ async function syncToWorkbench(results) {
     ps.inspections = kept
   }
 
+  // --- LIVE PORTAL DATES + expiration-change detection (July 2026) ---
+  // Record each successfully-read permit's summary dates into
+  // blob.portalDates (the app reads them via data/permitDates.ts
+  // permitInfoOf — live over the baked snapshot). Then compare tonight's
+  // EXPIRE date against the last known one — the previous recording, or the
+  // baked snapshot on day one — and raise a permit notification when it
+  // moved (extension approved, re-issue, …). Notifications use the
+  // "portal-evt:" sourceKey prefix: they're EVENT history, so the
+  // "portal:"-prefix prune above can never reconcile them away; they live
+  // until Adam dismisses them (and stay in the bell's history after).
+  const baked = readBakedDates(new URL('../src/data/permitDates.ts', import.meta.url))
+  const portalDates = { ...(blob.portalDates || {}) }
+  let dRecorded = 0, dChanges = 0
+  for (const r of results) {
+    if (!r.summaryOk) continue // summary never rendered → leave this permit's record alone
+    const prev = portalDates[r.permit] || {}
+    const prevExpires = prev.expires || baked[r.permit]?.expires || ''
+    const change = expiryChange(prevExpires, r.summary.expires)
+    if (change) {
+      dChanges++
+      console.log(`   📅 EXPIRY CHANGE ${r.permit}: ${change.from} → ${change.to}`)
+      const proj = blob.roster.find((x) => x.permit === r.permit)
+      const ps = proj && blob.projects[proj.id]
+      if (ps) {
+        const key = `portal-evt:${r.permit}:expires:${change.from}->${change.to}`
+        ps.notifications = ps.notifications || []
+        // De-dupe on the exact transition (dismissed ones count — don't re-nag).
+        if (!ps.notifications.some((n) => n.sourceKey === key)) {
+          ps.notifications.push({
+            sourceKey: key,
+            text: `Permit expiration date CHANGED at the county: ${change.from} → ${change.to} (extension approved? re-issue?)`,
+            date: new Date().toLocaleDateString(),
+            dismissed: false,
+            createdAt: new Date().toISOString(),
+          })
+        }
+      }
+    }
+    // Record field-wise with non-empty-wins, so one bad read never erases a
+    // date we knew (mirrors the app's permitInfoOf bias).
+    portalDates[r.permit] = {
+      status: r.summary.status || prev.status || '',
+      issued: r.summary.issued || prev.issued || '',
+      expires: r.summary.expires || prev.expires || '',
+      checkedAt: new Date().toISOString(),
+    }
+    dRecorded++
+  }
+  blob.portalDates = portalDates
+
   console.log('\nWorkbench sync:')
   console.log(`   tasks:         +${added} new, ${updated} updated, ${cleared} cleared`)
   console.log(`   inspections:   +${iAdded} new, ${iUpdated} updated, ${iCleared} cleared`)
   console.log(`   notifications: +${nAdded} new, ${nCleared} cleared`)
+  console.log(`   portal dates:  ${dRecorded} recorded, ${dChanges} expiry change${dChanges === 1 ? '' : 's'}`)
   if (!doWrite) return console.log('\n(PREVIEW — nothing written. Re-run with  --write  to apply.)\n')
 
   // Heartbeat for the app: stamp when this scan last WROTE, so 🏠 Today can

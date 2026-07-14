@@ -52,7 +52,7 @@ function firstPending(
   return { key: 'done', label: doneLabel }
 }
 import { PERMIT_PORTALS, PROJECT_FOLDERS } from '../data/sharepoint'
-import { PERMIT_DATES } from '../data/permitDates'
+import { permitInfoOf } from '../data/permitDates'
 import { shutoffFor } from './shutoff'
 
 /**
@@ -256,14 +256,15 @@ export function permitPortalOf(p: Project, ps: ProjectState): string {
   return ps.permitUrl ?? PERMIT_PORTALS[p.permit] ?? ''
 }
 
-/** The effective issued date: a typed-in value wins over the live portal data. */
+/** The effective issued date: a typed-in value wins over the county data
+ *  (live scanner record over the baked snapshot — see permitInfoOf). */
 export function permitIssuedOf(p: Project, ps: ProjectState): string {
-  return ps.permitIssuedDate ?? PERMIT_DATES[p.permit]?.issued ?? ''
+  return ps.permitIssuedDate ?? permitInfoOf(p.permit)?.issued ?? ''
 }
 
 /** The county's authoritative status string (e.g. "Issued", "In Review"), if known. */
 export function permitCountyStatusOf(p: Project): string {
-  return PERMIT_DATES[p.permit]?.status ?? ''
+  return permitInfoOf(p.permit)?.status ?? ''
 }
 
 /** Report the next REQUIRED permit milestone. */
@@ -330,6 +331,6 @@ export function permitStatus(p: Project, ps: ProjectState): PermitStatus {
   const who = permitResponsibleOf(ps)
   if (who === 'Owner' || who === 'GC') return 'not-ours'
   const anyStepDone = Object.values(ps.steps.permit).some((s) => s?.done)
-  if (anyStepDone || p.permit !== '' || PERMIT_DATES[p.permit]) return 'in-review'
+  if (anyStepDone || p.permit !== '' || permitInfoOf(p.permit)) return 'in-review'
   return 'not-applied'
 }

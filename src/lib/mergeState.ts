@@ -121,5 +121,9 @@ export function mergeWorkbench(base: WorkbenchState, local: WorkbenchState, remo
     // the local side's pending "Scan now" request in that case is correct
     // (a completed scan is exactly what clears the request everywhere).
     scanMeta: pick3(base.scanMeta, local.scanMeta, remote.scanMeta),
+    // Live county permit dates recorded by the nightly scanner, keyed by
+    // permit # → per-key 3-way like every other map. Only the scanner writes
+    // these, so conflicts are rare; remote-wins on one is the fresher scan.
+    portalDates: rec((s) => s.portalDates),
   }
 }

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { permitExpiresOf, permitExpiryFor, permitExpiringSoon } from './permitExpiry'
 import { emptyProjectState } from '../data/seed'
 import { makeProject } from './testUtils'
-import { PERMIT_DATES } from '../data/permitDates'
+import { PERMIT_DATES, applyPortalDates, permitInfoOf } from '../data/permitDates'
 
 // permitExpiry drives the "permit expiring" alerts — a lapsed building permit
 // stalls the whole house, so the day math and the data precedence both matter.
@@ -33,6 +33,49 @@ describe('permitExpiresOf — where the expiration date comes from', () => {
     const ps = emptyProjectState()
     expect(permitExpiresOf(p, ps)).toBe('')
     expect(permitExpiryFor(p, ps)).toBeNull()
+  })
+})
+
+// The LIVE layer (July 2026): the nightly scanner records each permit's portal
+// dates into the blob (WorkbenchState.portalDates); applyPortalDates() feeds
+// them to the pure getters. The rule that matters: live data wins over the
+// baked snapshot FIELD BY FIELD, but an empty live field never erases baked
+// knowledge — and the typed-in override still beats both.
+describe('live portal dates (applyPortalDates / permitInfoOf)', () => {
+  // Module-global, same gotcha as lifecycles' applyStepOverrides: ALWAYS
+  // reset in afterEach or the live map poisons later tests.
+  afterEach(() => applyPortalDates(undefined))
+
+  const permit = Object.keys(PERMIT_DATES)[0]
+
+  it('a live expire date (extension approved) beats the baked snapshot', () => {
+    applyPortalDates({ [permit]: { expires: '2027-05-01' } })
+    const p = makeProject({ permit })
+    expect(permitExpiresOf(p, emptyProjectState())).toBe('2027-05-01')
+  })
+
+  it('an EMPTY live field falls back to the baked value (never erases)', () => {
+    // The scanner records what it could read; a field it couldn't parse is ''.
+    applyPortalDates({ [permit]: { status: 'Issued', expires: '' } })
+    expect(permitInfoOf(permit)?.expires).toBe(PERMIT_DATES[permit].expires)
+  })
+
+  it('the typed-in override still beats live data — and "" still silences', () => {
+    applyPortalDates({ [permit]: { expires: '2027-05-01' } })
+    const p = makeProject({ permit })
+    const ps = emptyProjectState()
+    ps.permitExpiresDate = '2026-12-31'
+    expect(permitExpiresOf(p, ps)).toBe('2026-12-31')
+    ps.permitExpiresDate = '' // the escape hatch survives the live layer
+    expect(permitExpiresOf(p, ps)).toBe('')
+  })
+
+  it('live data makes a permit UNKNOWN to the snapshot resolvable', () => {
+    // e.g. a brand-new permit the scanner saw before anyone regenerated the
+    // baked file — the app should still get its dates.
+    applyPortalDates({ 'X-NONE': { status: 'Issued', issued: '2026-07-01', expires: '2027-07-01' } })
+    const p = makeProject() // permit 'X-NONE'
+    expect(permitExpiresOf(p, emptyProjectState())).toBe('2027-07-01')
   })
 })
 

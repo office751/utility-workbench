@@ -8,6 +8,12 @@ project's `inspections` list (the app's 🔍 Inspections tab — reference info,
 deliberately NOT tasks); "Information…" rows become dismissible FYI
 notifications on the Permit tab.
 
+It also records each permit's **summary dates** (status / issue date / expire
+date) into the app (`portalDates` in the blob), and raises a 🔔 notification
+whenever the county's EXPIRATION date changes — an extension approved, a
+re-issue, anything (helpers + rules in `portal-dates.mjs`; the app-side spec
+is in docs/BRAINS.md under "permitDates.ts").
+
 It logs in the same way you do (Tyler ID) **once**, saves that browser session
 locally, and reuses it. No password is stored or typed by the script.
 

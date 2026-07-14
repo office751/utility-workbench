@@ -490,6 +490,23 @@ export interface WorkbenchState {
      */
     requestedAt?: string
   }
+  /**
+   * LIVE county permit dates, recorded by the nightly scanner (scan.mjs
+   * --write) from each permit's portal summary: status / issue date / expire
+   * date, keyed by permit number. The app reads these through
+   * data/permitDates.ts `permitInfoOf()` (live over the baked snapshot,
+   * field-wise non-empty-wins), so an EXTENSION approved at the county moves
+   * the expiry countdown by itself. The scanner also compares each night's
+   * expire date against the last known one and raises a permit notification
+   * when it changes (sourceKey prefix "portal-evt:" — event history, never
+   * pruned). Like scanMeta/assignees: MUST be carried through migrate() or
+   * every app save strips what the scanner recorded (the blob-clobber
+   * failure mode).
+   */
+  portalDates?: Record<
+    string,
+    { status?: string; issued?: string; expires?: string; checkedAt?: string }
+  >
 }
 
 /** One model's library page: its plan files + editable facts. */
