@@ -274,6 +274,26 @@ SECO disclaimed 14845 SW 77th Ave — Marion Oaks' western edge is Duke).
   no key. If the county ever renames layer fields (`PARCEL`, `SITUS_1`,
   `NAME`, `candidates[].score`), the parsers return null → honest misses.
 
+**Water flavor (July 2026)** — same pipeline, `kind: 'water'`, against the
+county's Utility Service Areas layer (MCU + ~24 private companies), always
+filtered `WATER='Yes'` (the layer mixes water and sewer rows).
+
+- **City-water lots ONLY** (`needsWaterVerify` in nextAction.ts): source
+  City/CityWM shows the check; Well and unset never do — a well lot has no
+  company to verify, and an unset source means well-vs-city itself is
+  undecided (Adam's rule).
+- **Territory ≠ availability.** A water territory is a franchise area, not a
+  main at the lot. The apply writes `waterCompanyId` + a provenance NOTE on
+  the 'cavail' step but NEVER checks it — confirming a main reaches the lot
+  stays a human call.
+- **`waterCompanyId: 'MCU'` sentinel** = "explicitly confirmed the default"
+  (types.ts). Resolves to no roster entry so every contact lookup falls
+  through to built-in MCU; `needsWaterVerify` counts it (or a done 'cavail',
+  or any roster id) as confirmed.
+- `waterProviderCode`: only /marion county utilities/i → 'MCU'; every other
+  company → null → one-click set only via a matching Settings roster entry
+  (kind 'water'), same never-guess rule as electric.
+
 ## mergeState.ts / migrate() — concurrency + shape changes
 
 - Two operators editing concurrently merge 3-way (never last-write-wins

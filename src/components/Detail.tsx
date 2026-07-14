@@ -31,6 +31,7 @@ import {
   isSepticDone,
   isWaterDone,
   needsVerify,
+  needsWaterVerify,
   nextElectricAction,
   closingProgress,
   nextPermitAction,
@@ -93,6 +94,9 @@ interface Updaters {
   /** 🗺️ Territory check's "Set X + mark verified" — utility + verify step in
    *  ONE update (see useProjects.applyVerifiedUtility / TerritoryCheck.tsx). */
   applyVerifiedUtility: (id: number, code: Utility, providerName: string) => void
+  /** 💧 Water flavor: waterCompanyId + provenance note on 'cavail' (which
+   *  stays UNCHECKED — availability is still a human call). */
+  applyVerifiedWaterUtility: (id: number, companyId: string, providerName: string) => void
   addProjectFiles: (id: number, files: File[]) => Promise<{ ok: number; failed: string[] }>
   removeProjectFile: (id: number, index: number) => void
   addOrder: (id: number, order: { category: string; status: OrderStatus; orderedOn?: string }) => void
@@ -732,7 +736,12 @@ function ElectricBody({
           TerritoryCheck.tsx / lib/territoryLookup.ts), a second click writes
           utility + verify-step in one update. */}
       {needsVerify(p, ps) && (
-        <TerritoryCheck p={p} utilities={utilities} applyVerifiedUtility={applyVerifiedUtility} />
+        <TerritoryCheck
+          p={p}
+          kind="electric"
+          utilities={utilities}
+          applyVerified={applyVerifiedUtility}
+        />
       )}
 
       {/* Read-only config summary — edit these in Settings. */}
@@ -852,7 +861,15 @@ function ElectricBody({
 
 /* ===================== WATER ===================== */
 
-function WaterBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps }: Props) {
+function WaterBody({
+  project: p,
+  ps,
+  toggleStep,
+  setStepNote,
+  catchUpSteps,
+  utilities,
+  applyVerifiedWaterUtility,
+}: Props) {
   const source = waterSourceOf(p, ps)
   const next = nextWaterAction(p, ps)
 
@@ -861,6 +878,18 @@ function WaterBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps }: Pr
       <p className="summary">
         <Icon name="water_drop" size={15} color="var(--info)" /> {WATER_LABEL[source]}
       </p>
+
+      {/* City-water lots with no confirmed company: same county-GIS check as
+          the Electric tab. Wells never see this — nothing to verify
+          (needsWaterVerify, Adam's rule July 2026). */}
+      {needsWaterVerify(p, ps) && (
+        <TerritoryCheck
+          p={p}
+          kind="water"
+          utilities={utilities}
+          applyVerified={applyVerifiedWaterUtility}
+        />
+      )}
 
       <GuideCallout id="manage-water" />
 

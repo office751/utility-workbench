@@ -44,13 +44,29 @@ const GEOCODER =
 /** Marion County's "Electric Service Areas" polygons (Duke / SECO / Clay /
  *  Ocala Electric / Central Florida Electric) — county-maintained, the same
  *  layer their own GIS portal serves. */
-const TERRITORY_LAYER =
+const ELECTRIC_LAYER =
   'https://services1.arcgis.com/oMGpBoZpy1Db2sAl/arcgis/rest/services/Electric_Service_Areas/FeatureServer/0/query'
+
+/** Marion County's "Utility Service Areas" polygons — territorial boundaries
+ *  for the water/sewer companies (MCU + the two dozen small private ones:
+ *  Sunshine, FGUA/Aqua, Windstream, …). Rows carry WATER/SEWER yes-no flags,
+ *  so the water lookup filters WATER='Yes'. NOTE: a water territory means
+ *  "this company's franchise area", NOT "there's a main at the lot" — that's
+ *  why the water flow never auto-checks the availability step. */
+const WATER_LAYER =
+  'https://services1.arcgis.com/oMGpBoZpy1Db2sAl/arcgis/rest/services/Utility_Service_Areas/FeatureServer/0/query'
+
+/** Which side of the house a lookup asks about. */
+export type TerritoryKind = 'electric' | 'water'
 
 /** Human fallback when the automated lookup can't answer — the county's own
  *  interactive map of the same layer. */
-export const TERRITORY_MAP_URL =
-  'https://data-marioncountyfl.opendata.arcgis.com/datasets/electric-service-areas/explore'
+export const TERRITORY_MAP_URLS: Record<TerritoryKind, string> = {
+  electric: 'https://data-marioncountyfl.opendata.arcgis.com/datasets/electric-service-areas/explore',
+  water: 'https://data-marioncountyfl.opendata.arcgis.com/datasets/utility-service-areas/explore',
+}
+/** Back-compat alias (the electric map) — prefer TERRITORY_MAP_URLS[kind]. */
+export const TERRITORY_MAP_URL = TERRITORY_MAP_URLS.electric
 
 /** Geocode candidates scoring below this are treated as "not found" — a wrong
  *  rooftop would silently verify the wrong utility ("can't tell" beats
@@ -127,34 +143,35 @@ export function geocodeUrl(address: string): string {
   return `${GEOCODER}?${q}`
 }
 
-/** Which provider's polygon contains this point? */
-export function territoryUrl(lon: number, lat: number): string {
+/** The point-in-territory query, shared by both kinds. The water layer mixes
+ *  water and sewer rows, so its query filters `WATER='Yes'`; the electric
+ *  layer is electric-only (where=1=1 keeps the param present and harmless). */
+function territoryQuery(kind: TerritoryKind, lon: number, lat: number, distance?: number): string {
   const q = new URLSearchParams({
     geometry: `${lon},${lat}`,
     geometryType: 'esriGeometryPoint',
     inSR: '4326',
     spatialRel: 'esriSpatialRelIntersects',
+    where: kind === 'water' ? "WATER='Yes'" : '1=1',
     outFields: 'NAME',
     returnGeometry: 'false',
     f: 'json',
   })
-  return `${TERRITORY_LAYER}?${q}`
+  if (distance) {
+    q.set('distance', String(distance))
+    q.set('units', 'esriSRUnit_Meter')
+  }
+  return `${kind === 'water' ? WATER_LAYER : ELECTRIC_LAYER}?${q}`
+}
+
+/** Which provider's polygon contains this point? */
+export function territoryUrl(lon: number, lat: number, kind: TerritoryKind = 'electric'): string {
+  return territoryQuery(kind, lon, lat)
 }
 
 /** Same layer, widened to a 1-mile ring — reveals a nearby territorial seam. */
-export function seamUrl(lon: number, lat: number): string {
-  const q = new URLSearchParams({
-    geometry: `${lon},${lat}`,
-    geometryType: 'esriGeometryPoint',
-    inSR: '4326',
-    spatialRel: 'esriSpatialRelIntersects',
-    distance: String(SEAM_METERS),
-    units: 'esriSRUnit_Meter',
-    outFields: 'NAME',
-    returnGeometry: 'false',
-    f: 'json',
-  })
-  return `${TERRITORY_LAYER}?${q}`
+export function seamUrl(lon: number, lat: number, kind: TerritoryKind = 'electric'): string {
+  return territoryQuery(kind, lon, lat, SEAM_METERS)
 }
 
 /** Pull {lon, lat, situs} out of a ParcelCentroids response — null when the
@@ -211,6 +228,17 @@ export function providerCode(name: string): Utility | null {
   return null
 }
 
+/**
+ * Water flavor of providerCode: the only built-in is Marion County Utilities.
+ * 'MCU' is the ProjectState.waterCompanyId sentinel for "explicitly confirmed
+ * the default" (see types.ts) — every other company returns null, and the UI
+ * offers a one-click set only when a matching Settings → Utility-companies
+ * roster entry exists (same never-guess rule as electric).
+ */
+export function waterProviderCode(name: string): string | null {
+  return /marion county utilities/i.test(name) ? 'MCU' : null
+}
+
 /** Lots with no assigned street number can't be geocoded — same test the
  *  rest of the app uses (nextAction.isTBD), local copy to stay import-light. */
 export function isLocatableAddress(address: string): boolean {
@@ -229,15 +257,21 @@ async function getJson(url: string): Promise<unknown> {
 /**
  * The whole pipeline: locate the lot (parcel first, address fallback), then
  * ask the county whose territory it's in, plus who else is within a mile.
+ * `kind` picks the layer: 'electric' (default) or 'water' (city-water lots;
+ * territory = franchise area, NOT main-at-the-lot — the availability call
+ * stays human).
  *
  * Never throws — every failure path returns {ok:false, reason} phrased for
  * direct display, because this runs from a button handler and "it broke"
  * banners help nobody.
  */
-export async function lookupTerritory(p: {
-  parcel: string
-  address: string
-}): Promise<TerritoryResult> {
+export async function lookupTerritory(
+  p: {
+    parcel: string
+    address: string
+  },
+  kind: TerritoryKind = 'electric',
+): Promise<TerritoryResult> {
   try {
     // ---- 1. locate: parcel number beats address (exact + works for TBD lots)
     let where: { lon: number; lat: number; matched: string } | null = null
@@ -258,12 +292,11 @@ export async function lookupTerritory(p: {
     }
 
     // ---- 2. whose polygon is the lot in?
-    const providers = parseProviders(await getJson(territoryUrl(where.lon, where.lat)))
+    const providers = parseProviders(await getJson(territoryUrl(where.lon, where.lat, kind)))
     if (providers.length === 0) {
       return {
         ok: false,
-        reason:
-          'The lot is outside every polygon on the county electric-territory layer — verify by phone.',
+        reason: `The lot is outside every polygon on the county ${kind}-territory layer — verify by phone.`,
       }
     }
     // Overlapping polygons at the point = the county data itself is ambiguous
@@ -281,7 +314,7 @@ export async function lookupTerritory(p: {
     // Best-effort: a failure here must not sink an already-solid answer.
     let neighbors: string[] = []
     try {
-      neighbors = parseProviders(await getJson(seamUrl(where.lon, where.lat))).filter(
+      neighbors = parseProviders(await getJson(seamUrl(where.lon, where.lat, kind))).filter(
         (n) => n !== providers[0],
       )
     } catch {
@@ -291,7 +324,7 @@ export async function lookupTerritory(p: {
     return {
       ok: true,
       provider: providers[0],
-      code: providerCode(providers[0]),
+      code: kind === 'water' ? waterProviderCode(providers[0]) : providerCode(providers[0]),
       neighbors,
       point: { lon: where.lon, lat: where.lat },
       via,

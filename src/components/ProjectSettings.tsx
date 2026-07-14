@@ -426,6 +426,9 @@ function ProjectSettings({ project: p, ps, setField, updateFacts, utilities, onC
               onChange={(e) => setField(p.id, 'waterCompanyId', e.target.value || undefined)}
             >
               <option value="">Marion County Utilities (default)</option>
+              {/* 'MCU' = the county-GIS check confirmed the default (types.ts).
+                  Same contacts as unset — listed so the select displays it. */}
+              <option value="MCU">Marion County Utilities (confirmed)</option>
               {utilities
                 .filter((u) => u.kind === 'water')
                 .map((u) => (

@@ -265,7 +265,12 @@ export interface ProjectState {
   waterSource?: WaterSource
   /** Overrides the default water contact (Marion County Utilities) with a
    *  data/utilities.ts roster entry id (kind 'water'). Leaving it unset
-   *  preserves today's behavior exactly — MCU stays the contact shown. */
+   *  preserves today's behavior exactly — MCU stays the contact shown.
+   *  SPECIAL VALUE 'MCU' (July 2026): "explicitly CONFIRMED the default" —
+   *  written by the Water tab's county-GIS territory check. It resolves to
+   *  no roster entry, so every contact lookup falls through to the built-in
+   *  MCU exactly like unset; the difference is needsWaterVerify() treats it
+   *  as verified, so the check-banner stays dismissed. */
   waterCompanyId?: string
   septicSource?: SepticSource
   septicSystem?: SepticSystem

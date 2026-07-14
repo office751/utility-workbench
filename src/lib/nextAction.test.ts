@@ -11,6 +11,7 @@ import {
   isOurCourtKey,
   isPermitDone,
   needsVerify,
+  needsWaterVerify,
   nextElectricAction,
   nextPermitAction,
   nextSepticAction,
@@ -88,6 +89,41 @@ describe('nextElectricAction — the electric walk', () => {
     // July 2026: transferred moved to the closing checklist ('xfer') — a
     // powered-up house reads Complete regardless of the account's name.
     expect(isElectricDone(ps)).toBe(true)
+  })
+})
+
+describe('needsWaterVerify — the Water tab county-GIS check gate', () => {
+  it('CITY-WATER lots only: wells and unset sources never show the check', () => {
+    // Adam's rule (July 2026): a well lot has no water company to verify, and
+    // an unset source means well-vs-city itself is still undecided — the GIS
+    // can't make that call.
+    expect(needsWaterVerify(makeProject({ waterSource: 'Well' }), emptyProjectState())).toBe(false)
+    expect(needsWaterVerify(makeProject({ waterSource: '' }), emptyProjectState())).toBe(false)
+    expect(needsWaterVerify(makeProject({ waterSource: 'City' }), emptyProjectState())).toBe(true)
+    expect(needsWaterVerify(makeProject({ waterSource: 'CityWM' }), emptyProjectState())).toBe(true)
+  })
+
+  it('the ps waterSource override wins over the roster value', () => {
+    const wellByRoster = makeProject({ waterSource: 'Well' })
+    const ps = emptyProjectState()
+    ps.waterSource = 'City' // re-decided in Settings: actually a city lot
+    expect(needsWaterVerify(wellByRoster, ps)).toBe(true)
+  })
+
+  it("confirmed either way dismisses it: a chosen company (incl. the 'MCU' sentinel) or 'cavail' done", () => {
+    const city = makeProject({ waterSource: 'City' })
+
+    const viaSentinel = emptyProjectState()
+    viaSentinel.waterCompanyId = 'MCU' // the GIS check confirmed the default
+    expect(needsWaterVerify(city, viaSentinel)).toBe(false)
+
+    const viaRoster = emptyProjectState()
+    viaRoster.waterCompanyId = 'sunshine-utils' // custom company from Settings
+    expect(needsWaterVerify(city, viaRoster)).toBe(false)
+
+    const viaStep = emptyProjectState()
+    viaStep.steps.water['cavail'] = { done: true } // you can't confirm availability without knowing who you asked
+    expect(needsWaterVerify(city, viaStep)).toBe(false)
   })
 })
 

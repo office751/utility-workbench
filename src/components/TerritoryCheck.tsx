@@ -1,12 +1,16 @@
 /**
- * TerritoryCheck — the "Territory not verified" banner, now with a brain.
+ * TerritoryCheck — the "not verified" banner, now with a brain.
  *
- * Lives on the Electric tab whenever needsVerify() says the utility is still
- * unconfirmed. One click asks Marion County's own GIS which electric company
- * serves the lot (lib/territoryLookup.ts — parcel-first lookup against the
- * county's Electric Service Areas layer), then a second click writes the
- * answer: utility set + 'verify' step checked, in one state update
- * (useProjects.applyVerifiedUtility).
+ * Two flavors of the same flow (lib/territoryLookup.ts — parcel-first lookup
+ * against Marion County's own service-area layers):
+ *
+ *   ⚡ electric — on the Electric tab whenever needsVerify() says the utility
+ *     is unconfirmed. Apply = utility set + 'verify' step checked, one update.
+ *   💧 water — on the Water tab for CITY-WATER lots only (needsWaterVerify);
+ *     wells have no company to verify. Apply = waterCompanyId set + the
+ *     provenance stamped into the 'cavail' step NOTE — the step itself stays
+ *     unchecked, because territory says WHOSE franchise area this is, not
+ *     whether a main actually reaches the lot. That call stays human.
  *
  * Why this exists: SECO/Duke seams cut right through our subdivisions
  * (Marion Oaks' west edge is Duke!), and confirming territory used to mean
@@ -17,39 +21,60 @@ import type { Project, Utility } from '../types'
 import type { UtilityCompany } from '../data/utilities'
 import {
   lookupTerritory,
-  TERRITORY_MAP_URL,
+  TERRITORY_MAP_URLS,
+  type TerritoryKind,
   type TerritoryResult,
 } from '../lib/territoryLookup'
 import Icon from './Icon'
 
 interface Props {
   p: Project
+  /** Which service-area layer to ask (and which apply-wording to use). */
+  kind: TerritoryKind
   /** Owner-added extra companies (Settings → Utility companies setup) — lets a
-   *  non-built-in county answer (e.g. Ocala Electric) still be one-click set
-   *  when Adam already created a roster entry for it. */
+   *  non-built-in county answer (e.g. Ocala Electric, Sunshine Utilities)
+   *  still be one-click set when Adam already created a roster entry for it. */
   utilities: UtilityCompany[]
-  applyVerifiedUtility: (id: number, code: Utility, providerName: string) => void
+  /** The one-setState writer for this kind (applyVerifiedUtility /
+   *  applyVerifiedWaterUtility — see useProjects). */
+  applyVerified: (id: number, code: Utility, providerName: string) => void
 }
 
-export default function TerritoryCheck({ p, utilities, applyVerifiedUtility }: Props) {
+/** Per-kind wording so the banner reads naturally on both tabs. */
+const KIND_TEXT: Record<TerritoryKind, { headline: (p: Project) => string; setLabel: string }> = {
+  electric: {
+    headline: (p) =>
+      `Territory not verified — confirm the electric company before applying (subdivision: ${p.subdivision}).`,
+    setLabel: 'mark verified',
+  },
+  water: {
+    headline: () =>
+      'City-water lot — confirm WHICH water company serves it before applying. (The availability call still confirms a main reaches the lot.)',
+    setLabel: 'record company',
+  },
+}
+
+export default function TerritoryCheck({ p, kind, utilities, applyVerified }: Props) {
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState<TerritoryResult | null>(null)
 
   async function check() {
     setBusy(true)
     setResult(null)
-    setResult(await lookupTerritory(p)) // never throws — misses come back as {ok:false}
+    setResult(await lookupTerritory(p, kind)) // never throws — misses come back as {ok:false}
     setBusy(false)
   }
 
   // For a provider we have no built-in code for: is there an owner-added
-  // electric company whose name matches? (loose contains-match either way,
-  // so "Ocala Electric Utility" finds a roster entry named "Ocala Electric")
+  // company of this kind whose name matches? (loose contains-match either way,
+  // so "Sunshine Utilities" in the county layer finds a roster entry named
+  // "Sunshine Utilities of Central FL")
+  const rosterKind = kind === 'water' ? 'water' : 'electric'
   const rosterMatch =
     result?.ok && !result.code
       ? utilities.find(
           (u) =>
-            u.kind === 'electric' &&
+            u.kind === rosterKind &&
             (u.name.toLowerCase().includes(result.provider.toLowerCase()) ||
               result.provider.toLowerCase().includes(u.name.toLowerCase())),
         )
@@ -58,13 +83,14 @@ export default function TerritoryCheck({ p, utilities, applyVerifiedUtility }: P
   // The county map, centered on the lot when we know where it is — the human
   // fallback for every path below.
   const mapUrl = result?.ok
-    ? `${TERRITORY_MAP_URL}?location=${result.point.lat.toFixed(5)},${result.point.lon.toFixed(5)},15.00`
-    : TERRITORY_MAP_URL
+    ? `${TERRITORY_MAP_URLS[kind]}?location=${result.point.lat.toFixed(5)},${result.point.lon.toFixed(5)},15.00`
+    : TERRITORY_MAP_URLS[kind]
+
+  const text = KIND_TEXT[kind]
 
   return (
     <div className="banner">
-      <Icon name="warning" size={15} color="var(--warn)" /> Territory not verified — confirm the
-      electric company before applying (subdivision: {p.subdivision}).
+      <Icon name="warning" size={15} color="var(--warn)" /> {text.headline(p)}
       <div className="tc-actions">
         {/* The one-click answer. While a result is showing, the button stays
             as a smaller "re-check" so a misfire is never a dead end. */}
@@ -114,24 +140,30 @@ export default function TerritoryCheck({ p, utilities, applyVerifiedUtility }: P
           {result.code ? (
             <button
               className="contact tc-apply"
-              onClick={() => applyVerifiedUtility(p.id, result.code!, result.provider)}
+              onClick={() => applyVerified(p.id, result.code!, result.provider)}
             >
-              <Icon name="task_alt" size={15} /> Set {result.code} + mark verified
+              <Icon name="task_alt" size={15} /> Set{' '}
+              {kind === 'water' ? result.provider : result.code} + {text.setLabel}
             </button>
           ) : rosterMatch ? (
             <button
               className="contact tc-apply"
-              onClick={() => applyVerifiedUtility(p.id, rosterMatch.id, result.provider)}
+              onClick={() => applyVerified(p.id, rosterMatch.id, result.provider)}
             >
-              <Icon name="task_alt" size={15} /> Set “{rosterMatch.name}” + mark verified
+              <Icon name="task_alt" size={15} /> Set “{rosterMatch.name}” + {text.setLabel}
             </button>
-          ) : (
+          ) : kind === 'electric' ? (
             // A real provider we have no workflow for (e.g. Ocala Electric):
             // give the name and the path, never a fake code.
             <div className="muted">
               {result.provider} isn't one of the built-ins (SECO/Duke/Clay). Add it under ⚙
               Settings → Utility companies setup, then set it on this project — it'll work like
               Clay does: a contact card, no auto-filled forms.
+            </div>
+          ) : (
+            <div className="muted">
+              {result.provider} isn't in your companies list yet. Add it (kind: water) under ⚙
+              Settings → Utility companies setup, then re-check here to record it with one click.
             </div>
           )}
         </div>

@@ -9,9 +9,11 @@ import {
   parseGeocode,
   parseProviders,
   providerCode,
+  waterProviderCode,
   isLocatableAddress,
   MIN_GEOCODE_SCORE,
   SEAM_METERS,
+  TERRITORY_MAP_URLS,
 } from './territoryLookup'
 
 /* Real response shapes captured from the live county services July 2026
@@ -53,6 +55,19 @@ describe('providerCode() — county layer name → app utility code', () => {
   })
 })
 
+describe('waterProviderCode() — county water layer name → waterCompanyId', () => {
+  it("maps only the built-in default (the 'MCU' sentinel)", () => {
+    expect(waterProviderCode('Marion County Utilities')).toBe('MCU')
+  })
+
+  it('never guesses for the private companies — roster-match or report-only', () => {
+    expect(waterProviderCode('Sunshine Utilities')).toBeNull()
+    expect(waterProviderCode('FGUA/Aqua Utilities')).toBeNull()
+    expect(waterProviderCode('City of Belleview')).toBeNull()
+    expect(waterProviderCode('')).toBeNull()
+  })
+})
+
 describe('URL builders', () => {
   // URLSearchParams encodes quotes/commas — decode before asserting so the
   // tests read like the query the server actually sees.
@@ -84,6 +99,22 @@ describe('URL builders', () => {
     const s = seamUrl(-82.2473, 29.0071)
     expect(s).toContain(`distance=${SEAM_METERS}`)
     expect(SEAM_METERS).toBe(1609) // one mile — the "you're near the seam" radius
+  })
+
+  it("water queries hit the Utility Service Areas layer, filtered to WATER='Yes'", () => {
+    // The water layer mixes water & sewer rows — an unfiltered query would
+    // let a sewer-only polygon masquerade as a water answer.
+    const t = territoryUrl(-82.2473, 29.0071, 'water')
+    expect(t).toContain('Utility_Service_Areas')
+    expect(decoded(t)).toContain("WATER='Yes'")
+    expect(decoded(seamUrl(-82.2473, 29.0071, 'water'))).toContain("WATER='Yes'")
+    // …and the electric layer never gets the water filter.
+    expect(decoded(territoryUrl(-82.2473, 29.0071))).not.toContain('WATER')
+  })
+
+  it('each kind links to its own county map for the human fallback', () => {
+    expect(TERRITORY_MAP_URLS.electric).toContain('electric-service-areas')
+    expect(TERRITORY_MAP_URLS.water).toContain('utility-service-areas')
   })
 })
 

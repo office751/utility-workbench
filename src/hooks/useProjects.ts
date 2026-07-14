@@ -698,6 +698,37 @@ export function useProjects() {
   }
 
   /**
+   * 💧 Water flavor of applyVerifiedUtility: record WHO serves a city-water
+   * lot (waterCompanyId — 'MCU' sentinel for the built-in default, or a
+   * Settings-roster entry id) and stamp the provenance into the 'cavail'
+   * step's NOTE — WITHOUT checking the step. Territory says whose franchise
+   * area this is; whether there's actually a main at the lot is the
+   * availability call, and that stays human (see docs/BRAINS.md).
+   * One setState, same clobber lesson as markApplied.
+   */
+  function applyVerifiedWaterUtility(id: number, companyId: string, providerName: string) {
+    setState((prev) => {
+      const cur = prev.projects[id] ?? emptyProjectState()
+      // Preserve the step's done/date exactly — only the note is ours to write.
+      const existing: StepState = cur.steps.water.cavail ?? { done: false }
+      const water = {
+        ...cur.steps.water,
+        cavail: {
+          ...existing,
+          note: `County GIS · ${providerName} · ${new Date().toLocaleDateString()}`,
+        },
+      }
+      return {
+        ...prev,
+        projects: {
+          ...prev.projects,
+          [id]: { ...cur, waterCompanyId: companyId, steps: { ...cur.steps, water } },
+        },
+      }
+    })
+  }
+
+  /**
    * ⏩ "Catch up": mark several EARLIER checklist steps done — or undo exactly
    * that — in ONE state update. This is the writer behind the catch-up row on
    * checklists (Checklist.tsx); WHICH steps qualify is decided by the pure
@@ -1305,6 +1336,7 @@ export function useProjects() {
     toggleStep,
     markApplied,
     applyVerifiedUtility,
+    applyVerifiedWaterUtility,
     catchUpSteps,
     setClosingStep,
     setStepNote,
