@@ -7,7 +7,7 @@ change a rule on purpose, change its test AND this doc in the same commit;
 if a test fails and you didn't mean to change behavior, your change is wrong,
 not the test.
 
-Written July 2026 as part of the brains-coverage pass. Tests: 163 across 14
+Written July 2026 as part of the brains-coverage pass. Tests: 168 across 14
 files (`npx vitest run`, ~350 ms).
 
 ## Global invariants (break these and real houses get hurt)
@@ -131,13 +131,25 @@ files (`npx vitest run`, ~350 ms).
   Ocala Waterway, Coral Ridge, Hidden Lake, Woods & Lakes) — or any lot with
   no utility set — demand `verify` first. Confirming = setting `ps.electricCo`
   OR checking the verify step.
-- **Electric done** = final step checked AND `transferred` (the account must
-  leave Iron Shield's name after sale).
+- **Electric done** = final step checked (power on). The account transfer
+  used to be required here too; since July 2026 it belongs to the CLOSING
+  checklist (`'xfer'`) — a powered-up house reads Complete, and the sale
+  workflow owns the transfer. `electricNeedsAction` likewise no longer
+  carries the shut-off-due nudge (see closing below).
 - **Water** resolves its checklist by source: Well = one step (`wdrilled`);
   City skips the water-main-extension (`wmOnly`) steps; CityWM includes them.
   No source set → the move is *choosing* one.
 - **Septic** resolves by source/system: Sewer lots use the sewer list; the
   INRB notice step exists only when `septicSystem === 'INRB'`.
+- **Closing (the sale workflow, July 2026)** — its own bucket
+  (`ProjectState.closingSteps`), NOT a sixth stream. Default list =
+  `CLOSING_STEPS` in lifecycles; owner-editable under override key
+  `'closing'`. Rules: `closingStepDone` is the ONLY reader — the `'xfer'`
+  step ("account transferred / shut off") MIRRORS `ps.transferred` (the
+  field shutoff.ts reads) instead of living in the bucket, one source of
+  truth. `closingPending` only while `underContract` with steps left.
+  `closingNeedsAction` = shut-off deadline ≤ 10 days (the threshold that
+  moved here from electric).
 - **Permit**: `corrections` skipped in the walk; `issued` checked = done even
   if earlier boxes weren't ticked (believe the county). `permitNeedsAction`
   only while WE are responsible (`Owner`/`GC` lots are tracked, not on us).

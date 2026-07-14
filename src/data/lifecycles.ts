@@ -80,6 +80,26 @@ export const PERMIT_STEPS: StepDef[] = [
   { id: 'issued', label: 'Permit issued / picked up' },
 ]
 
+/* ------------------------- CLOSING ----------------------- */
+/* The SALE workflow — the process Adam walks once a house goes under
+   contract (July 2026). Deliberately NOT a Stream: it has its own bucket
+   (ProjectState.closingSteps) so the five construction streams stay exactly
+   as they are. Two step ids are special in the UI (ClosingCard.tsx):
+     'estop' / 'wstop' render the utility stop-service buttons inline;
+     'xfer' is BOUND to ps.transferred (one source of truth — the shut-off
+     deadline math in lib/shutoff.ts reads that field).
+   Owner-editable like every other list, under the override key 'closing'. */
+export const CLOSING_STEPS: StepDef[] = [
+  { id: 'contract', label: 'Under contract — signed contract in hand' },
+  { id: 'cdate', label: 'Closing date confirmed with title company' },
+  { id: 'walkthrough', label: 'Buyer walkthrough scheduled / done' },
+  { id: 'estop', label: 'Electric — stop service / transfer scheduled' },
+  { id: 'wstop', label: 'Water — MCU disconnect submitted (form + deed)' },
+  { id: 'xfer', label: 'Electric account transferred / shut off' },
+  { id: 'handoff', label: 'Keys, warranty & selections docs handed to buyer' },
+  { id: 'deedclosed', label: 'Closed — deed recorded, mark house SOLD' },
+]
+
 /* ===================================================================
    OWNER STEP OVERRIDES
    The lists above are the built-in DEFAULTS. The owner can edit any of them
@@ -152,4 +172,9 @@ export function electricSteps(): StepDef[] {
 }
 export function permitSteps(): StepDef[] {
   return OVERRIDES['permit'] ?? PERMIT_STEPS
+}
+/** The effective closing checklist (owner override under key 'closing', else
+ *  the built-in sale workflow). Not stream-keyed — see CLOSING_STEPS above. */
+export function closingSteps(): StepDef[] {
+  return OVERRIDES['closing'] ?? CLOSING_STEPS
 }

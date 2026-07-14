@@ -37,8 +37,9 @@ interface Props {
    */
   ac: ActionCenter
   tasks: Task[]
-  /** Open a project on a specific tab (e.g. an expiring permit → its Permit tab). */
-  onOpen: (id: number, stream: Stream) => void
+  /** Open a project on a specific tab (e.g. an expiring permit → its Permit
+   *  tab; a shut-off → the Overview, where the Closing card lives). */
+  onOpen: (id: number, stream: Stream | 'overview') => void
   /** Mark a task done from the home screen. */
   onCompleteTask: (id: string) => void
   /** Jump to the Tasks tab (used by the empty-focus hint). */
@@ -142,7 +143,7 @@ function TaskRow({
 }
 
 /** One urgent CONSTRUCTION row — click to open the project. */
-function AttnRow({ item, onOpen }: { item: ActionItem; onOpen: (id: number, s: Stream) => void }) {
+function AttnRow({ item, onOpen }: { item: ActionItem; onOpen: (id: number, s: Stream | 'overview') => void }) {
   const tone: BadgeTone = item.severity === 'crit' ? 'danger' : item.severity === 'warn' ? 'warn' : 'neutral'
   return (
     <button className="t-row t-row--link" onClick={() => onOpen(item.projectId, item.stream)}>

@@ -106,6 +106,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
     toggleStep,
     markApplied,
     catchUpSteps,
+    setClosingStep,
     setStepNote,
     setNote,
     setField,
@@ -174,11 +175,13 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
   const [adding, setAdding] = useState(false) // is the Add form open?
   const [applying, setApplying] = useState(false) // is ⚡ Batch Apply open?
   const [reporting, setReporting] = useState(false) // is 📋 Status report open?
-  // When you open a project from Today/Tasks, jump straight to that stream's tab.
-  const [openStream, setOpenStream] = useState<Stream | undefined>(undefined)
+  // When you open a project from Today/Tasks, jump straight to that stream's
+  // tab — or its Overview, where the Closing card lives (shut-off alerts land
+  // there since July 2026).
+  const [openStream, setOpenStream] = useState<Stream | 'overview' | undefined>(undefined)
 
   /** Open a project, optionally landing on a specific stream tab. */
-  const openProject = (id: number, stream: Stream) => {
+  const openProject = (id: number, stream: Stream | 'overview') => {
     setTab('projects')
     setOpenStream(stream)
     setSelectedId(id)
@@ -521,6 +524,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
             toggleStep={toggleStep}
             setStepNote={setStepNote}
             catchUpSteps={catchUpSteps}
+            setClosingStep={setClosingStep}
             setNote={setNote}
             setField={setField}
             addProjectFiles={addProjectFiles}

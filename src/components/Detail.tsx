@@ -32,6 +32,7 @@ import {
   isWaterDone,
   needsVerify,
   nextElectricAction,
+  closingProgress,
   nextPermitAction,
   nextSepticAction,
   nextWaterAction,
@@ -46,7 +47,6 @@ import {
   utilityOf,
   waterSourceOf,
 } from '../lib/nextAction'
-import { shutoffFor } from '../lib/shutoff'
 import { permitExpiryFor } from '../lib/permitExpiry'
 import { permitHandoffDraft, permitHandoffDraftWithLinks, type HandoffDraft } from '../lib/permitHandoff'
 import { confirmSend } from '../lib/confirmSend'
@@ -55,11 +55,10 @@ import { meterNotifyDraft } from '../lib/loadForm'
 import { getShareUrl } from '../lib/files'
 import { grantedProjectIds, shareFileToInvestor } from '../lib/investor'
 import { writeRichClipboard } from '../lib/richCopy'
-import { isMaterialsDone, ordersSummary } from '../lib/orders'
+import { isMaterialsDone, ordersOf, ordersSummary } from '../lib/orders'
 import { GEORGES } from '../data/contacts'
-// Utility CLOSEOUT (disconnect-at-sale) — the mirror of the apply flow:
-// stop-service links for SECO/Duke, and the MCU water disconnect email draft.
-import { ELECTRIC_DISCONNECT, MCU_WATER_DISCONNECT, waterDisconnectDraft } from '../data/disconnect'
+// (Utility closeout / disconnect-at-sale moved to ClosingCard.tsx — sale
+// workflow lives on the Overview's Closing card since July 2026.)
 // SECO's real load form, pre-filled from this project — same helper Batch
 // Apply uses (lib/secoForm.ts); this just adds a second place to download it.
 import { SECO_BLANK_FORM_URL, fillSecoLoadForm } from '../lib/secoForm'
@@ -77,6 +76,7 @@ import MaterialsBody from './MaterialsBody'
 import SelectionsView from './SelectionsView'
 import Icon, { miForEmoji } from './Icon'
 import GuideCallout from './GuideCallout'
+import ClosingCard from './ClosingCard'
 
 /** The updater functions every body needs — grouped to avoid repetition. */
 interface Updaters {
@@ -84,6 +84,9 @@ interface Updaters {
   setStepNote: (id: number, stream: Stream, stepId: string, note: string) => void
   /** ⏩ Catch-up batch writer (mark earlier steps done / undo) — see lib/catchup.ts. */
   catchUpSteps: (id: number, stream: Stream, stepIds: string[], done: boolean) => void
+  /** ✓/✗ one CLOSING checklist step ('xfer' writes ps.transferred) — the
+   *  sale-workflow card on Overview. See useProjects.setClosingStep. */
+  setClosingStep: (id: number, stepId: string, done: boolean) => void
   setNote: (id: number, stream: Stream, text: string) => void
   setField: <K extends keyof ProjectState>(id: number, field: K, value: ProjectState[K]) => void
   addProjectFiles: (id: number, files: File[]) => Promise<{ ok: number; failed: string[] }>
@@ -136,8 +139,10 @@ interface Props extends Updaters {
   /** Owner-editable EXTRA utility companies (Settings → Utility companies setup) —
    *  for territories not covered by SECO/Duke/Clay/Marion County Utilities/Georges. */
   utilities: import('../data/utilities').UtilityCompany[]
-  /** Stream tab to open on (from a Today/Tasks deep-link). Default: Overview. */
-  initialStream?: Stream
+  /** Tab to open on (from a Today/Tasks deep-link) — a stream, or 'overview'
+   *  (where the Closing card lives; shut-off alerts land there). Default:
+   *  Overview. */
+  initialStream?: Stream | 'overview'
   /** THIS house's attention items (deadlines + gone-quiet stalls) from the
    *  action center — rendered as the Overview's alerts card. Since the July
    *  2026 Today slim-down, this is where portfolio noise became per-project
@@ -260,6 +265,11 @@ function Detail(props: Props) {
             <div className="pd-badges">
               {p.listStatus === 'CO' && <span className="prow-pill co">C.O.</span>}
               {p.listStatus === 'Hold' && <span className="prow-pill hold">HOLD</span>}
+              {ps.underContract && p.listStatus !== 'CO' && (
+                <span className="prow-pill uc" title="Under contract — closing checklist on the Overview">
+                  UNDER CONTRACT · {closingProgress(ps).done}/{closingProgress(ps).total}
+                </span>
+              )}
               {ps.isInvestorProject ? (
                 <span className="pd-badge investor">
                   <Icon name="person" size={14} />
@@ -397,12 +407,45 @@ function Detail(props: Props) {
             </div>
           )}
 
+          {/* 🏁 The sale workflow. The card appears once the house is marked
+              under contract (or already has a closing date from before this
+              card existed); otherwise a quiet one-liner offers the button.
+              Finished (C.O.) homes show neither — that process is over. */}
+          {ps.underContract || (ps.closingDate && p.listStatus !== 'CO') ? (
+            <ClosingCard
+              project={p}
+              ps={ps}
+              setField={setField}
+              setClosingStep={props.setClosingStep}
+              templates={props.templates}
+              setStepList={props.setStepList}
+              resetStepList={props.resetStepList}
+            />
+          ) : (
+            p.listStatus !== 'CO' && (
+              <div className="pd-uc-row">
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setField(p.id, 'underContract', true)}
+                  title="Start the sale workflow: closing checklist, closing date, shut-off countdown, disconnect buttons"
+                >
+                  <Icon name="sports_score" size={16} />
+                  Mark under contract…
+                </button>
+              </div>
+            )
+          )}
+
           {/* Status grid — ONE card per stream, the single source of truth.
               (The tabs above are navigation only — no duplicate status marks.) */}
           <div className="pd-status-grid">
             {STREAM_TABS.map(({ key, icon, name }) => {
               const st = streamStatus(key, p, ps)
-              const color = st.done ? 'var(--success)' : 'var(--rust)'
+              // "In progress" would be a lie for a Materials tab with zero
+              // orders — nothing has started. Quiet gray "Not started" instead
+              // (Adam, July 2026).
+              const notStarted = key === 'materials' && ordersOf(ps).length === 0
+              const color = st.done ? 'var(--success)' : notStarted ? 'var(--ink-3)' : 'var(--rust)'
               return (
                 <button key={key} className="pd-scard" onClick={() => setActiveTab(key)}>
                   <div className="pd-scard-h">
@@ -411,6 +454,8 @@ function Detail(props: Props) {
                     <span className="pd-scard-spacer" />
                     {st.done ? (
                       <Icon name="check_circle" size={16} color="var(--success)" fill />
+                    ) : notStarted ? (
+                      <span className="pd-scard-prog ns">Not started</span>
                     ) : (
                       <span className="pd-scard-prog">In progress</span>
                     )}
@@ -541,14 +586,10 @@ function Detail(props: Props) {
 
 /* ==================== ELECTRIC ==================== */
 
-function ElectricBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps, setField, templates }: Props) {
+function ElectricBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps, templates }: Props) {
   const next = nextElectricAction(p, ps)
-  const shutoff = shutoffFor(ps)
   const u = utilityOf(p, ps)
   const eng = engineerOf(p, ps)
-  // Stop-service link for this utility (SECO/Duke), shown in the closeout box
-  // below. undefined for Clay/custom/unknown → no disconnect button yet.
-  const disc = u ? ELECTRIC_DISCONNECT[u] : undefined
   // ⚡ Duke web application:
   //   building → computing directions from the map services
   //   opened   → portal launched + fill-data copied; now waiting on Claude
@@ -776,90 +817,19 @@ function ElectricBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps, s
         catchUpSteps={catchUpSteps}
       />
 
-      {/* Closing date + shut-off reminder stay here — they're sale workflow,
-          not project config. */}
-      <div className="closing">
-        <label>
-          Closing date
-          <input
-            type="date"
-            value={ps.closingDate ?? ''}
-            onChange={(e) => setField(p.id, 'closingDate', e.target.value)}
-          />
-        </label>
-
-        {shutoff && (
-          <span className={'shutoff' + (shutoff.daysLeft <= 7 ? ' due' : shutoff.daysLeft <= 14 ? ' warn' : '')}>
-            <Icon name="schedule" size={14} /> Shut off / transfer electric by <b>{shutoff.date}</b> ({shutoff.daysLeft}{' '}
-            days)
-          </span>
-        )}
-
-        {ps.closingDate && (
-          <label className="transfer">
-            <input
-              type="checkbox"
-              checked={ps.transferred ?? false}
-              onChange={(e) => setField(p.id, 'transferred', e.target.checked)}
-            />
-            Account transferred / shut off
-          </label>
-        )}
-      </div>
-
-      {/* Closeout: the button that actually schedules the disconnect/transfer
-          with the utility when the house sells — the action the shut-off
-          reminder above points to. Only SECO/Duke have a link for now. */}
-      {disc && (
-        <div className="closeout">
-          <h4 className="closeout-h">
-            <Icon name="power_settings_new" size={14} /> Disconnect / transfer at sale
-          </h4>
-          <div className="contact-row">
-            <a className="contact" href={disc.url} target="_blank" rel="noopener noreferrer">
-              <Icon name="bolt" size={15} /> Stop {u} service
-            </a>
-            {disc.phone && (
-              <a className="contact" href={`tel:+1${disc.phone.replace(/\D/g, '')}`}>
-                <Icon name="call" size={15} /> {u} — {disc.phone}
-              </a>
-            )}
-          </div>
-          {disc.note && <p className="provider">{disc.note}</p>}
-        </div>
-      )}
+      {/* The closing date / shut-off countdown / transfer checkbox / stop-service
+          buttons that used to live here moved to the Closing card on Overview
+          (July 2026) — they're SALE workflow, and pulling them out lets this
+          tab read Complete once power is on. */}
     </>
   )
 }
 
 /* ===================== WATER ===================== */
 
-function WaterBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps, templates }: Props) {
+function WaterBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps }: Props) {
   const source = waterSourceOf(p, ps)
   const next = nextWaterAction(p, ps)
-  // Municipal water (Marion County Utilities) is the only water the builder
-  // holds an account on — a private well has nothing to disconnect — so the
-  // closeout tools show only for City / City-with-water-main sources.
-  const municipal = source === 'City' || source === 'CityWM'
-  const [discBusy, setDiscBusy] = useState(false)
-
-  /** Open the MCU disconnect-request email. A mailto can't attach files, so the
-   *  confirm dialog spells out what to attach (the form + notarized deed)
-   *  before it opens the draft. */
-  function draftDisconnect() {
-    const draft = waterDisconnectDraft(p, ps, templates)
-    if (
-      !confirmSend(`Draft the Marion County Utilities disconnect request for ${p.address}?`, [
-        "This email can't attach files — attach these to the draft yourself before sending:",
-        ...draft.attachments.map((a) => `• ${a}`),
-      ])
-    )
-      return
-    setDiscBusy(true)
-    window.location.href = draft.mailto
-    // Clear the busy flag after the mail client has had a moment to open.
-    setTimeout(() => setDiscBusy(false), 1500)
-  }
 
   return (
     <>
@@ -896,29 +866,8 @@ function WaterBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps, temp
         </>
       )}
 
-      {/* Closeout: when the home sells, stop the MCU water/sewer account.
-          A link to the county's disconnect form + a pre-addressed email draft
-          (you attach the completed form + notarized deed before sending). */}
-      {municipal && (
-        <div className="closeout">
-          <h4 className="closeout-h">
-            <Icon name="water_drop" size={14} /> Disconnect at sale — Marion County Utilities
-          </h4>
-          <div className="contact-row">
-            <a className="contact" href={MCU_WATER_DISCONNECT.formUrl} target="_blank" rel="noopener noreferrer">
-              <Icon name="description" size={15} /> MCU disconnect form
-            </a>
-            <button className="contact" onClick={draftDisconnect} disabled={discBusy}>
-              <Icon name={discBusy ? 'hourglass_top' : 'mail'} size={15} />
-              {discBusy ? ' Drafting…' : ' Draft MCU disconnect email'}
-            </button>
-            <a className="contact" href={`tel:+1${MCU_WATER_DISCONNECT.phone.replace(/\D/g, '')}`}>
-              <Icon name="call" size={15} /> MCU — {MCU_WATER_DISCONNECT.phone}
-            </a>
-          </div>
-          <p className="provider">{MCU_WATER_DISCONNECT.note}</p>
-        </div>
-      )}
+      {/* The MCU disconnect-at-sale tools that used to sit here moved to the
+          Closing card on Overview (July 2026) — sale workflow, not build. */}
     </>
   )
 }

@@ -707,6 +707,35 @@ export function useProjects() {
     })
   }
 
+  /**
+   * ✓/✗ ONE step of the CLOSING checklist (the sale workflow — its own bucket,
+   * ProjectState.closingSteps, not a stream). One special case: the 'xfer'
+   * step ("account transferred / shut off") is NOT stored in the bucket — it
+   * writes ps.transferred instead, because that's the field the shut-off
+   * deadline math (lib/shutoff.ts) has always read. One source of truth.
+   */
+  function setClosingStep(id: number, stepId: string, done: boolean) {
+    setState((prev) => {
+      const cur = prev.projects[id] ?? emptyProjectState()
+      if (stepId === 'xfer') {
+        return { ...prev, projects: { ...prev.projects, [id]: { ...cur, transferred: done } } }
+      }
+      const existing: StepState = cur.closingSteps?.[stepId] ?? { done: false }
+      const closingSteps = {
+        ...(cur.closingSteps ?? {}),
+        [stepId]: {
+          ...existing,
+          done,
+          // Same stamping rule as toggleStep: fresh date both ways on check,
+          // cleared on uncheck (see that function's comment for the why).
+          date: done ? new Date().toLocaleDateString() : undefined,
+          doneAt: done ? new Date().toISOString() : undefined,
+        },
+      }
+      return { ...prev, projects: { ...prev.projects, [id]: { ...cur, closingSteps } } }
+    })
+  }
+
   /** Save the small note attached to ONE checklist step. */
   function setStepNote(id: number, stream: Stream, stepId: string, note: string) {
     const ps = getProjectState(id)
@@ -1244,6 +1273,7 @@ export function useProjects() {
     toggleStep,
     markApplied,
     catchUpSteps,
+    setClosingStep,
     setStepNote,
     setNote,
     setField,

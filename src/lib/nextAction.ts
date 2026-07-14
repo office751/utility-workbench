@@ -23,6 +23,7 @@ import type {
 } from '../types'
 import {
   type StepDef,
+  closingSteps,
   electricSteps,
   isStepListCustomized,
   permitSteps,
@@ -160,23 +161,62 @@ export function nextElectricAction(p: Project, ps: ProjectState): NextAction {
   return { key: 'done', label: 'Complete' }
 }
 
-/** Fully done = the final electric step is checked AND the account was
- *  transferred after sale. */
+/** Fully done = the final electric step (power on) is checked. The account
+ *  transfer used to be required here too, but it belongs to the SALE, not the
+ *  build — since July 2026 it lives on the closing checklist, so a powered-up
+ *  house finally reads Complete. */
 export function isElectricDone(ps: ProjectState): boolean {
-  return lastStepDone(electricSteps(), ps.steps.electric) && Boolean(ps.transferred)
+  return lastStepDone(electricSteps(), ps.steps.electric)
 }
 
 /**
- * "Needs action" = the ball is in OUR court (verify / apply / pay / notify),
- * or a shut-off deadline is 10 days out or closer. Waiting on the utility
- * (engineer, field work) does NOT count — nothing for us to do there.
- * Uses the shared OUR_COURT judgment so the list dots and Today always agree
- * (a hand-copied key list here once drifted from the command center's).
+ * "Needs action" = the ball is in OUR court (verify / apply / pay / notify).
+ * Waiting on the utility (engineer, field work) does NOT count — nothing for
+ * us to do there. Uses the shared OUR_COURT judgment so the list dots and
+ * Today always agree (a hand-copied key list here once drifted from the
+ * command center's). The shut-off-due nudge that used to live here moved to
+ * closingNeedsAction — it's sale workflow now.
  */
 export function electricNeedsAction(p: Project, ps: ProjectState): boolean {
   const key = nextElectricAction(p, ps).key
+  return isOurCourtKey('electric', key, p, ps)
+}
+
+/* ================== CLOSING (the sale workflow) ================== */
+
+/**
+ * Is ONE closing step done? Everything reads this instead of poking the
+ * bucket directly, because 'xfer' is special: it MIRRORS ps.transferred (the
+ * field the shut-off deadline math reads) rather than being stored in
+ * closingSteps — one source of truth, no drift.
+ */
+export function closingStepDone(ps: ProjectState, stepId: string): boolean {
+  if (stepId === 'xfer') return Boolean(ps.transferred)
+  return Boolean(ps.closingSteps?.[stepId]?.done)
+}
+
+/** Checked/total across the EFFECTIVE closing list (owner override aware) —
+ *  powers the "3/8" progress on the Closing card and header pill. */
+export function closingProgress(ps: ProjectState): { done: number; total: number } {
+  const steps = closingSteps()
+  return { done: steps.filter((s) => closingStepDone(ps, s.id)).length, total: steps.length }
+}
+
+/** Under contract with closing steps still unchecked — the working state. */
+export function closingPending(ps: ProjectState): boolean {
+  if (!ps.underContract) return false
+  const { done, total } = closingProgress(ps)
+  return done < total
+}
+
+/**
+ * The closing FIRE: the electric shut-off deadline (2 business days after
+ * closing) is 10 days out or closer and the account hasn't moved. Same
+ * threshold the electric stream used before this became sale workflow.
+ */
+export function closingNeedsAction(ps: ProjectState): boolean {
   const so = shutoffFor(ps)
-  return isOurCourtKey('electric', key, p, ps) || Boolean(so && so.daysLeft <= 10)
+  return Boolean(so && so.daysLeft <= 10)
 }
 
 /* ======================== WATER ======================== */
