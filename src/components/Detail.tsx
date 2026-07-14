@@ -234,7 +234,14 @@ function Detail(props: Props) {
 
   // The one high-level "where this house is right now" badge for the header:
   // the first stream that isn't done yet, with its next action.
-  const stageStream = STREAM_TABS.find((s) => !streamStatus(s.key, p, ps).done)
+  // An EMPTY materials queue is not a stage the house is waiting on — the
+  // Materials tab just processes orders as they come (Tasks/Quick-Add surface
+  // what needs ordering), so "Materials — no orders yet" must never headline
+  // the house (Adam, July 2026). Skip it when picking the stage badge.
+  const stageStream = STREAM_TABS.find((s) => {
+    if (s.key === 'materials' && ordersOf(ps).length === 0) return false
+    return !streamStatus(s.key, p, ps).done
+  })
   const headerStage = stageStream
     ? `${stageStream.name} — ${streamStatus(stageStream.key, p, ps).label}`
     : 'All streams complete'
