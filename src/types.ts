@@ -276,6 +276,19 @@ export interface ProjectState {
   closingDate?: string // YYYY-MM-DD; drives the shut-off reminder
   transferred?: boolean // electric account transferred after sale
 
+  // --- closing (the sale workflow, July 2026) ---
+  /** Set by the "Mark under contract" button — from then on the Closing card
+   *  shows on this house's Overview and the UNDER CONTRACT pill on its row. */
+  underContract?: boolean
+  /**
+   * The closing checklist's saved state (data/lifecycles.ts CLOSING_STEPS,
+   * owner-editable under override key 'closing'). Deliberately its OWN bucket,
+   * not a sixth stream — the five construction streams stay untouched. The
+   * 'xfer' step is NOT stored here: it mirrors `transferred` above (one source
+   * of truth for the shut-off math), written via useProjects.setClosingStep.
+   */
+  closingSteps?: Record<string, StepState>
+
   // --- ownership (who this house belongs to) ---
   /** Who owns the home. Blank = our own spec build (implied Iron Shield). */
   ownerName?: string

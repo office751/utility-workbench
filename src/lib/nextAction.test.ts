@@ -1,5 +1,9 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import {
+  closingNeedsAction,
+  closingPending,
+  closingProgress,
+  closingStepDone,
   confirmedUtility,
   electricNeedsAction,
   isElectricDone,
@@ -76,13 +80,62 @@ describe('nextElectricAction — the electric walk', () => {
     expect(nextElectricAction(amb, ps2).key).toBe('apply')
   })
 
-  it('done = final step checked AND the account transferred after sale', () => {
+  it('done = power on — the account transfer is closing workflow, not build', () => {
     const ps = emptyProjectState()
     for (const id of ['verify', 'submit', 'deposit', 'engineer', 'rough', 'fieldsched', 'fielddone', 'meternotify', 'meter', 'power'])
       ps.steps.electric[id] = { done: true }
-    expect(isElectricDone(ps)).toBe(false) // power on, but account still ours
-    ps.transferred = true
+    // July 2026: transferred moved to the closing checklist ('xfer') — a
+    // powered-up house reads Complete regardless of the account's name.
     expect(isElectricDone(ps)).toBe(true)
+  })
+})
+
+describe('closing helpers — the sale workflow bucket', () => {
+  it("'xfer' mirrors ps.transferred; other steps read their own bucket", () => {
+    const ps = emptyProjectState()
+    expect(closingStepDone(ps, 'xfer')).toBe(false)
+    ps.transferred = true
+    expect(closingStepDone(ps, 'xfer')).toBe(true) // no closingSteps entry needed
+    expect(closingStepDone(ps, 'contract')).toBe(false)
+    ps.closingSteps = { contract: { done: true } }
+    expect(closingStepDone(ps, 'contract')).toBe(true)
+  })
+
+  it('progress counts the effective list, xfer included via transferred', () => {
+    const ps = emptyProjectState()
+    expect(closingProgress(ps)).toEqual({ done: 0, total: 8 })
+    ps.closingSteps = { contract: { done: true }, cdate: { done: true } }
+    ps.transferred = true
+    expect(closingProgress(ps)).toEqual({ done: 3, total: 8 })
+  })
+
+  it('follows an owner-edited closing list (override key "closing")', () => {
+    applyStepOverrides({ closing: [{ id: 'a', label: 'A' }, { id: 'xfer', label: 'X' }] })
+    const ps = emptyProjectState()
+    ps.transferred = true
+    expect(closingProgress(ps)).toEqual({ done: 1, total: 2 })
+  })
+
+  it('pending ONLY while under contract with steps left', () => {
+    const ps = emptyProjectState()
+    expect(closingPending(ps)).toBe(false) // not under contract → never pending
+    ps.underContract = true
+    expect(closingPending(ps)).toBe(true)
+    ps.closingSteps = {}
+    for (const id of ['contract', 'cdate', 'walkthrough', 'estop', 'wstop', 'handoff', 'deedclosed'])
+      ps.closingSteps[id] = { done: true }
+    ps.transferred = true // = 'xfer'
+    expect(closingPending(ps)).toBe(false) // all 8 done
+  })
+
+  it('fires when the shut-off deadline is 10 days out or closer', () => {
+    const ps = emptyProjectState()
+    expect(closingNeedsAction(ps)).toBe(false) // no closing date → no deadline
+    const soon = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10)
+    ps.closingDate = soon
+    expect(closingNeedsAction(ps)).toBe(true)
+    ps.transferred = true // account moved → deadline satisfied
+    expect(closingNeedsAction(ps)).toBe(false)
   })
 })
 
