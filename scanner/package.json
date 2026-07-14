@@ -8,7 +8,8 @@
     "login": "node login.mjs",
     "scan": "node scan.mjs",
     "scan:josh": "node scan-josh.mjs --write",
-    "scan:josh:preview": "node scan-josh.mjs"
+    "scan:josh:preview": "node scan-josh.mjs",
+    "new:house": "node new-house.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
