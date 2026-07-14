@@ -12,6 +12,8 @@
 import { useState } from 'react'
 import type { Project, ProjectState, Stream } from '../types'
 import {
+  closingNeedsAction,
+  closingPending,
   electricNeedsAction,
   isElectricDone,
   isPermitDone,
@@ -28,6 +30,7 @@ import {
   waterNeedsAction,
   type PermitStatus,
 } from '../lib/nextAction'
+import { shutoffFor } from '../lib/shutoff'
 import { isMaterialsDone, materialsNeedsAction, ordersSummary } from '../lib/orders'
 import Filters, { NO_FILTERS, PERMIT_FILTER_ORDER, countActive, type FilterState } from './Filters'
 import ShareMenu from './ShareMenu'
@@ -117,13 +120,19 @@ function ProjectList({ projects, onSelect, onAdd, onBatchApply, onStatusReport, 
   const rows = projects.map((p) => {
     const ps = getProjectState(p.id)
     const cells = streamCells(p, ps)
+    // The CLOSING fire: shut-off deadline ≤ 10 days. It outranks the ordinary
+    // next-action line — missing it means paying a sold house's power bill.
+    const closingFire = closingNeedsAction(ps)
+    const so = closingFire ? shutoffFor(ps) : null
     return {
       p,
       ps,
       status: permitStatus(p, ps),
-      allDone: cells.every((c) => c.state === 'done'),
-      anyFire: cells.some((c) => c.state === 'fire'),
-      next: nextLine(p, ps, cells),
+      // A house under contract isn't "completed" until its closing checklist
+      // is walked — keep it visible under the Hide-completed filter.
+      allDone: cells.every((c) => c.state === 'done') && !closingPending(ps),
+      anyFire: cells.some((c) => c.state === 'fire') || closingFire,
+      next: so ? `Shut off / transfer electric by ${so.date}` : nextLine(p, ps, cells),
     }
   })
 
@@ -244,6 +253,11 @@ function ProjectList({ projects, onSelect, onAdd, onBatchApply, onStatusReport, 
                 <span className="prow-addr">{p.address}</span>
                 {p.listStatus === 'CO' && <span className="prow-pill co">C.O.</span>}
                 {p.listStatus === 'Hold' && <span className="prow-pill hold">HOLD</span>}
+                {ps.underContract && p.listStatus !== 'CO' && (
+                  <span className="prow-pill uc" title="Under contract — closing checklist on this house's Overview">
+                    UNDER CONTRACT
+                  </span>
+                )}
                 {/* Under the investor filter the right side already names them. */}
                 {ps.isInvestorProject && !filters.investorOnly && (
                   <span className="prow-investor" title={`Investor project — ${ps.investorName || 'investor not named'}`}>

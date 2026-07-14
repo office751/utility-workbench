@@ -35,7 +35,9 @@ export interface ActionItem {
   projectId: number
   address: string
   meta: string // "F-LH · Silver Springs Shores"
-  stream: Stream // which tab to jump to when clicked
+  /** Which tab to jump to when clicked — a stream, or 'overview' for items
+   *  the Overview owns (the shut-off deadline lives on its Closing card). */
+  stream: Stream | 'overview'
   kind: ActionKind
   icon: string
   text: string // what's going on / what to do
@@ -134,7 +136,9 @@ export function buildActionCenter(
       const overdue = so.daysLeft < 0
       attention.push({
         ...base,
-        stream: 'electric',
+        // 'overview' — the shut-off controls live on the Closing card there
+        // (they left the Electric tab in July 2026).
+        stream: 'overview',
         kind: 'shutoff',
         icon: '⚡',
         text: overdue ? 'Shut-off OVERDUE' : 'Electric shut-off due',
@@ -281,10 +285,14 @@ export function streamActionCounts(
     materials: false,
   }
   for (const it of ac.attention) {
+    if (it.stream === 'overview') continue // shut-offs belong to no stream tab
     proj[it.stream].add(it.projectId)
     fire[it.stream] = true
   }
-  for (const it of ac.moves) proj[it.stream].add(it.projectId)
+  for (const it of ac.moves) {
+    if (it.stream === 'overview') continue
+    proj[it.stream].add(it.projectId)
+  }
   return {
     electric: { count: proj.electric.size, fire: fire.electric },
     water: { count: proj.water.size, fire: fire.water },
