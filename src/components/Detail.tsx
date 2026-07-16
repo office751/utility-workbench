@@ -290,7 +290,9 @@ function Detail(props: Props) {
             <div className="pd-badges">
               {p.listStatus === 'CO' && <span className="prow-pill co">C.O.</span>}
               {p.listStatus === 'Hold' && <span className="prow-pill hold">HOLD</span>}
-              {ps.underContract && p.listStatus !== 'CO' && (
+              {/* Shown alongside the C.O. pill too — a finished house that's
+                  selling wears both hats (Adam, July 2026). */}
+              {ps.underContract && (
                 <span className="prow-pill uc" title="Under contract — closing checklist on the Overview">
                   UNDER CONTRACT · {closingProgress(p, ps).done}/{closingProgress(p, ps).total}
                 </span>
@@ -449,8 +451,9 @@ function Detail(props: Props) {
           {/* 🏁 The sale workflow. The card appears once the house is marked
               under contract (or already has a closing date from before this
               card existed); otherwise a quiet one-liner offers the button.
-              Finished (C.O.) homes show neither — that process is over. */}
-          {ps.underContract || (ps.closingDate && p.listStatus !== 'CO') ? (
+              C.O. homes INCLUDED (Adam, July 2026): a finished house is
+              exactly the one about to sell — C.O. → under contract → closing. */}
+          {ps.underContract || ps.closingDate ? (
             <ClosingCard
               project={p}
               ps={ps}
@@ -461,18 +464,16 @@ function Detail(props: Props) {
               resetStepList={props.resetStepList}
             />
           ) : (
-            p.listStatus !== 'CO' && (
-              <div className="pd-uc-row">
-                <button
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => setField(p.id, 'underContract', true)}
-                  title="Start the sale workflow: closing checklist, closing date, shut-off countdown, disconnect buttons"
-                >
-                  <Icon name="sports_score" size={16} />
-                  Mark under contract…
-                </button>
-              </div>
-            )
+            <div className="pd-uc-row">
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => setField(p.id, 'underContract', true)}
+                title="Start the sale workflow: closing checklist, closing date, shut-off countdown, disconnect buttons"
+              >
+                <Icon name="sports_score" size={16} />
+                Mark under contract…
+              </button>
+            </div>
           )}
 
           {/* Status grid — ONE card per stream, the single source of truth.

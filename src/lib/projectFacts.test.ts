@@ -52,6 +52,21 @@ describe('hasManualPermitEdits()', () => {
   it("other human markers (a C.O.'d home) count as manual too", () => {
     expect(hasManualPermitEdits({ issued: { done: true, date: '(C.O.)' } })).toBe(true)
   })
+
+  it("an UNcheck counts as manual — '(unchecked)' sentinel (July 2026)", () => {
+    // The fix for "I can't edit projects once they're issued": unticking a
+    // box stamps '(unchecked)' (toggleStep), which must read as a human
+    // decision — otherwise migrate()'s county/number-format re-derive would
+    // flip the box right back on the next load.
+    expect(
+      hasManualPermitEdits({
+        submitted: county,
+        review: county,
+        approved: county,
+        issued: { done: false, date: '(unchecked)' },
+      }),
+    ).toBe(true)
+  })
 })
 
 describe('shouldRederivePermitSteps()', () => {

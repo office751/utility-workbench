@@ -158,13 +158,18 @@ function ProjectList({ projects, onSelect, onAdd, onBatchApply, onStatusReport, 
   // decides whether the default "All" view includes finished homes.
   const chipCount: Record<PermitStatus, number> = { co: 0, issued: 0, 'not-ours': 0, 'in-review': 0, 'not-applied': 0 }
   for (const r of pool) chipCount[r.status]++
-  const allCount = pool.filter((r) => !(filters.hideCO && r.p.listStatus === 'CO')).length
+  // hide-CO hides FINISHED homes — but one still walking its closing checklist
+  // (under contract, July 2026) is active sale work, so it stays visible until
+  // the deed records and the checklist completes.
+  const coHidden = (r: (typeof rows)[number]) =>
+    filters.hideCO && r.p.listStatus === 'CO' && !closingPending(r.p, r.ps)
+  const allCount = pool.filter((r) => !coHidden(r)).length
 
   // A specific chip BYPASSES hide-CO: clicking "C.O." is an explicit ask to see
   // finished homes, and no other bucket contains them anyway.
   const visible =
     filters.permitStatus === 'all'
-      ? pool.filter((r) => !(filters.hideCO && r.p.listStatus === 'CO'))
+      ? pool.filter((r) => !coHidden(r))
       : pool.filter((r) => r.status === filters.permitStatus)
 
   const nActive = countActive(filters)
@@ -253,7 +258,9 @@ function ProjectList({ projects, onSelect, onAdd, onBatchApply, onStatusReport, 
                 <span className="prow-addr">{p.address}</span>
                 {p.listStatus === 'CO' && <span className="prow-pill co">C.O.</span>}
                 {p.listStatus === 'Hold' && <span className="prow-pill hold">HOLD</span>}
-                {ps.underContract && p.listStatus !== 'CO' && (
+                {/* Shown alongside the C.O. pill too — a finished house that's
+                    selling wears both hats (Adam, July 2026). */}
+                {ps.underContract && (
                   <span className="prow-pill uc" title="Under contract — closing checklist on this house's Overview">
                     UNDER CONTRACT
                   </span>

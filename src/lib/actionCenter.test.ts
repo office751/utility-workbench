@@ -40,7 +40,7 @@ describe('buildActionCenter — deterministic fixtures', () => {
       takeoffs,
     )
 
-  it('finished (CO) and parked (Hold) homes are skipped entirely', () => {
+  it('finished (CO) and parked (Hold) homes surface no construction items', () => {
     const ps = emptyProjectState()
     ps.permitExpiresDate = '2026-06-01' // long expired — would be a crit fire
     const ac = center([
@@ -53,6 +53,22 @@ describe('buildActionCenter — deterministic fixtures', () => {
     // including CO/Hold — it's "how many houses we track", not "how many active".
     expect(ac.stats.projects).toBe(2)
     expect(ac.stats.allClear).toBe(true)
+  })
+
+  it("a C.O. home that's SELLING still fires its shut-off deadline (Hold never does)", () => {
+    // The sale workflow runs on finished homes (July 2026): C.O. → under
+    // contract → closing. The shut-off deadline is the one alert a C.O.
+    // house must still raise — everything else stays quiet.
+    const ps = emptyProjectState()
+    ps.underContract = true
+    ps.closingDate = '2026-07-02' // → shut-off due today (Mon Jul 6)
+    ps.permitExpiresDate = '2026-06-01' // expired — must STILL stay silent on a C.O. house
+    const ac = center([{ p: makeProject({ id: 1, listStatus: 'CO' }), ps }])
+    expect(ac.attention.map((a) => a.kind)).toEqual(['shutoff'])
+    expect(ac.moves).toHaveLength(0)
+    // A parked (Hold) house is skipped entirely, closing date or not.
+    const held = center([{ p: makeProject({ id: 2, listStatus: 'Hold' }), ps }])
+    expect(held.attention).toHaveLength(0)
   })
 
   it('permit expiry: 14-day lookahead window, severity steps at 7/0', () => {

@@ -28,8 +28,12 @@ import { emptyProjectState, inferPermitSteps } from '../data/seed'
  * Machine-derived steps carry sentinel "dates" — '(county)' from portal data,
  * '(inferred)' from the permit-number format. A REAL date (stamped by
  * toggleStep when you click a checkbox) — or any other marker, like the
- * '(C.O.)' on finished homes — means a human decided, so auto-re-derivation
- * must keep its hands off.
+ * '(C.O.)' on finished homes, '(caught up)' from the catch-up row, or
+ * '(unchecked)' when a box is manually UNticked — means a human decided, so
+ * auto-re-derivation must keep its hands off. The '(unchecked)' sentinel is
+ * the whole reason unchecks stick (July 2026): before it, unticking a box on
+ * an "issued" house left no trace here, and the county re-derive flipped the
+ * box back on every load.
  *
  * This is the SAME test migrate() uses on load; it lives here so the two
  * callers can never drift apart.

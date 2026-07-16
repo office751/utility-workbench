@@ -78,11 +78,36 @@ export function buildActionCenter(
   let toOrderTotal = 0
 
   for (const p of projects) {
-    // Finished (C.O.) and parked (Hold) homes never belong in "needs attention"
-    // or the to-do moves — skip them entirely so the command center stays focused.
-    if (p.listStatus === 'CO' || p.listStatus === 'Hold') continue
+    // Parked (Hold) homes never belong in "needs attention" or the to-do
+    // moves — skip them entirely so the command center stays focused.
+    if (p.listStatus === 'Hold') continue
     const ps = getProjectState(p.id)
     const base = { projectId: p.id, address: p.address, meta: `${p.model} · ${p.subdivision}` }
+
+    // --- deadline: electric shut-off after a closing ---
+    // Checked for EVERY non-Hold house INCLUDING C.O. (July 2026): the sale
+    // workflow runs on finished homes — C.O. → under contract → closing —
+    // and missing this deadline means paying a sold house's power bill.
+    const so = shutoffFor(ps)
+    if (so && so.daysLeft <= 10) {
+      const overdue = so.daysLeft < 0
+      attention.push({
+        ...base,
+        // 'overview' — the shut-off controls live on the Closing card there
+        // (they left the Electric tab in July 2026).
+        stream: 'overview',
+        kind: 'shutoff',
+        icon: '⚡',
+        text: overdue ? 'Shut-off OVERDUE' : 'Electric shut-off due',
+        detail: overdue ? `overdue · ${so.date}` : `${so.daysLeft}d · ${so.date}`,
+        severity: overdue ? 'crit' : 'warn',
+        sortDays: so.daysLeft,
+      })
+    }
+
+    // Finished (C.O.) homes: the shut-off above is the ONLY thing they can
+    // surface — no construction alerts or moves for a done house.
+    if (p.listStatus === 'CO') continue
 
     // --- NEW-MODEL TAKEOFFS: a model missing takeoffs is a problem; missing
     //     them once the PERMIT IS ISSUED is the most important thing on the
@@ -130,23 +155,8 @@ export function buildActionCenter(
       })
     }
 
-    // --- deadline: electric shut-off after a closing ---
-    const so = shutoffFor(ps)
-    if (so && so.daysLeft <= 10) {
-      const overdue = so.daysLeft < 0
-      attention.push({
-        ...base,
-        // 'overview' — the shut-off controls live on the Closing card there
-        // (they left the Electric tab in July 2026).
-        stream: 'overview',
-        kind: 'shutoff',
-        icon: '⚡',
-        text: overdue ? 'Shut-off OVERDUE' : 'Electric shut-off due',
-        detail: overdue ? `overdue · ${so.date}` : `${so.daysLeft}d · ${so.date}`,
-        severity: overdue ? 'crit' : 'warn',
-        sortDays: so.daysLeft,
-      })
-    }
+    // (The electric shut-off deadline is checked ABOVE the C.O. skip — see
+    // the top of the loop.)
 
     // --- stalled stages (gone quiet) across the four lifecycle streams ---
     for (const stream of ['electric', 'water', 'septic', 'permit'] as Stream[]) {

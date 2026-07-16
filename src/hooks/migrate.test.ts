@@ -71,6 +71,35 @@ describe('migrate() round-trip', () => {
     expect(out2.vendorCatalogsSeeded).toBe(true)
   })
 
+  it("keeps a manual UNCHECK on an issued permit — the '(unchecked)' clobber regression", () => {
+    // July 2026 (Adam: "I can't edit projects once they're issued"): a numeric
+    // permit # infers as issued, so the checklist arrives all-done. Unchecking
+    // a box used to leave no manual trace (dates were cleared), and this very
+    // re-derive flipped it back on the next load. toggleStep now stamps
+    // '(unchecked)', which hasManualPermitEdits reads as a human decision.
+    const inferred = { done: true, date: '(inferred)' }
+    const edited = emptyProjectState()
+    edited.steps.permit = {
+      submitted: inferred,
+      review: inferred,
+      approved: inferred,
+      issued: { done: false, date: '(unchecked)' }, // Adam unticked it
+    }
+    const machine = emptyProjectState()
+    machine.steps.permit = { submitted: inferred, review: inferred }
+    const out2 = migrate({
+      roster: [
+        { ...PROJECTS[0], id: 901, permit: '2099123456' }, // all digits → infers issued
+        { ...PROJECTS[0], id: 902, permit: '2099123457' },
+      ],
+      projects: { 901: edited, 902: machine },
+    })
+    // The hand-unticked box STAYS unticked…
+    expect(out2.projects[901].steps.permit.issued?.done).toBe(false)
+    // …while a purely machine-derived checklist still follows the inference.
+    expect(out2.projects[902].steps.permit.issued?.done).toBe(true)
+  })
+
   // The guard: if someone adds a field to WorkbenchState, they must add it here
   // AND to migrate()'s result object — or this fails. That's the whole point.
   it('output carries EVERY WorkbenchState field', () => {

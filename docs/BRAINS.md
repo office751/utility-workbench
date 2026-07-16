@@ -152,9 +152,13 @@ files (`npx vitest run`, ~350 ms).
   has no account to disconnect, so the step and its slot in n/n progress
   vanish (id-matched, so it survives an owner rename). `closingPending` only
   while `underContract` with steps left. `closingNeedsAction` = shut-off
-  deadline ≤ 10 days (the threshold that moved here from electric). UI note:
-  the Overview's alerts card hides `shutoff` items — the Closing card beside
-  it shows the same countdown (Today still alerts).
+  deadline ≤ 10 days (the threshold that moved here from electric).
+  **The sale workflow is NOT gated by `listStatus` (July 2026)** — a C.O.
+  house can be marked under contract (that's the normal order: finish, then
+  sell), wears the UNDER CONTRACT pill next to its C.O. pill, and the
+  Projects list's hide-CO filter keeps it visible while `closingPending`.
+  UI note: the Overview's alerts card hides `shutoff` items — the Closing
+  card beside it shows the same countdown (Today still alerts).
 - **Permit**: `corrections` skipped in the walk; `issued` checked = done even
   if earlier boxes weren't ticked (believe the county). `permitNeedsAction`
   only while WE are responsible (`Owner`/`GC` lots are tracked, not on us).
@@ -177,9 +181,12 @@ files (`npx vitest run`, ~350 ms).
 
 ## actionCenter.ts — the Today ranking (THE prioritization)
 
-Two lists per build, walked once across all non-CO/non-Hold projects
+Two lists per build, walked once across all non-Hold projects
 (`stats.projects` still counts the whole roster — it's "houses tracked", not
-"active"):
+"active"). **Hold homes are skipped entirely. C.O. homes surface exactly ONE
+kind of item: the electric shut-off deadline** — the sale workflow runs on
+finished homes (July 2026: C.O. → under contract → closing), so that deadline
+must never go quiet; every other alert and move stays off for a done house:
 
 **attention** (fires — deadline/stall alerts), ranked by:
 1. **Severity**: crit > warn > info.
@@ -335,6 +342,16 @@ tuning is the design, not an exception).
 - Every state-shape change goes through `migrate()` in `useProjects.ts`
   (tested round-trip in `hooks/migrate.test.ts`). The June 2026 data-loss bug
   (dropped `assignees`) lives in test form there — don't repeat it.
+- **Permit-checklist re-derive respects EVERY manual toggle, including
+  unchecks (July 2026).** migrate() re-infers a permit checklist from county
+  data / the permit-number format only while `hasManualPermitEdits` says the
+  checklist is machine-derived. `toggleStep` stamps a real date on check and
+  the **`'(unchecked)'` sentinel on UNcheck** — both count as manual, so
+  neither direction gets clobbered. (Before the sentinel, unchecking cleared
+  the date, left no manual trace, and an "issued" house's checklist snapped
+  back to all-done on every load.) The sentinel is invisible (the UI shows
+  dates only on done steps) and unparseable (backfillDoneAt/staleness ignore
+  it) — same design as `'(caught up)'`.
 - **Cloud-write invariant (CRITICAL, from the blob-clobber incident): never
   write the cloud before a successful read.** Not a lib/ module, but it
   belongs in any list of rules that must survive.

@@ -630,7 +630,7 @@ export function useProjects() {
             ...existing,
             done,
             // Stamp BOTH date fields with the CURRENT date/time every time a step
-            // is checked off, and CLEAR them when it's unchecked.
+            // is checked off.
             //   date   → friendly string shown next to the step in the UI
             //   doneAt → exact machine timestamp the stale-status math reads
             //
@@ -639,9 +639,16 @@ export function useProjects() {
             // first date — so an item checked on 6/30, unchecked, then re-checked
             // on 7/2 still showed 6/30. The date should reflect when you ACTUALLY
             // checked it. (This mirrors setModelTakeoff, which already stamps a
-            // fresh date on done and drops it on undone. Clearing is safe: both
-            // the UI and staleness.ts only read these fields when `done` is true.)
-            date: done ? new Date().toLocaleDateString() : undefined,
+            // fresh date on done and drops it on undone.)
+            //
+            // UNCHECKING stamps the '(unchecked)' sentinel instead of clearing
+            // (July 2026). It's invisible (the UI shows dates only on done
+            // steps) and unparseable (backfillDoneAt/staleness ignore it), but
+            // it makes hasManualPermitEdits SEE the uncheck. Before this,
+            // unchecking left no manual trace, so migrate()'s county/number-
+            // format re-derive flipped the box right back on the next load —
+            // an "issued" permit checklist literally couldn't be edited.
+            date: done ? new Date().toLocaleDateString() : '(unchecked)',
             doneAt: done ? new Date().toISOString() : undefined,
           },
         },
@@ -753,7 +760,9 @@ export function useProjects() {
    * (same honesty rule as the '(county)'/'(inferred)' markers).
    *
    * done=false is the UNDO: uncheck those same steps again, clearing the
-   * sentinel but keeping any notes — the same clearing rule as toggleStep.
+   * sentinel but keeping any notes. Deliberately CLEARS the date (unlike
+   * toggleStep's '(unchecked)' stamp): undo means "put it back the way it
+   * was", so a machine-derived checklist goes back to looking machine-derived.
    *
    * One setState for the whole batch, per the one-setState rule — a loop of
    * toggleStep calls would clobber itself (same lesson as markApplied above).
@@ -800,8 +809,10 @@ export function useProjects() {
         [stepId]: {
           ...existing,
           done,
-          // Same stamping rule as toggleStep: fresh date both ways on check,
-          // cleared on uncheck (see that function's comment for the why).
+          // Fresh date on every check, cleared on uncheck. (toggleStep stamps
+          // '(unchecked)' instead — but that exists only to protect the PERMIT
+          // checklist from the county re-derive; nothing re-derives closing
+          // steps, so plain clearing is right here.)
           date: done ? new Date().toLocaleDateString() : undefined,
           doneAt: done ? new Date().toISOString() : undefined,
         },
