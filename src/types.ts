@@ -639,6 +639,18 @@ export interface CabinetRun {
   /** Wall (or row) length in inches the segments must fit. */
   length: number
   items: CabinetSegment[]
+  /**
+   * Which wall of the room this run sits on, for the top-down plan view the
+   * installer gets: top/left/right/bottom walls, or 'island' (a floating
+   * row; island rows draw side-by-side in run order). Absent = inferred
+   * (first base wall 'top', second 'left', ISLAND group 'island').
+   */
+  side?: 'top' | 'left' | 'right' | 'bottom' | 'island'
+  /**
+   * Cabinet depth in inches (how far the boxes stick out from the wall) —
+   * only used to draw the plan view. Absent = 12 for UPPER runs, else 24.
+   */
+  depth?: number
 }
 
 /** A named cabinet layout for a model (usually “Kitchen”). */

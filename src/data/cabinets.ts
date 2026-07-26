@@ -87,6 +87,8 @@ const INDEPENDENCE_KITCHEN: CabinetLayout = {
     {
       id: 'ind-k-sinkbase',
       group: 'BASE',
+      side: 'top',
+      depth: 24,
       name: 'Sink wall — base',
       length: 142,
       items: [
@@ -101,6 +103,8 @@ const INDEPENDENCE_KITCHEN: CabinetLayout = {
     {
       id: 'ind-k-rangebase',
       group: 'BASE',
+      side: 'left',
+      depth: 24,
       name: 'Range wall — base',
       length: 158.5,
       items: [
@@ -114,6 +118,8 @@ const INDEPENDENCE_KITCHEN: CabinetLayout = {
     {
       id: 'ind-k-sinkupper',
       group: 'UPPER',
+      side: 'top',
+      depth: 12,
       name: 'Sink wall — uppers',
       length: 142,
       items: [
@@ -128,6 +134,8 @@ const INDEPENDENCE_KITCHEN: CabinetLayout = {
     {
       id: 'ind-k-rangeupper',
       group: 'UPPER',
+      side: 'left',
+      depth: 12,
       name: 'Range wall — uppers',
       length: 158.5,
       items: [
@@ -142,6 +150,8 @@ const INDEPENDENCE_KITCHEN: CabinetLayout = {
     {
       id: 'ind-k-islwork',
       group: 'ISLAND',
+      side: 'island',
+      depth: 24,
       name: 'Island — working row (24" deep)',
       length: 96,
       items: [
@@ -153,6 +163,8 @@ const INDEPENDENCE_KITCHEN: CabinetLayout = {
     {
       id: 'ind-k-islseat',
       group: 'ISLAND',
+      side: 'island',
+      depth: 12,
       name: 'Island — seating row (12" deep)',
       length: 96,
       items: [

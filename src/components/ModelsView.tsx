@@ -287,6 +287,7 @@ function ModelsView({
       <CabinetLayoutEditor
         layouts={cabinetLayoutsFor(mk, models)}
         onChange={(next) => setModelInfo(mk, { cabinets: next })}
+        printTitle={`Model ${mk}`}
       />
 
       {/* The plans locker — identical mechanics to a project's Files box:

@@ -4798,3 +4798,30 @@ a.map-btn {
   border-radius: var(--radius);
   padding: 5px 8px;
 }
+
+/* Top-down plan view (CabinetPlanView) — a fixed-light "paper drawing" so it
+   reads the same on screen, in dark mode, and out of the printer. */
+.cab-plan { margin: 8px 0 14px; }
+.cab-plan-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+.cab-plan-bar .tpl-preview-h { margin: 0; }
+.cab-plan-sheets { display: flex; gap: 12px; flex-wrap: wrap; }
+.cab-plan-sheet {
+  flex: 1 1 340px;
+  min-width: 300px;
+  max-width: 560px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: #ffffff; /* paper — deliberately not var(--panel) */
+}
+.cab-plan-title {
+  font-size: calc(11px * var(--font-scale));
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #6f685c;
+  background: #faf8f4;
+  border-bottom: 1px solid #e3ded6;
+  padding: 6px 10px;
+}
+.cab-plan-svg { display: block; width: 100%; height: auto; }

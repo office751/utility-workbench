@@ -376,6 +376,12 @@ is computed HERE, once, never re-tallied in a component.
   the field-verified Surf Blvd kitchen and its fit/BOM is pinned by tests);
   read-through until the first in-app edit copies the array into
   `ModelState.cabinets` (blob owns it after — an emptied list stays empty).
+- **Plan-view defaults** (drawing only, never fit math): `effDepth` = the
+  run's own depth, else 12″ for UPPER-group runs, else 24″; `inferSide` =
+  explicit side, else ISLAND-group floats, else first wall run 'top' and
+  second 'left' — counted PER LEVEL (uppers separately from bases), matching
+  CabinetPlanView's per-sheet counting. The island's distance from the walls
+  in the drawing is schematic; the installer locates it from the floor plan.
 
 ## data/models.ts — owner-edited model specs (July 2026)
 

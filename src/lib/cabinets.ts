@@ -89,6 +89,44 @@ export function layoutCount(layout: CabinetLayout): number {
   return layoutBom(layout).reduce((a, l) => a + l.qty, 0)
 }
 
+/**
+ * Tape-measure positions readout for a run: "LS33 0–33 · B09 33–42 · …".
+ * The installer's cut sheet — every segment's start–end along the wall.
+ */
+export function positionsLine(run: CabinetRun): string {
+  let at = 0
+  return run.items
+    .map((it) => {
+      const a = at
+      at = +(at + (Number(it.width) || 0)).toFixed(3)
+      return `${it.sku} ${fmtIn(a).replace('″', '')}–${fmtIn(at).replace('″', '')}`
+    })
+    .join(' · ')
+}
+
+/**
+ * Effective cabinet depth for the plan view: the run's own depth wins;
+ * otherwise UPPER runs are 12″ (wall cabinets) and everything else 24″
+ * (base cabinets). Drawing-only — never affects fit math.
+ */
+export function effDepth(run: CabinetRun): number {
+  if (Number(run.depth) > 0) return Number(run.depth)
+  return /upper/i.test(run.group) ? 12 : 24
+}
+
+/**
+ * Which wall a run draws on when the owner hasn't said: ISLAND-group runs
+ * float ('island'); otherwise the FIRST wall run of the layout takes the
+ * top wall and the SECOND takes the left (the standard L), further walls
+ * default 'top' again — at that point the owner should set sides by hand.
+ * `wallIndex` = this run's position counting only non-island runs.
+ */
+export function inferSide(run: CabinetRun, wallIndex: number): NonNullable<CabinetRun['side']> {
+  if (run.side) return run.side
+  if (/island/i.test(run.group)) return 'island'
+  return wallIndex === 1 ? 'left' : 'top'
+}
+
 const EIGHTHS = ['', '⅛', '¼', '⅜', '½', '⅝', '¾', '⅞']
 
 /**

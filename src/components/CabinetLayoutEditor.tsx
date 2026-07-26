@@ -18,13 +18,25 @@
  * (copy-on-write over the data/cabinets.ts default; see cabinetLayoutsFor).
  */
 import { useState } from 'react'
-import type { CabinetLayout, CabinetRun, CabinetSegment } from '../types'
+import type { CabinetLayout, CabinetSegment } from '../types'
 import { CABINET_KIND_LABELS, FGT_SKUS, SEGMENT_PRESETS } from '../data/cabinets'
-import { fmtIn, layoutBom, layoutCount, runFit, skuWidth } from '../lib/cabinets'
+import { effDepth, fmtIn, inferSide, layoutBom, layoutCount, positionsLine, runFit, skuWidth } from '../lib/cabinets'
+import CabinetPlanView from './CabinetPlanView'
+
+/** Wall choices for the plan view (where does this run sit in the room?). */
+const SIDES: { v: NonNullable<import('../types').CabinetRun['side']>; label: string }[] = [
+  { v: 'top', label: 'top wall' },
+  { v: 'left', label: 'left wall' },
+  { v: 'right', label: 'right wall' },
+  { v: 'bottom', label: 'bottom wall' },
+  { v: 'island', label: 'island' },
+]
 
 interface Props {
   layouts: CabinetLayout[]
   onChange: (next: CabinetLayout[]) => void
+  /** Header for the printed installer sheet, e.g. "Model Independence". */
+  printTitle?: string
 }
 
 const uid = () =>
@@ -32,19 +44,7 @@ const uid = () =>
     ? crypto.randomUUID().slice(0, 13)
     : Math.random().toString(36).slice(2, 15)
 
-/** Positions readout: "LS33 0–33 · B09 33–42 · …" (tape-measure style). */
-function positionsLine(run: CabinetRun): string {
-  let at = 0
-  return run.items
-    .map((it) => {
-      const a = at
-      at = +(at + (Number(it.width) || 0)).toFixed(3)
-      return `${it.sku} ${fmtIn(a).replace('″', '')}–${fmtIn(at).replace('″', '')}`
-    })
-    .join(' · ')
-}
-
-function CabinetLayoutEditor({ layouts, onChange }: Props) {
+function CabinetLayoutEditor({ layouts, onChange, printTitle }: Props) {
   // Which segment is open in the inspector (run id + segment id).
   const [sel, setSel] = useState<{ r: string; i: string } | null>(null)
 
@@ -104,7 +104,23 @@ function CabinetLayoutEditor({ layouts, onChange }: Props) {
             </button>
           </div>
 
+          {/* The installer's view: top-down plan assembled from the runs
+              below (each run's "wall" select places it in the room). */}
+          <CabinetPlanView layout={L} printTitle={printTitle ?? 'Cabinet layout'} />
+
           {L.runs.map((run, ri) => {
+            // Wall index (non-island runs before this one, SAME level — uppers
+            // count separately from bases, matching the per-sheet counting in
+            // CabinetPlanView) so the side select shows what the plan infers
+            // when side isn't set yet.
+            const isUpper = (g: string) => /upper/i.test(g)
+            let wi = 0
+            for (const r of L.runs) {
+              if (r.id === run.id) break
+              if (isUpper(r.group) !== isUpper(run.group)) continue
+              if (inferSide(r, wi) !== 'island') wi++
+            }
+            const side = inferSide(run, wi)
             const fit = runFit(run)
             const chip =
               fit.status === 'fit'
@@ -139,6 +155,44 @@ function CabinetLayoutEditor({ layouts, onChange }: Props) {
                             void (d[li].runs[ri].length = Math.max(
                               1,
                               parseFloat(e.target.value) || run.length,
+                            )),
+                        )
+                      }
+                    />
+                    in
+                  </label>
+                  <label className="cab-len">
+                    on
+                    <select
+                      value={side}
+                      onChange={(e) =>
+                        patch(
+                          (d) =>
+                            void (d[li].runs[ri].side = e.target
+                              .value as (typeof SIDES)[number]['v']),
+                        )
+                      }
+                    >
+                      {SIDES.map((s) => (
+                        <option key={s.v} value={s.v}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="cab-len">
+                    deep
+                    <input
+                      type="number"
+                      step={1}
+                      min={1}
+                      value={effDepth(run)}
+                      onChange={(e) =>
+                        patch(
+                          (d) =>
+                            void (d[li].runs[ri].depth = Math.max(
+                              1,
+                              parseFloat(e.target.value) || effDepth(run),
                             )),
                         )
                       }

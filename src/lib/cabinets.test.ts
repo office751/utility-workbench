@@ -9,7 +9,7 @@
 import { describe, expect, it } from 'vitest'
 import type { CabinetLayout, CabinetRun } from '../types'
 import { DEFAULT_CABINET_LAYOUTS, cabinetLayoutsFor } from '../data/cabinets'
-import { fmtIn, layoutBom, layoutCount, runFit, skuWidth } from './cabinets'
+import { effDepth, fmtIn, inferSide, layoutBom, layoutCount, runFit, skuWidth } from './cabinets'
 
 const run = (length: number, widths: number[]): CabinetRun => ({
   id: 'r',
@@ -129,6 +129,31 @@ describe('the shipped Independence default (Surf Blvd rev F3)', () => {
       cabinetLayoutsFor('Independence', { Independence: { cabinets: [] } }),
     ).toHaveLength(0) // deliberate delete sticks — blob owns it after first write
     expect(cabinetLayoutsFor('A', undefined)).toEqual([])
+  })
+})
+
+describe('plan-view defaults (effDepth / inferSide)', () => {
+  const r = (group: string, side?: CabinetRun['side'], depth?: number): CabinetRun => ({
+    id: 'r',
+    group,
+    name: 'x',
+    length: 96,
+    items: [],
+    ...(side ? { side } : {}),
+    ...(depth ? { depth } : {}),
+  })
+  it('depth: own value wins, else UPPER=12, else 24', () => {
+    expect(effDepth(r('BASE'))).toBe(24)
+    expect(effDepth(r('UPPER'))).toBe(12)
+    expect(effDepth(r('ISLAND', 'island', 12))).toBe(12)
+    expect(effDepth(r('UPPER', undefined, 24))).toBe(24) // over-fridge deep run
+  })
+  it('side: explicit wins; island group floats; walls go top, left, top…', () => {
+    expect(inferSide(r('BASE', 'right'), 0)).toBe('right')
+    expect(inferSide(r('ISLAND'), 0)).toBe('island')
+    expect(inferSide(r('BASE'), 0)).toBe('top')
+    expect(inferSide(r('BASE'), 1)).toBe('left')
+    expect(inferSide(r('UPPER'), 0)).toBe('top')
   })
 })
 
