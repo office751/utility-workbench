@@ -4664,3 +4664,137 @@ a.map-btn {
   font-size: var(--text-sm);
   resize: vertical;
 }
+
+/* ---------------------------------------------------------------- */
+/* 🧰 Cabinet layout editor (📐 Models → CabinetLayoutEditor.tsx)    */
+/* Strips are TO SCALE: each segment's flex-grow = its inches.       */
+/* ---------------------------------------------------------------- */
+.cab-editor { margin-top: 18px; }
+.cab-layout {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  padding: 12px 14px;
+  margin: 10px 0 14px;
+}
+.cab-layout-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.cab-name {
+  font-weight: 700;
+  font-size: calc(15px * var(--font-scale));
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  padding: 3px 6px;
+  min-width: 140px;
+}
+.cab-name:hover, .cab-name:focus { border-color: var(--border); background: var(--panel); }
+.cab-run { border-top: 1px dashed var(--divider); padding: 10px 0 6px; }
+.cab-run-head { display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.cab-run-name { font-weight: 600; font-size: calc(13.5px * var(--font-scale)); flex: 0 1 auto; }
+.cab-group {
+  font-size: calc(10px * var(--font-scale));
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 1px 8px;
+  text-transform: uppercase;
+}
+.cab-len { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: calc(12px * var(--font-scale)); }
+.cab-len input { width: 74px; }
+.cab-chip {
+  font-size: calc(11.5px * var(--font-scale));
+  font-weight: 700;
+  border-radius: var(--radius-pill);
+  padding: 2px 10px;
+  font-variant-numeric: tabular-nums;
+}
+.cab-chip.ok   { color: var(--success); border: 1.5px solid var(--success-border); background: var(--success-bg); }
+.cab-chip.warn { color: var(--warn);    border: 1.5px solid var(--warn-strong);    background: var(--warn-bg); }
+.cab-chip.over { color: var(--danger);  border: 1.5px solid var(--danger-border);  background: var(--danger-bg); }
+.cab-run-del { margin-left: auto; }
+
+.cab-strip { display: flex; gap: 2px; height: 64px; }
+.cab-seg {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-width: 3px; overflow: hidden;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--panel);
+  cursor: pointer; text-align: center; line-height: 1.15; padding: 2px;
+}
+.cab-seg .cab-sku { font-weight: 700; font-size: calc(11.5px * var(--font-scale)); font-variant-numeric: tabular-nums; }
+.cab-seg .cab-w   { font-size: calc(10px * var(--font-scale)); opacity: 0.75; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.cab-seg.k-cab    { background: var(--info-bg);    border-color: var(--info); color: var(--info); }
+.cab-seg.k-sink   { background: #c4d9ec;           border-color: var(--info); color: #1d4568; }
+.cab-seg.k-corner { background: var(--warn-bg);    border-color: var(--warn-strong); color: var(--warn); }
+.cab-seg.k-appl   { background: var(--panel);      border-style: dashed; color: var(--muted); }
+.cab-seg.k-open   { background: transparent;       border-style: dashed; color: var(--ink-3); }
+.cab-seg.k-fill   {
+  background: repeating-linear-gradient(45deg, var(--info-bg), var(--info-bg) 4px, var(--panel) 4px, var(--panel) 8px);
+  border-color: var(--info); color: var(--info);
+}
+.cab-seg.k-openwall { background: transparent; border: 1.5px dashed var(--divider); cursor: default; }
+.cab-seg.selected { outline: 2.5px solid var(--accent); outline-offset: 1px; }
+
+.cab-pos {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: calc(10.5px * var(--font-scale));
+  color: var(--ink-3);
+  margin-top: 6px; line-height: 1.7; word-spacing: 1px;
+}
+
+.cab-inspector {
+  display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: flex-end;
+  border: 1.5px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--accent-bg);
+  padding: 10px 12px; margin-top: 8px;
+}
+.cab-inspector label {
+  display: flex; flex-direction: column; gap: 3px;
+  font-size: calc(10.5px * var(--font-scale));
+  letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); font-weight: 600;
+}
+.cab-inspector input, .cab-inspector select { font-size: calc(13px * var(--font-scale)); }
+.cab-inspector input[type='number'] { width: 84px; }
+.cab-note-f input { width: 220px; }
+.cab-count { flex-direction: row !important; align-items: center; text-transform: none !important; gap: 6px !important; padding-bottom: 6px; }
+.cab-btnrow { display: flex; gap: 6px; }
+.cab-addrow { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+
+.cab-bom { margin-top: 12px; }
+.cab-bom table { border-collapse: collapse; }
+.cab-bom td { padding: 3px 14px 3px 0; border-bottom: 1px solid var(--divider); font-size: calc(13px * var(--font-scale)); }
+.cab-bom-sku { font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 700; }
+.cab-bom-qty { font-variant-numeric: tabular-nums; }
+.cab-bom-runs { color: var(--ink-3); }
+
+/* 📐 Models — editable spec facts row + the add-model card */
+.spec-row { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; margin: 6px 0 2px; }
+.spec-field {
+  display: flex; flex-direction: column; gap: 3px;
+  font-size: calc(10.5px * var(--font-scale));
+  letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--muted); font-weight: 600;
+}
+.spec-field input { width: 110px; font-variant-numeric: tabular-nums; }
+.model-card-add { border-style: dashed; color: var(--muted); }
+.model-card-add:hover { color: var(--accent); border-color: var(--accent); }
+
+/* Inputs inside the spec row + cabinet editor get the app's standard field
+   look (inputs are styled per-container in this app, not globally). */
+.spec-field input,
+.cab-inspector input,
+.cab-inspector select,
+.cab-len input,
+.notes-label > input {
+  font: inherit;
+  font-size: calc(13.5px * var(--font-scale));
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 5px 8px;
+}

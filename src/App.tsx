@@ -48,7 +48,7 @@ const VendorsView = lazy(() => import('./components/VendorsView'))
 const VendorsEditor = lazy(() => import('./components/VendorsEditor'))
 import { VENDORS, orderMailto } from './data/vendors'
 import { collectPendingOrders } from './lib/orders'
-import { modelKey } from './data/models'
+import { applyModelSpecs, modelKey } from './data/models'
 const UtilitiesEditor = lazy(() => import('./components/UtilitiesEditor'))
 const DrawTemplatesEditor = lazy(() => import('./components/DrawTemplatesEditor'))
 import { DRAW_TEMPLATES_DEFAULT } from './data/drawTemplates'
@@ -171,6 +171,14 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
   // permit-status chips all read tonight's portal data, not just the baked
   // snapshot. (migrate() also applies them on load, before first render.)
   applyPortalDates(state.portalDates)
+  // And for owner-edited model specs (📐 Models tab): sync them into the
+  // data/models.ts resolver so specFor() — the SECO/Duke load-form packets —
+  // uses the edited sqft/tonnage, not just the code defaults.
+  applyModelSpecs(
+    Object.fromEntries(
+      Object.entries(state.models ?? {}).flatMap(([k, m]) => (m.spec ? [[k, m.spec]] : [])),
+    ),
+  )
 
   // Dark mode (persists per device — see hooks/useTheme.ts).
   const { theme, toggle: toggleTheme } = useTheme()

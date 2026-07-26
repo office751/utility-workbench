@@ -590,4 +590,61 @@ export interface ModelState {
   masterFiled?: boolean
   /** Free-form notable info — revisions, engineer notes, quirks. */
   notes?: string
+  /**
+   * Owner edits to the model's spec facts (sqft / tons / beds). Absent field =
+   * use the data/models.ts default. Flows into the electric load forms via
+   * applyModelSpecs() (module-global, synced in App.tsx each render — the
+   * portalDates pattern), so fixing a sqft here fixes every SECO/Duke packet.
+   */
+  spec?: { sqft?: number | ''; tons?: number | ''; beds?: number | '' }
+  /**
+   * FGT cabinet layouts for this model (kitchen, baths…). Each layout is a set
+   * of RUNS (a wall or island row) whose segments must sum to the run's wall
+   * length — lib/cabinets.ts is the fit-math brain. Absent = show the
+   * data/cabinets.ts default for this model (copy-on-write on first edit,
+   * same read-through pattern as the model spec facts).
+   */
+  cabinets?: CabinetLayout[]
+  /**
+   * The model's OneDrive/SharePoint folder (plans, calcs, takeoff PDFs) —
+   * pasted once from OneDrive's "Copy link", rendered as a 📂 button. This
+   * LINKS to where files already live; the docs locker above still exists for
+   * signed-link sharing (Jennifer flow, mailclip pastes).
+   */
+  folderUrl?: string
+}
+
+/** One segment of a cabinet run — a cabinet box, appliance gap, filler… */
+export interface CabinetSegment {
+  id: string
+  /** cab = cabinet · sink = sink base · corner = corner unit ·
+   *  appl = appliance opening · open = window/doorway · fill = filler/scribe */
+  kind: 'cab' | 'sink' | 'corner' | 'appl' | 'open' | 'fill'
+  /** FGT item code (B21, W3042…) or a label for appliances/openings. */
+  sku: string
+  /** Inches along the wall. Decimals fine (2.5 = 2½″). */
+  width: number
+  note?: string
+  /** false = exclude from the BOM — used on a corner unit's SECOND appearance
+   *  (an LS33 shows on both walls of the corner but is one cabinet). */
+  count?: boolean
+}
+
+/** One run of cabinets: a wall (base or upper) or an island row. */
+export interface CabinetRun {
+  id: string
+  /** Display group tag: BASE / UPPER / ISLAND / anything. */
+  group: string
+  name: string
+  /** Wall (or row) length in inches the segments must fit. */
+  length: number
+  items: CabinetSegment[]
+}
+
+/** A named cabinet layout for a model (usually “Kitchen”). */
+export interface CabinetLayout {
+  id: string
+  name: string
+  notes?: string
+  runs: CabinetRun[]
 }

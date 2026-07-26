@@ -53,9 +53,40 @@ export function modelKey(model: string): string {
   return (f || '').toUpperCase()
 }
 
-/** The spec for a roster model string (empty spec when the model is unknown). */
+/**
+ * Owner spec edits from the 📐 Models tab (ModelState.spec), keyed by model
+ * key. Module-global synced via applyModelSpecs() — App.tsx calls it each
+ * render (the portalDates pattern) so specFor()'s callers (loadForm, SECO/
+ * Duke packets) see edits without threading state through pure modules.
+ * TESTING GOTCHA (BRAINS.md): reset with applyModelSpecs(undefined) in
+ * afterEach or overrides leak between tests.
+ */
+type SpecOverride = { sqft?: number | ''; tons?: number | ''; beds?: number | '' }
+let SPEC_OVERRIDES: Record<string, SpecOverride> | undefined
+
+export function applyModelSpecs(overrides?: Record<string, SpecOverride>): void {
+  SPEC_OVERRIDES = overrides
+}
+
+/**
+ * The spec for a roster model string: code default, with owner edits laid on
+ * top FIELD BY FIELD (an edited sqft never blanks the default tonnage —
+ * same non-empty-wins spirit as permitInfoOf). Unknown model = empty spec.
+ */
 export function specFor(model: string): ModelSpec {
-  return MODELS_DEFAULT[modelKey(model)] ?? { sqft: '', tons: '' }
+  return effectiveSpec(modelKey(model))
+}
+
+/** Same, but for an already-normalized model key (what ModelsView holds). */
+export function effectiveSpec(key: string): ModelSpec {
+  const base = MODELS_DEFAULT[key] ?? { sqft: '' as const, tons: '' as const }
+  const ov = SPEC_OVERRIDES?.[key]
+  if (!ov) return base
+  return {
+    sqft: ov.sqft !== undefined && ov.sqft !== '' ? ov.sqft : base.sqft,
+    tons: ov.tons !== undefined && ov.tons !== '' ? ov.tons : base.tons,
+    beds: ov.beds !== undefined && ov.beds !== '' ? ov.beds : base.beds,
+  }
 }
 
 /**

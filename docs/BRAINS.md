@@ -356,13 +356,43 @@ tuning is the design, not an exception).
   write the cloud before a successful read.** Not a lib/ module, but it
   belongs in any list of rules that must survive.
 
+## cabinets.ts — FGT cabinet layout fit math (📐 Models, July 2026)
+
+Born from a real ordering near-miss: a hand-tallied Surf Blvd range wall left
+35½″ for a 36″ refrigerator and the error survived two revisions. Sum-vs-wall
+is computed HERE, once, never re-tallied in a component.
+
+- **Fit tolerance ±0.01″** — `runFit` says `fit` within a hundredth; `over`
+  (boxes exceed the wall) is the emergency because cabinet boxes can't
+  scribe; `under` is informational (open wall — maybe deliberate).
+- **BOM counts boxes only** (kinds `cab`/`sink`/`corner`), skips
+  `count === false` — a corner unit (LS33/WDC) appears in BOTH runs it
+  touches but is ONE cabinet; exactly one appearance carries count.
+  Appliances, openings, fillers never reach the BOM.
+- **`skuWidth` = first two digits** of the FGT code (B21→21, W3042→30,
+  W362424→36); no digits (RANGE, filler) → `null`, caller keeps the typed
+  width (invariant 3: never guess).
+- Defaults in `data/cabinets.ts` (`DEFAULT_CABINET_LAYOUTS` — Independence is
+  the field-verified Surf Blvd kitchen and its fit/BOM is pinned by tests);
+  read-through until the first in-app edit copies the array into
+  `ModelState.cabinets` (blob owns it after — an emptied list stays empty).
+
+## data/models.ts — owner-edited model specs (July 2026)
+
+- `applyModelSpecs()` module-global (the portalDates pattern, synced by
+  App.tsx each render) lays 📐-tab spec edits over `MODELS_DEFAULT`
+  **field by field, non-empty-wins** — an edited sqft never blanks the
+  default tonnage; blanking a field falls back to the code default.
+  Consumers (`specFor` → SECO/Duke load forms) pick edits up automatically.
+
 ## Testing gotchas
 
 - `data/lifecycles.ts` keeps owner step-edits in a **module-global**
   (`applyStepOverrides`). Any test that customizes a list MUST reset with
   `applyStepOverrides(undefined)` in `afterEach` or it poisons later tests.
   **Same for `data/permitDates.ts`** live dates: reset with
-  `applyPortalDates(undefined)`.
+  `applyPortalDates(undefined)`. **Same for `data/models.ts`** spec edits:
+  reset with `applyModelSpecs(undefined)`.
 - Clock-dependent brains are tested with `vi.useFakeTimers()` +
   `vi.setSystemTime(...)` — never against the real clock.
 - `src/lib/testUtils.ts` builds fixtures that stay OUT of the data files
