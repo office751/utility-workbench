@@ -382,6 +382,11 @@ is computed HERE, once, never re-tallied in a component.
   second 'left' — counted PER LEVEL (uppers separately from bases), matching
   CabinetPlanView's per-sheet counting. The island's distance from the walls
   in the drawing is schematic; the installer locates it from the floor plan.
+- **`cornerShape`** (drawing only): WDC* → 'diag' (pentagon, 45° door face),
+  LS* → 'lazy' (pie-cut L, turntable + bi-fold), everything else → 'rect'
+  (a BBC blind corner IS a rectangle in plan). Corner units at a run's end
+  draw ONCE at the room corner — the count:false twin stays an invisible
+  spacer — and arms not longer than the arm depth fall back to rectangles.
 
 ## data/models.ts — owner-edited model specs (July 2026)
 

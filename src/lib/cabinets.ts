@@ -90,6 +90,22 @@ export function layoutCount(layout: CabinetLayout): number {
 }
 
 /**
+ * What a corner unit actually looks like from above, by FGT code family:
+ * WDC* = wall diagonal corner (pentagon with a 45° door face), LS* = lazy
+ * susan (L-shaped pie-cut, turntables + bi-fold), everything else (BBC
+ * blind corners, unknown codes) = plain rectangle — a blind corner IS a
+ * rectangle in plan. Drawing-only; never affects fit math or the BOM.
+ */
+export function cornerShape(sku: string): 'diag' | 'lazy' | 'rect' {
+  const s = String(sku ?? '')
+    .toUpperCase()
+    .trim()
+  if (s.startsWith('WDC')) return 'diag'
+  if (s.startsWith('LS')) return 'lazy'
+  return 'rect'
+}
+
+/**
  * Tape-measure positions readout for a run: "LS33 0–33 · B09 33–42 · …".
  * The installer's cut sheet — every segment's start–end along the wall.
  */

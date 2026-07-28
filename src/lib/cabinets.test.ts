@@ -9,7 +9,16 @@
 import { describe, expect, it } from 'vitest'
 import type { CabinetLayout, CabinetRun } from '../types'
 import { DEFAULT_CABINET_LAYOUTS, cabinetLayoutsFor } from '../data/cabinets'
-import { effDepth, fmtIn, inferSide, layoutBom, layoutCount, runFit, skuWidth } from './cabinets'
+import {
+  cornerShape,
+  effDepth,
+  fmtIn,
+  inferSide,
+  layoutBom,
+  layoutCount,
+  runFit,
+  skuWidth,
+} from './cabinets'
 
 const run = (length: number, widths: number[]): CabinetRun => ({
   id: 'r',
@@ -129,6 +138,18 @@ describe('the shipped Independence default (Surf Blvd rev F3)', () => {
       cabinetLayoutsFor('Independence', { Independence: { cabinets: [] } }),
     ).toHaveLength(0) // deliberate delete sticks — blob owns it after first write
     expect(cabinetLayoutsFor('A', undefined)).toEqual([])
+  })
+})
+
+describe('cornerShape', () => {
+  it('WDC codes draw as diagonal corners, LS as lazy susans, rest as rects', () => {
+    expect(cornerShape('WDC2442')).toBe('diag')
+    expect(cornerShape('wdc2736')).toBe('diag')
+    expect(cornerShape('LS33')).toBe('lazy')
+    expect(cornerShape('LS36')).toBe('lazy')
+    expect(cornerShape('BBC42')).toBe('rect') // a blind corner IS a rectangle
+    expect(cornerShape('B36')).toBe('rect')
+    expect(cornerShape('')).toBe('rect')
   })
 })
 
