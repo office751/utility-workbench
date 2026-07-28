@@ -20,7 +20,7 @@
 import { useState } from 'react'
 import type { CabinetLayout, CabinetSegment } from '../types'
 import { CABINET_KIND_LABELS, FGT_SKUS, SEGMENT_PRESETS } from '../data/cabinets'
-import { effDepth, fmtIn, inferSide, layoutBom, layoutCount, positionsLine, runFit, skuWidth } from '../lib/cabinets'
+import { effDepth, fmtIn, inferSide, layoutBom, layoutCount, runFit, skuWidth } from '../lib/cabinets'
 import CabinetPlanView from './CabinetPlanView'
 
 /** Wall choices for the plan view (where does this run sit in the room?). */
@@ -142,6 +142,22 @@ function CabinetLayoutEditor({ layouts, onChange, printTitle }: Props) {
                     onChange={(e) => patch((d) => void (d[li].runs[ri].name = e.target.value))}
                     aria-label="Run name"
                   />
+                  <span className={`cab-chip ${chip.cls}`}>{chip.label}</span>
+                  <button
+                    className="mini danger cab-run-del"
+                    onClick={() => {
+                      if (window.confirm(`Delete run “${run.name}”?`)) {
+                        setSel(null)
+                        patch((d) => void d[li].runs.splice(ri, 1))
+                      }
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+                {/* One quiet tools row: run facts on the left, add-buttons on
+                    the right — replaces the old two extra rows. */}
+                <div className="cab-run-tools">
                   <label className="cab-len">
                     wall
                     <input
@@ -212,22 +228,29 @@ function CabinetLayoutEditor({ layouts, onChange, printTitle }: Props) {
                     />
                     ends at wall
                   </label>
-                  <span className={`cab-chip ${chip.cls}`}>{chip.label}</span>
-                  <button
-                    className="mini danger cab-run-del"
-                    onClick={() => {
-                      if (window.confirm(`Delete run “${run.name}”?`)) {
-                        setSel(null)
-                        patch((d) => void d[li].runs.splice(ri, 1))
+                  <span className="cab-tools-spacer" aria-hidden="true" />
+                  {Object.entries(SEGMENT_PRESETS).map(([key, p]) => (
+                    <button
+                      key={key}
+                      className="mini"
+                      onClick={() =>
+                        patch((d) => {
+                          const it: CabinetSegment = { id: uid(), ...p }
+                          d[li].runs[ri].items.push(it)
+                          setSel({ r: run.id, i: it.id })
+                        })
                       }
-                    }}
-                  >
-                    ✕
-                  </button>
+                    >
+                      ＋ {CABINET_KIND_LABELS[p.kind].toLowerCase()}
+                    </button>
+                  ))}
                 </div>
 
-                {/* The to-scale strip. flexGrow = inches → widths stay honest. */}
-                <div className="cab-strip">
+                {/* The to-scale strip. flexGrow = inches → widths stay honest.
+                    A minimum px-per-inch keeps segments readable/tappable —
+                    long runs scroll sideways instead of crushing. */}
+                <div className="cab-strip-wrap">
+                <div className="cab-strip" style={{ minWidth: Math.max(360, run.length * 3.4) }}>
                   {run.items.map((it) => {
                     const w = Number(it.width) || 0
                     return (
@@ -265,7 +288,7 @@ function CabinetLayoutEditor({ layouts, onChange, printTitle }: Props) {
                     />
                   )}
                 </div>
-                <div className="cab-pos">{positionsLine(run)}</div>
+                </div>
 
                 {/* Inspector for the selected segment. */}
                 {selSeg && selIdx >= 0 && (
@@ -405,23 +428,6 @@ function CabinetLayoutEditor({ layouts, onChange, printTitle }: Props) {
                   </div>
                 )}
 
-                <div className="cab-addrow">
-                  {Object.entries(SEGMENT_PRESETS).map(([key, p]) => (
-                    <button
-                      key={key}
-                      className="mini"
-                      onClick={() =>
-                        patch((d) => {
-                          const it: CabinetSegment = { id: uid(), ...p }
-                          d[li].runs[ri].items.push(it)
-                          setSel({ r: run.id, i: it.id })
-                        })
-                      }
-                    >
-                      ＋ {CABINET_KIND_LABELS[p.kind].toLowerCase()}
-                    </button>
-                  ))}
-                </div>
               </div>
             )
           })}

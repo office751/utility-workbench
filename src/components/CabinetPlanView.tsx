@@ -419,12 +419,18 @@ function CabinetPlanView({ layout, printTitle }: Props) {
   const baseWalls = layout.runs.filter((r) => !uppers.includes(r) && !islands.includes(r))
   if (layout.runs.length === 0) return null
 
-  /** The installer sheet: plans + tape-measure positions + BOM + notes. */
+  /** The printable layout: one FULL PAGE per plan sheet (base, uppers),
+   *  then a final page with tape-measure positions + BOM + notes. */
   const print = () => {
     const svgs = [...(wrapRef.current?.querySelectorAll('svg.cab-plan-svg') ?? [])]
     const titles = [...(wrapRef.current?.querySelectorAll('.cab-plan-title') ?? [])]
-    const plansHtml = svgs
-      .map((s, i) => `<h2>${titles[i]?.textContent ?? ''}</h2>${s.outerHTML}`)
+    const header = `<h1>${printTitle} — ${layout.name}</h1>
+<p class="sub">FGT cabinet plan · Iron Shield Construction · printed ${new Date().toLocaleDateString()}</p>`
+    const pages = svgs
+      .map(
+        (s, i) => `<section class="page plan">${i === 0 ? header : ''}
+<h2>${titles[i]?.textContent ?? ''}</h2>${s.outerHTML}</section>`,
+      )
       .join('')
     const positions = layout.runs
       .map((r) => `<p><b>${r.name} — ${fmtIn(r.length)}</b><br><code>${positionsLine(r)}</code></p>`)
@@ -437,21 +443,21 @@ function CabinetPlanView({ layout, printTitle }: Props) {
     w.document.write(`<!doctype html><html><head><meta charset="utf-8">
 <title>${printTitle} — ${layout.name} — cabinet plan</title>
 <style>
-  body{font:14px/1.5 -apple-system,'Segoe UI',sans-serif;color:#2a2723;margin:28px;max-width:900px}
-  h1{font-size:20px;margin:0} .sub{color:#6f685c;margin:2px 0 18px}
-  h2{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:#6f685c;margin:22px 0 6px}
-  svg{width:100%;height:auto;border:1px solid #ddd;border-radius:6px}
+  body{font:14px/1.5 -apple-system,'Segoe UI',sans-serif;color:#2a2723;margin:20px}
+  h1{font-size:20px;margin:0} .sub{color:#6f685c;margin:2px 0 10px}
+  h2{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:#6f685c;margin:10px 0 6px}
+  .plan{break-after:page;page-break-after:always}
+  .plan svg{width:100%;height:82vh;border:1px solid #ddd;border-radius:6px}
   code{font-family:ui-monospace,Menlo,monospace;font-size:12.5px}
   table{border-collapse:collapse}td{padding:3px 16px 3px 0;border-bottom:1px solid #eee}
   p{margin:6px 0}.notes{white-space:pre-wrap;background:#faf8f4;border:1px solid #e3ded6;border-radius:6px;padding:10px 12px}
-  @media print{svg{break-inside:avoid}}
 </style></head><body>
-<h1>${printTitle} — ${layout.name}</h1>
-<p class="sub">FGT cabinet plan · Iron Shield Construction · printed ${new Date().toLocaleDateString()}</p>
-${plansHtml}
+${pages}
+<section>
 <h2>Positions (from each run's left/top end)</h2>${positions}
 <h2>Bill of materials</h2><table>${bom}</table>
 ${layout.notes ? `<h2>Notes</h2><div class="notes">${layout.notes}</div>` : ''}
+</section>
 <script>window.onload=()=>window.print()</script>
 </body></html>`)
     w.document.close()
@@ -462,7 +468,7 @@ ${layout.notes ? `<h2>Notes</h2><div class="notes">${layout.notes}</div>` : ''}
       <div className="cab-plan-bar">
         <span className="tpl-preview-h">Top-down plan</span>
         <button className="mini" onClick={print}>
-          🖨 Print for installer
+          🖨 Print Layout
         </button>
       </div>
       <div className="cab-plan-sheets">
