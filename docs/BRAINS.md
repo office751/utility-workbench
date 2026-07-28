@@ -387,6 +387,10 @@ is computed HERE, once, never re-tallied in a component.
   (a BBC blind corner IS a rectangle in plan). Corner units at a run's end
   draw ONCE at the room corner — the count:false twin stays an invisible
   spacer — and arms not longer than the arm depth fall back to rectangles.
+- **`CabinetRun.endWall`** (drawing only): the run's far end butts a return
+  wall (wall-to-wall measurement). The side's wall band stops at the run
+  end and a short perpendicular stub closes it — but only when EVERY run
+  on that side ends there (a mixed side keeps the full-length wall).
 
 ## data/models.ts — owner-edited model specs (July 2026)
 

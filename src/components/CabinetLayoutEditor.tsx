@@ -199,6 +199,19 @@ function CabinetLayoutEditor({ layouts, onChange, printTitle }: Props) {
                     />
                     in
                   </label>
+                  <label className="cab-len" title="The far end of this run butts a return wall (wall-to-wall measurement) — draws it on the plan">
+                    <input
+                      type="checkbox"
+                      checked={!!run.endWall}
+                      onChange={(e) =>
+                        patch((d) => {
+                          if (e.target.checked) d[li].runs[ri].endWall = true
+                          else delete d[li].runs[ri].endWall
+                        })
+                      }
+                    />
+                    ends at wall
+                  </label>
                   <span className={`cab-chip ${chip.cls}`}>{chip.label}</span>
                   <button
                     className="mini danger cab-run-del"

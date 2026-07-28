@@ -205,15 +205,32 @@ function buildSheet(runs: CabinetRun[], withIsland: CabinetRun[]) {
   const islandCaption =
     islands.length > 0 ? { x: ix0 + (ix - ix0) / 2, y: iy0 - 10, names: 'ISLAND' } : null
 
-  const walls = [...bySide.keys()].map((side) =>
-    side === 'top'
-      ? { x: -WT, y: -WT, w: xIn * k + 2 * WT, h: WT }
-      : side === 'bottom'
-        ? { x: -WT, y: yIn * k, w: xIn * k + 2 * WT, h: WT }
-        : side === 'left'
-          ? { x: -WT, y: -WT, w: WT, h: yIn * k + 2 * WT }
-          : { x: xIn * k, y: -WT, w: WT, h: yIn * k + 2 * WT },
-  )
+  // Wall bands. A side whose run ends at a RETURN WALL (endWall — a
+  // wall-to-wall measurement) stops there and gets a short perpendicular
+  // stub, so the installer sees what the last box/appliance butts against
+  // (Surf Blvd: the pantry wall beside the fridge).
+  const walls: { x: number; y: number; w: number; h: number }[] = []
+  for (const [side, list] of bySide) {
+    const enders = list.filter((r) => r.endWall)
+    const stopPx =
+      enders.length === list.length && list.length > 0
+        ? Math.max(...list.map((r) => r.length)) * k
+        : null // any run without endWall = wall runs the full room
+    const stub = enders.length ? (Math.max(...enders.map(effDepth)) + 14) * k : 0
+    if (side === 'top') {
+      walls.push({ x: -WT, y: -WT, w: (stopPx ?? xIn * k) + 2 * WT, h: WT })
+      if (stopPx !== null) walls.push({ x: stopPx, y: -WT, w: WT, h: stub + WT })
+    } else if (side === 'bottom') {
+      walls.push({ x: -WT, y: yIn * k, w: (stopPx ?? xIn * k) + 2 * WT, h: WT })
+      if (stopPx !== null) walls.push({ x: stopPx, y: yIn * k - stub, w: WT, h: stub + WT })
+    } else if (side === 'left') {
+      walls.push({ x: -WT, y: -WT, w: WT, h: (stopPx ?? yIn * k) + 2 * WT })
+      if (stopPx !== null) walls.push({ x: -WT, y: stopPx, w: stub + WT, h: WT })
+    } else {
+      walls.push({ x: xIn * k, y: -WT, w: WT, h: (stopPx ?? yIn * k) + 2 * WT })
+      if (stopPx !== null) walls.push({ x: xIn * k - stub, y: stopPx, w: stub + WT, h: WT })
+    }
+  }
   return { w: xIn * k + 2 * PAD, h: yIn * k + 2 * PAD, walls, placed, corners, islandCaption }
 }
 

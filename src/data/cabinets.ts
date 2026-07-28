@@ -102,6 +102,7 @@ const INDEPENDENCE_KITCHEN: CabinetLayout = {
     },
     {
       id: 'ind-k-rangebase',
+      endWall: true,
       group: 'BASE',
       side: 'left',
       depth: 24,
@@ -133,6 +134,7 @@ const INDEPENDENCE_KITCHEN: CabinetLayout = {
     },
     {
       id: 'ind-k-rangeupper',
+      endWall: true,
       group: 'UPPER',
       side: 'left',
       depth: 12,

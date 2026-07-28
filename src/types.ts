@@ -651,6 +651,13 @@ export interface CabinetRun {
    * only used to draw the plan view. Absent = 12 for UPPER runs, else 24.
    */
   depth?: number
+  /**
+   * The run's far end butts a return wall (a wall-to-wall measurement, like
+   * Surf Blvd's range wall ending at the pantry wall beside the fridge).
+   * Draws the short perpendicular wall on the plan so the installer sees
+   * what the last box/appliance sits against. Drawing-only.
+   */
+  endWall?: boolean
 }
 
 /** A named cabinet layout for a model (usually “Kitchen”). */
