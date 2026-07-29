@@ -118,9 +118,21 @@ describe('layoutBom', () => {
 
 describe('the shipped Independence default (Surf Blvd rev F3)', () => {
   const kitchen = DEFAULT_CABINET_LAYOUTS.Independence[0]
-  it('every run fits its wall exactly', () => {
+  it('runs fit their walls — sink wall deliberately 4″ shy of the slider', () => {
+    // The 142″ sink wall ends at the back sliding door: cabinets stop at
+    // 138″ with finished end panels (never a filler into a door casing),
+    // so BOTH sink-wall runs read exactly 4″ under. Everything else exact.
     for (const r of kitchen.runs) {
-      expect({ run: r.name, status: runFit(r).status }).toEqual({ run: r.name, status: 'fit' })
+      const f = runFit(r)
+      if (r.id === 'ind-k-sinkbase' || r.id === 'ind-k-sinkupper') {
+        expect({ run: r.name, status: f.status, diff: f.diff }).toEqual({
+          run: r.name,
+          status: 'under',
+          diff: -4,
+        })
+      } else {
+        expect({ run: r.name, status: f.status }).toEqual({ run: r.name, status: 'fit' })
+      }
     }
   })
   it('BOM = 20 cabinets with shared corners counted once', () => {
