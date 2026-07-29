@@ -82,7 +82,7 @@ const INDEPENDENCE_KITCHEN: CabinetLayout = {
   id: 'ind-kitchen',
   name: 'Kitchen',
   notes:
-    'Field-verified at 22047 SW Surf Blvd (rev F3, Jul 2026). Pantry closet (2668 bifold) sits behind the ≈3\'-0" end wall beside the fridge — no cabinets in it. Pending: corner→window field dim (sink stays centered under the 42" window; B09 + end filler flex). Island seating row = 12"-deep wall boxes on a site-built 4½" platform. Uppers run flush to the 8\' ceiling — flat scribe trim, not crown. Corner turntables: add LS33KIT (2 per kit).',
+    'Field-verified at 22047 SW Surf Blvd (rev F3, Jul 2026). Pantry closet (2668 bifold) sits behind the ≈3\'-0" end wall beside the fridge — no cabinets in it. Field-confirmed Jul 26 2026: corner→window = 62" (window 62–104). Sink base 66–102 sits 1" right of window center — forced minimum, accepted. Island seating row = 12"-deep wall boxes on a site-built 4½" platform. Uppers run flush to the 8\' ceiling — flat scribe trim, not crown. Corner turntables: add LS33KIT (2 per kit).',
   runs: [
     {
       id: 'ind-k-sinkbase',
@@ -95,7 +95,7 @@ const INDEPENDENCE_KITCHEN: CabinetLayout = {
         s('ind-k-sb1', 'corner', 'LS33', 33, 'lazy susan + LS33KIT'),
         s('ind-k-sb2', 'cab', 'B09', 9),
         s('ind-k-sb3', 'appl', 'DW', 24, 'dishwasher'),
-        s('ind-k-sb4', 'sink', 'SB36', 36, 'dbl bowl + G/D, centered under window'),
+        s('ind-k-sb4', 'sink', 'SB36', 36, 'dbl bowl + G/D; center 84" = 1" right of window center (83") — forced by LS33+B09+DW, invisible'),
         s('ind-k-sb5', 'cab', 'B36', 36, 'end stacks with upper at 138"'),
         s('ind-k-sb6', 'fill', 'filler', 4, 'matched with upper filler'),
       ],
@@ -126,8 +126,8 @@ const INDEPENDENCE_KITCHEN: CabinetLayout = {
       items: [
         s('ind-k-su1', 'corner', 'WDC2442', 24, 'wall diagonal corner'),
         s('ind-k-su2', 'cab', 'W2442', 24),
-        s('ind-k-su3', 'cab', 'W1542', 15),
-        s('ind-k-su4', 'open', 'WINDOW', 42, '3636 — no cabinet over sink'),
+        s('ind-k-su3', 'cab', 'W1242', 12, 'ends 60" — 2" clear of window edge at 62"'),
+        s('ind-k-su4', 'open', 'WINDOW', 45, 'window @ 62–104 (3636) + trim clearance — no cabinet over sink'),
         s('ind-k-su5', 'cab', 'W3342', 33, 'end stacks over base B36'),
         s('ind-k-su6', 'fill', 'filler', 4, 'matched with base filler'),
       ],
