@@ -133,6 +133,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
     setAdditionalRequests,
     lockSelections,
     unlockSelections,
+    applySelectionSubmission,
     addTask,
     updateTask,
     removeTask,
@@ -563,6 +564,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
             setAdditionalRequests={setAdditionalRequests}
             lockSelections={lockSelections}
             unlockSelections={unlockSelections}
+            applySelectionSubmission={applySelectionSubmission}
             addTask={addTask}
             updateTask={updateTask}
             removeTask={removeTask}

@@ -181,6 +181,21 @@ export const GUIDES: Guide[] = [
     tip: 'The Quick add bar works on ANY device you\'re signed in on — phone, Windows laptop, anywhere. (Separately, Adam\'s office Mac runs an automatic "Scan Josh" button that reads Messages directly and files orders without typing — but that is Mac-only, so the Quick add bar is the way everyone else captures orders.)',
   },
   {
+    id: 'client-selections-link',
+    icon: '🎨',
+    title: 'Let the client fill out their Selections',
+    when: 'A homeowner or investor needs to pick their finishes (paint, flooring, cabinets…) and you want them to do it from home, on their own time.',
+    steps: [
+      { who: 'you', text: 'Open the house → 🎨 Selections tab and click "Client link". The app makes a private link for THIS house and copies it — no login needed on their end.' },
+      { who: 'you', text: 'Text or email the link to the client (paste it into a message; there\'s a Copy button on the link row any time).' },
+      { who: 'wait', text: 'The client opens it on their phone, browses each vendor\'s options via the Browse ↗ links, picks their finishes, and hits "Send to Iron Shield". They can reopen the same link and resend as often as they like.' },
+      { who: 'app', text: 'Next time you open that house\'s Selections tab, a blue "submitted choices" banner shows who sent what and when.' },
+      { who: 'you', text: 'Click Apply on the banner. Their answers fill the form — anything they left blank keeps whatever was already there. Look it over and adjust freely.' },
+      { who: 'you', text: 'When they come in to sign: print the form (Print / Save PDF), get the wet signature, then sign-and-lock at the bottom of the tab like always.' },
+    ],
+    tip: 'Changed the catalog or their options since you sent the link? Click "Refresh client link" — the SAME link now shows the updated form. "Revoke" kills the link instantly (e.g. after closing). Nothing a client submits touches the app until you press Apply.',
+  },
+  {
     id: 'request-draw',
     icon: '💵',
     title: 'Request a construction-loan draw',

@@ -4826,3 +4826,138 @@ a.map-btn {
   padding: 6px 10px;
 }
 .cab-plan-svg { display: block; width: 100%; height: auto; }
+
+/* 🧊 3D views — same "paper" language as the plan sheets. The <details>
+   fold hides them visually but keeps the SVGs in the DOM for 🖨 print. */
+.cab-3d { margin-top: 10px; }
+.cab-3d summary {
+  cursor: pointer;
+  font-size: calc(11px * var(--font-scale));
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--muted);
+}
+.cab-3d-hint { font-weight: 400; letter-spacing: 0; text-transform: none; }
+.cab-3d-grid { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+.cab-3d-cell {
+  margin: 0;
+  flex: 1 1 300px;
+  min-width: 280px;
+  max-width: 460px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: #ffffff; /* paper — deliberately not var(--panel) */
+}
+.cab-3d-cell figcaption {
+  font-size: calc(12px * var(--font-scale));
+  color: #6f685c;
+  background: #faf8f4;
+  border-bottom: 1px solid #e3ded6;
+  padding: 5px 10px;
+}
+.cab-3d-cell figcaption label { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; }
+.cab-3d-svg { display: block; width: 100%; height: auto; }
+
+/* Crown molding order box — sits with the BOM, same table voice. */
+.cab-crown { margin-top: 12px; }
+.cab-crown-order { margin: 4px 0 6px; font-size: calc(14px * var(--font-scale)); }
+.cab-crown table { border-collapse: collapse; }
+.cab-crown td { padding: 3px 14px 3px 0; border-bottom: 1px solid var(--divider); font-size: calc(12.5px * var(--font-scale)); }
+
+/* ===== Client selections share link (SelectionsView + PublicSelect) ===== */
+
+/* 📥 "client submitted choices" review banner on the Selections tab —
+   same voice as .sel-locked-banner, in info colors. */
+.sel-sub-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 10px 0 4px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--info-bg);
+  /* no --info-border token exists — derive the hairline from --info, same
+     spirit as --accent-bg (color-mix keeps it theme-aware) */
+  border: 1px solid color-mix(in srgb, var(--info) 30%, transparent);
+  color: var(--ink);
+}
+.sel-sub-icon { color: var(--info); }
+.sel-sub-meta { font-size: var(--text-sm); }
+
+/* The active client link row under the action buttons. */
+.sel-share-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 2px 0 4px;
+  padding: 8px 10px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+}
+.sel-share-label {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: var(--ls-label);
+}
+.sel-share-url {
+  flex: 1 1 220px;
+  min-width: 0;
+  font-size: var(--text-xs);
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- PublicSelect: the phone-first page a homeowner opens (no login).
+   Mobile-first, mirroring the investor portal's .ip-* shell idea; the form
+   guts reuse the Selections tab's .sel-* classes above. ---- */
+.ps-outer {
+  min-height: 100vh;
+  background: var(--bg);
+  padding: 16px 12px 56px;
+  display: flex;
+  justify-content: center;
+}
+.ps-shell { width: 100%; max-width: 760px; }
+.ps-header { display: flex; align-items: center; gap: 12px; margin: 4px 0 10px; }
+.ps-logo { height: 46px; width: auto; }
+.ps-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  color: var(--ink);
+  margin: 0;
+}
+.ps-dim { color: var(--muted); font-size: var(--text-sm); margin: 4px 0; }
+.ps-intro { color: var(--ink); font-size: var(--text-sm); margin: 0 0 10px; line-height: 1.5; }
+.ps-prior { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; }
+.ps-error { color: var(--danger-ink); font-size: var(--text-sm); font-weight: var(--weight-semibold); margin: 6px 0 0; }
+.ps-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  box-shadow: var(--shadow-sm);
+  margin: 0 0 12px;
+}
+.ps-card.sel-section { margin-top: 0; } /* .sel-section's margin-top is for the tab */
+.ps-center { text-align: center; padding: 28px 16px; }
+.ps-center .ps-dim { max-width: 46ch; margin: 8px auto; }
+.ps-btnrow { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 12px; }
+.ps-send { text-align: center; }
+.ps-send .ps-name { align-items: center; margin-bottom: 4px; }
+.ps-send .ps-name input { text-align: center; }
+/* Comfortable thumb targets on the phone this page is made for. */
+.ps-outer .sel-select,
+.ps-outer .sel-writein,
+.ps-outer .sel-additional,
+.ps-send .ps-name input { font-size: var(--fs-input); min-height: var(--tap-min); }
+.ps-btnrow .btn { min-height: var(--tap-min); }

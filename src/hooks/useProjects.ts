@@ -25,6 +25,7 @@ import type {
   ProjectState,
   SelectionChoice,
   SelectionsCatalog,
+  ShareSubmissionChoices,
   StepState,
   Stream,
   Task,
@@ -44,6 +45,7 @@ import { PROJECTS } from '../data/projects'
 import { supabase } from '../lib/supabase'
 import { deleteProjectFile, uploadModelFile, uploadProjectFile } from '../lib/files'
 import { mergeWorkbench } from '../lib/mergeState'
+import { mergeSubmissionIntoSelections } from '../lib/selectionShare'
 import { applyFactsPatch, hasManualPermitEdits } from '../lib/projectFacts'
 import { CAUGHT_UP_DATE } from '../lib/catchup'
 import { applyPortalDates } from '../data/permitDates'
@@ -1106,6 +1108,25 @@ export function useProjects() {
     })
   }
 
+  /**
+   * Apply a CLIENT-SUBMITTED share-link form (📥 banner on the Selections tab)
+   * onto this project's saved selections — ONE setState, so it can't clobber a
+   * concurrent edit. The merge rules (answered categories replace, empty ones
+   * never wipe, lock preserved) live in lib/selectionShare.ts and are tested.
+   */
+  function applySelectionSubmission(id: number, sub: ShareSubmissionChoices) {
+    setState((prev) => {
+      const cur = prev.projects[id] ?? emptyProjectState()
+      return {
+        ...prev,
+        projects: {
+          ...prev.projects,
+          [id]: { ...cur, selections: mergeSubmissionIntoSelections(cur.selections, sub) },
+        },
+      }
+    })
+  }
+
   /** Mark one takeoff gathered (or not) for a house MODEL — shared across all
    *  projects of that model. */
   /** Upload plan files into a MODEL's library (📐 Models tab). Mirrors
@@ -1454,6 +1475,7 @@ export function useProjects() {
     setAdditionalRequests,
     lockSelections,
     unlockSelections,
+    applySelectionSubmission,
     addTask,
     updateTask,
     removeTask,

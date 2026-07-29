@@ -12,7 +12,7 @@
  * stay hidden until you open settings.
  */
 import { useEffect, useState } from 'react'
-import type { OrderItem, OrderStatus, Project, ProjectState, SelectionChoice, SelectionsCatalog, Stream, Task, Utility } from '../types'
+import type { OrderItem, OrderStatus, Project, ProjectState, SelectionChoice, SelectionsCatalog, ShareSubmissionChoices, Stream, Task, Utility } from '../types'
 import {
   type StepDef,
   electricSteps,
@@ -109,6 +109,8 @@ interface Updaters {
   setAdditionalRequests: (id: number, text: string) => void
   lockSelections: (id: number, signature: string, printedName: string) => void
   unlockSelections: (id: number) => void
+  /** 📥 Apply a client's share-link submission (Selections tab banner). */
+  applySelectionSubmission: (id: number, sub: ShareSubmissionChoices) => void
   addTask: (t: Omit<Task, 'id' | 'createdAt' | 'done' | 'doneAt'>) => void
   updateTask: (id: string, patch: Partial<Task>) => void
   removeTask: (id: string) => void
@@ -553,6 +555,7 @@ function Detail(props: Props) {
           setAdditionalRequests={props.setAdditionalRequests}
           lockSelections={props.lockSelections}
           unlockSelections={props.unlockSelections}
+          applySelectionSubmission={props.applySelectionSubmission}
           catalog={props.selectionsCatalog}
           vendors={props.vendors}
         />

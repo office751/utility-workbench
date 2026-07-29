@@ -250,6 +250,71 @@ export interface SelectionsCatalog {
   perModel?: Record<string, ModelSelectionTweaks>
 }
 
+/*
+ * THE SELECTIONS SHARE LINK (client fill-out) — lib/selectionShare.ts.
+ *
+ * These types describe rows in two real Postgres tables (selection_shares,
+ * selection_submissions — see supabase/setup-selection-shares.sql). They are
+ * NOT part of WorkbenchState, so they carry none of the migrate()/
+ * mergeWorkbench obligations blob fields do.
+ */
+
+/** One category as the CLIENT's phone sees it: everything already resolved —
+ *  per-model overrides applied and the "Browse ↗" link baked in (so the public
+ *  page needs no catalog, model, or vendor knowledge of its own). */
+export interface SharePayloadCategory {
+  id: string
+  label: string
+  options: string[]
+  hint?: string
+  /** The resolved browse link (category url, else its vendor's website). */
+  browseUrl?: string
+  /** Option label → image URL (public 'selection-images' bucket or a pasted
+   *  link) — public URLs, so a logged-out phone can render them. */
+  optionImages?: Record<string, string>
+}
+
+/** A payload section — Interior / Exterior, mirroring SelectionSection. */
+export interface SharePayloadSection {
+  id: 'interior' | 'exterior'
+  label: string
+  icon: string
+  categories: SharePayloadCategory[]
+}
+
+/**
+ * The CURATED SNAPSHOT a share link serves to the client's phone — built by
+ * buildSharePayload() the moment staff click "Client link", and stored in the
+ * selection_shares row. The public page renders ONLY this; the workbench blob
+ * itself is never readable from outside. Re-clicking "Client link" refreshes
+ * the snapshot (same token, same URL).
+ */
+export interface SelectionSharePayload {
+  /** Bump if the payload shape ever changes, so old links can be detected. */
+  version: 1
+  address: string
+  city: string
+  zip: string
+  /** Display label of the floor plan (e.g. "F-LH") — informational only. */
+  model: string
+  sections: SharePayloadSection[]
+  /** The choices already on file when the link was (re)shared — pre-fills the
+   *  client's form so they see where things stand. */
+  current: {
+    interior: Record<string, SelectionChoice>
+    exterior: Record<string, SelectionChoice>
+    additionalRequests?: string
+  }
+}
+
+/** What the client sends back (one selection_submissions row's `choices`).
+ *  Applied to the project's real selections only when staff click Apply. */
+export interface ShareSubmissionChoices {
+  interior: Record<string, SelectionChoice>
+  exterior: Record<string, SelectionChoice>
+  additionalRequests?: string
+}
+
 /**
  * Everything that CHANGES for one project — this is what localStorage holds.
  * Fields marked `?` are optional overrides: e.g. if `electricCo` is set here,

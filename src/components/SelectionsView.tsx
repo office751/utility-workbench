@@ -11,10 +11,30 @@
  * threaded down from App (useProjects). The category catalog lives in
  * data/selections.ts, so adding a choice is a config edit, not a code change.
  */
-import { useState } from 'react'
-import type { Project, ProjectState, SelectionCategory, SelectionChoice, SelectionsCatalog } from '../types'
+import { useEffect, useState } from 'react'
+import type {
+  Project,
+  ProjectState,
+  SelectionChoice,
+  SelectionsCatalog,
+  ShareSubmissionChoices,
+} from '../types'
 import { defaultSelections, resolveSelectionSections } from '../data/selections'
 import { buildSelectionsReport, openSelectionsPrint, selectionsMailto } from '../lib/selectionsReport'
+import {
+  browseUrlFor,
+  buildSharePayload,
+  countShareChoices,
+  createOrRefreshShare,
+  getShareForProject,
+  pendingSubmissionsFor,
+  resolveSubmissions,
+  revokeShare,
+  shareUrlFor,
+  type ShareRow,
+  type SubmissionRow,
+} from '../lib/selectionShare'
+import { hasSupabase } from '../lib/supabase'
 import { finishVendors, type Vendor } from '../data/vendors'
 import { modelKey } from '../data/models'
 import { OFFICE_CC } from '../data/contacts'
@@ -32,20 +52,14 @@ interface Props {
   setAdditionalRequests: (id: number, text: string) => void
   lockSelections: (id: number, signature: string, printedName: string) => void
   unlockSelections: (id: number) => void
+  /** Apply a client's share-link submission onto the saved selections (one
+   *  setState in useProjects — see the 📥 review banner below). */
+  applySelectionSubmission: (id: number, sub: ShareSubmissionChoices) => void
   /** The owner-editable catalog (Settings → Selections setup). Resolved per
    *  model here; falls back to code defaults when absent. */
   catalog?: SelectionsCatalog
   /** The effective vendors directory — finish-trade recipients + browse links. */
   vendors: Vendor[]
-}
-
-/** The client's "browse options online" link for a category: its own url wins,
- *  else the linked vendor's website (data/vendors.ts), else none. */
-function browseUrl(cat: SelectionCategory, vendors: Vendor[]): string | undefined {
-  const direct = cat.url?.trim()
-  if (direct) return direct
-  if (cat.vendorId) return vendors.find((v) => v.id === cat.vendorId)?.website || undefined
-  return undefined
 }
 
 /** Format an ISO timestamp as a friendly local date+time, blank-safe. */
@@ -62,6 +76,7 @@ function SelectionsView({
   setAdditionalRequests,
   lockSelections,
   unlockSelections,
+  applySelectionSubmission,
   catalog,
   vendors,
 }: Props) {
@@ -75,6 +90,88 @@ function SelectionsView({
   const [sig, setSig] = useState('')
   const [printed, setPrinted] = useState('')
   const [actionNote, setActionNote] = useState<string | null>(null)
+
+  /* ---- Client share link (lib/selectionShare.ts) ----
+     `share` = this house's active link, if one was minted; `pending` = client
+     submissions waiting for review (newest first). Both live in their own
+     Postgres tables — nothing here touches the workbench blob. */
+  const [share, setShare] = useState<ShareRow | null>(null)
+  const [pending, setPending] = useState<SubmissionRow[]>([])
+  useEffect(() => {
+    if (!hasSupabase) return
+    let alive = true // ignore results that land after we switched houses
+    getShareForProject(p.id).then((row) => alive && setShare(row))
+    pendingSubmissionsFor(p.id).then((rows) => alive && setPending(rows))
+    return () => {
+      alive = false
+    }
+  }, [p.id])
+
+  function note(msg: string, ms = 4000) {
+    setActionNote(msg)
+    setTimeout(() => setActionNote(null), ms)
+  }
+
+  /** Mint (or refresh) this house's client link and copy it. Re-clicking is
+   *  safe: same token, same URL — just a fresh snapshot of catalog + choices. */
+  async function makeClientLink() {
+    const payload = buildSharePayload(p, ps.selections, sections, vendors)
+    const row = await createOrRefreshShare(p.id, payload)
+    if (!row) return note('Could not create the link — cloud not connected.')
+    setShare(row)
+    try {
+      await navigator.clipboard.writeText(shareUrlFor(row.token))
+      note(share ? 'Link refreshed with today’s form & copied ✓' : 'Client link copied ✓ — text or email it')
+    } catch {
+      note('Link ready below — use its Copy button.')
+    }
+  }
+
+  async function copyShareUrl() {
+    if (!share) return
+    try {
+      await navigator.clipboard.writeText(shareUrlFor(share.token))
+      note('Copied ✓')
+    } catch {
+      note('Copy failed — long-press / select the link text instead.')
+    }
+  }
+
+  async function doRevoke() {
+    if (!share) return
+    if (!confirm('Turn off the client link? Anyone holding the URL loses access immediately. You can make a new link any time.')) return
+    if (await revokeShare(share.token)) {
+      setShare(null)
+      note('Link revoked.')
+    } else {
+      note('Could not revoke — check the connection and try again.')
+    }
+  }
+
+  /** Apply the newest client submission to the saved selections. Older pending
+   *  ones (superseded) are marked dismissed so the banner clears everywhere. */
+  async function applySubmission() {
+    const latest = pending[0]
+    if (!latest || locked) return
+    const who = latest.client_name.trim() || 'the client'
+    if (
+      !confirm(
+        `Apply ${who}'s submitted choices to ${p.address}?\n\nCategories they answered replace what's saved; everything they left blank stays as-is. You can still edit before locking.`,
+      )
+    )
+      return
+    applySelectionSubmission(p.id, latest.choices)
+    await resolveSubmissions(latest.id, pending.slice(1).map((s) => s.id))
+    setPending([])
+    note('Applied ✓ — look it over, then lock when the client signs.')
+  }
+
+  async function dismissSubmissions() {
+    if (!pending.length) return
+    if (!confirm('Dismiss the submitted choices without applying them?')) return
+    await resolveSubmissions(null, pending.map((s) => s.id))
+    setPending([])
+  }
 
   async function copyReport() {
     try {
@@ -141,6 +238,29 @@ function SelectionsView({
         this house. Pick a common option or type your own; lock it when they sign off.
       </p>
 
+      {/* 📥 A client filled out their share link — review & apply. Shows the
+          NEWEST submission; applying dismisses older superseded ones too. */}
+      {pending.length > 0 && (
+        <div className="sel-sub-banner">
+          <Icon name="move_to_inbox" size={20} className="sel-sub-icon" fill />
+          <span className="sel-sub-meta">
+            <b>{pending[0].client_name.trim() || 'Client'} submitted choices</b> (
+            {countShareChoices(pending[0].choices)} answered) on{' '}
+            {new Date(pending[0].submitted_at).toLocaleString()}
+            {pending.length > 1 ? ` — plus ${pending.length - 1} older` : ''}.{' '}
+            {locked ? 'Unlock the form below to apply them.' : 'Applying fills the form below; you can still edit before locking.'}
+          </span>
+          <span className="sel-spacer" />
+          <button className="btn btn-primary btn-sm" disabled={locked} onClick={applySubmission}>
+            <Icon name="task_alt" size={16} />
+            Apply
+          </button>
+          <button className="btn btn-secondary btn-sm" onClick={dismissSubmissions}>
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Export / share the package. Print → "Save as PDF" for the laminated
           job-site copy; Copy → paste anywhere; Email (below) → the finish trades. */}
       <div className="sel-actions">
@@ -156,8 +276,41 @@ function SelectionsView({
           <Icon name="mail" size={16} />
           Email finish trades
         </button>
+        {hasSupabase && (
+          <button
+            className="btn btn-secondary btn-sm"
+            disabled={locked}
+            title={
+              locked
+                ? 'Selections are locked — unlock to share'
+                : 'Make a private link the client opens on their phone — no login'
+            }
+            onClick={makeClientLink}
+          >
+            <Icon name="link" size={16} />
+            {share ? 'Refresh client link' : 'Client link'}
+          </button>
+        )}
         {actionNote && <span className="sel-action-note">{actionNote}</span>}
       </div>
+
+      {/* The active client link — text/email THIS to the homeowner. Refresh
+          re-snapshots the form (same URL); Revoke kills it immediately. */}
+      {share && (
+        <div className="sel-share-row">
+          <Icon name="phone_iphone" size={16} color="var(--rust)" />
+          <span className="sel-share-label">Client link</span>
+          <code className="sel-share-url">{shareUrlFor(share.token)}</code>
+          <button className="btn btn-secondary btn-sm" onClick={copyShareUrl}>
+            <Icon name="content_copy" size={14} />
+            Copy
+          </button>
+          <button className="btn btn-secondary btn-sm" onClick={doRevoke}>
+            <Icon name="link_off" size={14} />
+            Revoke
+          </button>
+        </div>
+      )}
 
       <div className="sel-recipients">
         {finVendors.length === 0 ? (
@@ -207,10 +360,10 @@ function SelectionsView({
                 <div className="sel-row" key={cat.id}>
                   <div className="sel-label">
                     <label htmlFor={fieldId}>{cat.label}</label>
-                    {browseUrl(cat, vendors) && (
+                    {browseUrlFor(cat, vendors) && (
                       <a
                         className="sel-browse"
-                        href={browseUrl(cat, vendors)}
+                        href={browseUrlFor(cat, vendors)}
                         target="_blank"
                         rel="noreferrer"
                         title="Browse options online"
