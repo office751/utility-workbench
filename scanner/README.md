@@ -71,3 +71,25 @@ Once the dry run looks right:
 - **Belleview** permits (bsaonline.com) aren't included — that site blocks automation.
 - `permit-portals.json` maps permit# → portal record. Regenerate it from a fresh
   Construction Job List export when you add permits.
+
+---
+
+## Selections Sheet generator (`selections-sheet.py`)
+
+Turns a completed **Home Build Selections Form** (Typeform) response into a
+one-page, signature-ready PDF on Iron Shield letterhead — print for wet-ink
+signing or upload to DocuSign.
+
+```
+python3 scanner/selections-sheet.py           # newest response → PDF on Desktop
+python3 scanner/selections-sheet.py --list    # recent responses + ids
+python3 scanner/selections-sheet.py --response <id>
+python3 scanner/selections-sheet.py --demo    # sample data, no token needed
+```
+
+Easiest: double-click **`Selections Sheet.command`** on the Desktop.
+
+One-time setup: add `TYPEFORM_TOKEN=tfp_...` to `scanner/.env`
+(Typeform → account menu → Personal tokens → Generate; scopes: Forms read +
+Responses read). New questions added to the Typeform show up automatically;
+to give one a shorter row label, add its ref to `LABELS` in the script.
