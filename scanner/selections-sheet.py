@@ -72,7 +72,7 @@ DEMO = {
     "property": "123 Example St, Ocala, FL",
     "rows": [
         ("LVP Flooring Color", "Tigertail"),
-        ("Shower Wall Tile", "Satori Statuario (Matte)"),
+        ("Shower Wall Tile", "Satori Statuario (Polished)"),
         ("Shower Floor Tile", "Galvano Charcoal Mosaic"),
         ("Granite Countertop", "I have a different granite in mind"),
         ("Granite Name (client's pick)", "Baltoro Italiano (Floor & Decor) — pricing TBD"),
