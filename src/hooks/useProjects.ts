@@ -42,6 +42,7 @@ import { ESTABLISHED_MODELS, TAKEOFF_TYPES } from '../data/takeoffs'
 import { ORDER_CATEGORIES, SITE_SERVICES, standardOrdersFor } from '../data/orders'
 import { modelKey } from '../data/models'
 import { PROJECTS } from '../data/projects'
+import { mergeBlockLintels } from '../lib/orders'
 import { supabase } from '../lib/supabase'
 import { deleteProjectFile, uploadModelFile, uploadProjectFile } from '../lib/files'
 import { mergeWorkbench } from '../lib/mergeState'
@@ -161,6 +162,10 @@ export function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
     // sync with the portal data we captured.
     if (!hasManualPermitEdits(norm.steps.permit))
       norm.steps.permit = inferPermitSteps(permitById.get(Number(id)) ?? '')
+    // Legacy split 'Block' + 'Lintels' rows → the combined "Block & Lintels"
+    // category (Aug 2026). Idempotent, so it simply runs on every load — no
+    // one-time flag; see lib/orders.ts mergeBlockLintels for the exact rules.
+    if (norm.orders?.length) norm.orders = mergeBlockLintels(norm.orders)
     projects[Number(id)] = norm
   }
   // Tasks arrived after the first releases — older saves won't have them.

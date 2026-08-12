@@ -12,7 +12,7 @@
  */
 import type { Project, ProjectState, TemplateOverride } from '../types'
 import { DEFAULT_VENDOR_BODY, DEFAULT_VENDOR_SUBJECT, effectiveTemplate, renderTemplate } from '../lib/templates'
-import { SITE_SERVICES } from './orders'
+import { CATEGORY_PORTIONS, portionsOf, SITE_SERVICES } from './orders'
 
 export interface Vendor {
   id: string
@@ -75,11 +75,16 @@ export const VENDORS: Vendor[] = [
     phone: '352-629-9788', // Marion Masonry of Ocala dispatch
     icon: '🧱',
     supplies: 'Slab package · lintels · sand',
+    // 'Lintels' (sand rides along) is Marion's PORTION of the combined
+    // "Block & Lintels" category — see the DZ Block note below.
     categories: ['Slab package', 'Lintels'],
   },
   {
     // Block comes from DZ Block, NOT Marion Masonry (Adam's correction,
     // June 11 2026). Mason Caruthers is the takeoffs contact there.
+    // 'Block' is DZ's PORTION of the combined "Block & Lintels" category
+    // (data/orders.ts CATEGORY_PORTIONS): the one order row drafts DZ the
+    // block email and Marion Masonry the lintel email.
     id: 'dz-block',
     name: 'DZ Block',
     email: 'dispatch@dzblock.com',
@@ -131,12 +136,31 @@ export const VENDORS: Vendor[] = [
   },
 ]
 
-/** Does this vendor cover an order category? True when the category is one of
- *  its `categories` (materials it supplies) OR its `catalog` (company order
- *  menu). One shared rule so the order email, the row's ✉️ button, and the
- *  composer all agree on which company an item belongs to. */
-export function vendorCovers(v: Vendor, category: string): boolean {
+/** Does this vendor DIRECTLY list a category — in `categories` (materials it
+ *  supplies) or `catalog` (company order menu)? Internal building block for
+ *  the portion-aware rules below. */
+function coversDirect(v: Vendor, category: string): boolean {
   return (v.categories?.includes(category) ?? false) || (v.catalog?.includes(category) ?? false)
+}
+
+/** Does this vendor cover an order category? True when it directly lists the
+ *  category, OR when the category is a combined one (Block & Lintels) and the
+ *  vendor supplies any of its portions — vendor rows keep their plain portion
+ *  names ('Block', 'Lintels'), so nothing stored had to change. One shared
+ *  rule so the order emails, the row's ✉️ buttons, and the composer all agree
+ *  on which company an item belongs to. */
+export function vendorCovers(v: Vendor, category: string): boolean {
+  return coversDirect(v, category) || portionsOf(category).some((c) => coversDirect(v, c))
+}
+
+/** What THIS vendor's email should call an order category: for a combined
+ *  category, the portion(s) the vendor actually sells ("Block" for DZ Block,
+ *  "Lintels" for Marion Masonry); the category itself otherwise. Keeps each
+ *  supplier's email scoped to what they supply — DZ never sees "Lintels". */
+export function vendorPortionLabel(v: Vendor, category: string): string {
+  const portions = CATEGORY_PORTIONS[category]
+  const mine = portions?.filter((c) => coversDirect(v, c)) ?? []
+  return mine.length > 0 ? mine.join(' & ') : category
 }
 
 /** The live values a vendor-email template's {{tokens}} can use. When the
@@ -158,14 +182,20 @@ export function vendorTemplateVars(
     .filter((o) => o.status === 'toOrder' && (!hasCoverage || vendorCovers(v, o.category)))
     .filter((o) => !onlyCategory || o.category === onlyCategory)
     .map((o) => {
-      const list = modelLists?.[o.category]
-      if (!list) return `  • ${o.category}`
+      // Name each line the way THIS vendor knows it: a combined category
+      // renders as the vendor's own portion (DZ Block sees "Block", Marion
+      // Masonry sees "Lintels"). Model order lists are keyed by portion too,
+      // with the raw category as a fallback for custom/edge cases.
+      const label = vendorPortionLabel(v, o.category)
+      const list = modelLists?.[label] ?? modelLists?.[o.category]
+      if (!list) return `  • ${label}`
       const detail = list
         .split('\n')
         .map((l) => `      ${l}`)
         .join('\n')
-      return `  • ${o.category}:\n${detail}`
+      return `  • ${label}:\n${detail}`
     })
+  const onlyLabel = onlyCategory ? vendorPortionLabel(v, onlyCategory) : ''
   return {
     vendor: v.name,
     contact: v.contact || v.name,
@@ -176,8 +206,8 @@ export function vendorTemplateVars(
     parcel: p.parcel,
     permit: p.permit,
     model: p.model,
-    category: onlyCategory ?? '',
-    items: items.length ? items.join('\n') : `  • ${onlyCategory ?? ''}`,
+    category: onlyLabel,
+    items: items.length ? items.join('\n') : `  • ${onlyLabel}`,
   }
 }
 
@@ -207,34 +237,59 @@ export function vendorMailto(
   return vendorDraftUrl(v, renderTemplate(t.subject, vars), renderTemplate(t.body, vars))
 }
 
+/** One ready-to-send order draft: the button's href plus who it goes to.
+ *  `portion` is what this email orders — the vendor's slice of a combined
+ *  category ("Block" / "Lintels"), or the plain category — and labels the
+ *  button when one order row needs more than one email. */
+export interface OrderDraft {
+  href: string
+  vendor: Vendor
+  portion: string
+}
+
 /**
- * The one-click ✉️ Order draft for a SINGLE order row: picks the vendor that
- * covers the order's category, addresses it (TO + CC), writes a
- * material-specific subject, and scopes the body to just that item (with the
- * model's saved order list when there is one). The only thing left is Send.
+ * The one-click ✉️ Order drafts for a SINGLE order row: each draft picks the
+ * vendor that covers (a portion of) the order's category, addresses it
+ * (TO + CC), writes a material-specific subject, and scopes the body to just
+ * that item (with the model's saved order list when there is one). The only
+ * thing left is Send.
  *
- * Returns null when no vendor covers the category — the row then has no
+ * A plain category returns ONE draft, same as ever. A combined category
+ * (Block & Lintels — data/orders.ts CATEGORY_PORTIONS) returns one draft PER
+ * SUPPLIER: DZ Block gets the block email, Marion Masonry the lintel email.
+ * A vendor supplying several portions gets a single email listing them all.
+ *
+ * Returns [] when no vendor covers the category — the row then has no
  * button (add the category to a vendor in VENDORS above to light it up).
  */
-export function orderMailto(
+export function orderMailtos(
   vendors: Vendor[],
   category: string,
   p: Project,
   ps: ProjectState,
   overrides?: Record<string, TemplateOverride>,
   modelLists?: Record<string, string>,
-): { href: string; vendor: Vendor } | null {
-  const v = vendors.find((x) => vendorCovers(x, category))
-  if (!v) return null
-  const t = effectiveTemplate(overrides, `vendor:${v.id}`, {
-    subject: v.subjectDefault ?? DEFAULT_VENDOR_SUBJECT,
-    body: v.bodyDefault ?? DEFAULT_VENDOR_BODY,
+): OrderDraft[] {
+  // One supplier per portion, de-duplicated (first covering vendor wins per
+  // portion — same "first match" rule the single-vendor button always used).
+  const suppliers: Vendor[] = []
+  for (const portion of portionsOf(category)) {
+    const v = vendors.find((x) => vendorCovers(x, portion))
+    if (v && !suppliers.includes(v)) suppliers.push(v)
+  }
+  return suppliers.map((v) => {
+    const t = effectiveTemplate(overrides, `vendor:${v.id}`, {
+      subject: v.subjectDefault ?? DEFAULT_VENDOR_SUBJECT,
+      body: v.bodyDefault ?? DEFAULT_VENDOR_BODY,
+    })
+    const vars = vendorTemplateVars(v, p, ps, modelLists, category)
+    const portion = vendorPortionLabel(v, category)
+    // Material-specific subject (the template's subject serves the all-items
+    // vendor button; a single order reads better with the material up front) —
+    // scoped to this vendor's portion so DZ's subject says "Block order".
+    const subject = `${portion} order — ${p.address}, ${p.city}`
+    return { href: vendorDraftUrl(v, subject, renderTemplate(t.body, vars)), vendor: v, portion }
   })
-  const vars = vendorTemplateVars(v, p, ps, modelLists, category)
-  // Material-specific subject (the template's subject serves the all-items
-  // vendor button; a single order reads better with the category up front).
-  const subject = `${category} order — ${p.address}, ${p.city}`
-  return { href: vendorDraftUrl(v, subject, renderTemplate(t.body, vars)), vendor: v }
 }
 
 /** A tel: link for one-tap calling (strip to digits), or null when no phone is

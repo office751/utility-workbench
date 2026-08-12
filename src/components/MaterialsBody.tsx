@@ -9,7 +9,7 @@
 import { Fragment, useState } from 'react'
 import type { OrderItem, OrderStatus, Project, ProjectState, TemplateOverride, WorkbenchState } from '../types'
 import { MATERIAL_CATEGORIES, ORDER_STATUSES, standardOrdersFor } from '../data/orders'
-import { orderMailto, vendorCallHref, vendorCovers, vendorMailto, type Vendor } from '../data/vendors'
+import { orderMailtos, vendorCallHref, vendorCovers, vendorMailto, type Vendor } from '../data/vendors'
 import { modelKey } from '../data/models'
 import { ordersOf } from '../lib/orders'
 import { orderLeadInfo } from '../lib/leadTimes'
@@ -82,8 +82,10 @@ function MaterialsBody({ project: p, ps, canSeeModels, templates, modelTakeoffs,
   const coveredVendorIds = new Set(
     orders
       .filter((o) => o.status === 'toOrder')
-      .map((o) => vendors.find((v) => vendorCovers(v, o.category))?.id)
-      .filter(Boolean),
+      // flatMap, not find: a combined category (Block & Lintels) covers TWO
+      // vendors — both already have a button on the row, so both stay out of
+      // the "other vendors" strip.
+      .flatMap((o) => vendors.filter((v) => vendorCovers(v, o.category)).map((v) => v.id)),
   )
   const otherVendors = vendors.filter((v) => !coveredVendorIds.has(v.id))
 
@@ -128,17 +130,19 @@ function MaterialsBody({ project: p, ps, canSeeModels, templates, modelTakeoffs,
       ) : (
         <div className="orders">
           {sorted.map((o) => {
-            // Draft the one-click order email up front — only for a to-order row
-            // whose category maps to a known vendor — so we can render it on its
-            // own full-width line below the controls.
-            const draft = o.status === 'toOrder' ? orderMailto(vendors, o.category, p, ps, templates, lists) : null
-            const who = draft ? draft.vendor.contact || draft.vendor.name : ''
-            const call = draft ? vendorCallHref(draft.vendor) : null
-            // Does ANY vendor in the directory cover this category? Decides
-            // whether the row needs the free-text "vendor…" box at all (a known
-            // vendor already shows on the ✉️ Order button — the box was
-            // redundant next to it; roadmap "redundant vendor affordance").
-            const knownVendor = vendors.find((v) => vendorCovers(v, o.category))
+            // Draft the one-click order emails up front — only for a to-order
+            // row whose category maps to known vendors — so we can render them
+            // on their own full-width line below the controls. Usually ONE
+            // draft; a combined category (Block & Lintels) gets one per
+            // supplier: the block email to DZ Block, the lintel email to
+            // Marion Masonry — both fully addressed, just press Send twice.
+            const drafts = o.status === 'toOrder' ? orderMailtos(vendors, o.category, p, ps, templates, lists) : []
+            // Which vendors cover this category? Decides whether the row needs
+            // the free-text "vendor…" box at all (a known vendor already shows
+            // on the ✉️ Order button — the box was redundant next to it;
+            // roadmap "redundant vendor affordance"). Plural for combined
+            // categories, so the quiet "via …" label can name both suppliers.
+            const coveringVendors = vendors.filter((v) => vendorCovers(v, o.category))
             // Lead-time math: null unless still "to order" WITH a needed-by
             // date. Renders as the tinted "order by <date>" pill next to the
             // category (Today's Order-NOW alerts come from the same module).
@@ -197,7 +201,7 @@ function MaterialsBody({ project: p, ps, canSeeModels, templates, modelTakeoffs,
                       typed one by hand — never hide typed data). With a known
                       vendor, the ✉️ Order button below names them, and rows
                       past "to order" get a quiet read-only "via <vendor>". */}
-                  {!knownVendor || o.vendor ? (
+                  {coveringVendors.length === 0 || o.vendor ? (
                     <input
                       className="order-vendor"
                       value={o.vendor ?? ''}
@@ -205,8 +209,11 @@ function MaterialsBody({ project: p, ps, canSeeModels, templates, modelTakeoffs,
                       placeholder="vendor…"
                     />
                   ) : o.status !== 'toOrder' ? (
-                    <span className="order-vendor-known" title={knownVendor.supplies}>
-                      via {knownVendor.name}
+                    <span
+                      className="order-vendor-known"
+                      title={coveringVendors.map((v) => v.supplies).join(' · ')}
+                    >
+                      via {coveringVendors.map((v) => v.name).join(' + ')}
                     </span>
                   ) : null}
 
@@ -220,30 +227,40 @@ function MaterialsBody({ project: p, ps, canSeeModels, templates, modelTakeoffs,
                   </button>
                 </div>
 
-                {/* One-click order email on its OWN full-width line: a fully
-                    drafted, fully addressed email for THIS material (TO + CC +
-                    body w/ the model's order list) — the only thing left is Send.
-                    Its own line means the vendor name is never clipped (it used
-                    to overflow a narrow grid column into the status dropdown). */}
-                {draft && (
+                {/* One-click order emails on their OWN full-width line: fully
+                    drafted, fully addressed (TO + CC + body w/ the model's
+                    order list) — the only thing left is Send. Usually one
+                    button; a Block & Lintels row shows TWO (block → DZ Block,
+                    lintels → Marion Masonry), each labeled with its portion so
+                    it's obvious both emails need sending. Its own line means
+                    the vendor names are never clipped. */}
+                {drafts.length > 0 && (
                   <div className="order-actions">
-                    <a
-                      className="mini order-send"
-                      href={draft.href}
-                      title={`Draft the ${o.category} order to ${who}${draft.vendor.cc ? ` (CC ${draft.vendor.cc.split('@')[0].replace('.', ' ')})` : ''} — just press Send`}
-                    >
-                      ✉️ Order from {draft.vendor.name}
-                    </a>
-                    {call && (
-                      <a
-                        className="mini order-call"
-                        href={call}
-                        aria-label={`Call ${draft.vendor.name}`}
-                        title={`Call ${draft.vendor.name} — ${draft.vendor.phone}`}
-                      >
-                        📞 Call
-                      </a>
-                    )}
+                    {drafts.map((d) => {
+                      const who = d.vendor.contact || d.vendor.name
+                      const call = vendorCallHref(d.vendor)
+                      return (
+                        <Fragment key={d.vendor.id}>
+                          <a
+                            className="mini order-send"
+                            href={d.href}
+                            title={`Draft the ${d.portion} order to ${who}${d.vendor.cc ? ` (CC ${d.vendor.cc.split('@')[0].replace('.', ' ')})` : ''} — just press Send`}
+                          >
+                            ✉️ Order {drafts.length > 1 ? `${d.portion.toLowerCase()} ` : ''}from {d.vendor.name}
+                          </a>
+                          {call && (
+                            <a
+                              className="mini order-call"
+                              href={call}
+                              aria-label={`Call ${d.vendor.name}`}
+                              title={`Call ${d.vendor.name} — ${d.vendor.phone}`}
+                            >
+                              📞 {drafts.length > 1 ? d.vendor.name : 'Call'}
+                            </a>
+                          )}
+                        </Fragment>
+                      )
+                    })}
                   </div>
                 )}
               </div>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { collectPendingOrders, isMaterialsDone, ordersSummary, parseQuickAdd, toOrderCount } from './orders'
+import { collectPendingOrders, isMaterialsDone, mergeBlockLintels, ordersSummary, parseQuickAdd, toOrderCount } from './orders'
 import { emptyProjectState } from '../data/seed'
 import { makeProject } from './testUtils'
 import type { OrderItem, OrderStatus } from '../types'
@@ -61,7 +61,7 @@ describe('parseQuickAdd', () => {
     const r = parseQuickAdd('marion oaks block', roster)
     expect(r.matches).toHaveLength(2)
     expect(r.confident).toBe(false) // top score equals #2 — ask, don't guess
-    expect(r.categories).toEqual(['Block'])
+    expect(r.categories).toEqual(['Block & Lintels'])
   })
 
   it('street-suffix noise words (SW, Pl, Rd…) never influence the match', () => {
@@ -70,10 +70,14 @@ describe('parseQuickAdd', () => {
     expect(r.confident).toBe(false)
   })
 
-  it("understands Josh's spellings: lentil→Lintels, sand→Lintels, slap→Slab", () => {
-    expect(parseQuickAdd('lentil delivery', roster).categories).toEqual(['Lintels'])
-    expect(parseQuickAdd('need sand', roster).categories).toEqual(['Lintels']) // sand ships with lintels
+  it("understands Josh's spellings: lentil/sand→Block & Lintels, slap→Slab", () => {
+    expect(parseQuickAdd('lentil delivery', roster).categories).toEqual(['Block & Lintels'])
+    expect(parseQuickAdd('need sand', roster).categories).toEqual(['Block & Lintels']) // sand ships with lintels
     expect(parseQuickAdd('slap package', roster).categories).toEqual(['Slab package'])
+  })
+
+  it('block AND lintels in one text collapse to the ONE combined category', () => {
+    expect(parseQuickAdd('block and lintels on site', roster).categories).toEqual(['Block & Lintels'])
   })
 
   it('catches several categories in one message, de-duplicated', () => {
@@ -129,5 +133,56 @@ describe('collectPendingOrders', () => {
     expect(pending[0].projectId).toBe(1)
     expect(pending[0].lead?.status).toBe('late')
     expect(pending[2].lead).toBeNull() // undated sinks last
+  })
+})
+
+// mergeBlockLintels runs on EVERY load (migrate) against live production
+// orders, so its "never rewrite history" promise is worth pinning hard.
+describe('mergeBlockLintels', () => {
+  const row = (category: string, status: OrderStatus, patch: Partial<OrderItem> = {}): OrderItem => ({
+    id: `${category}-id`,
+    category,
+    status,
+    createdAt: '6/1/2026',
+    ...patch,
+  })
+
+  it('merges a still-to-order Block + Lintels pair into ONE combined row', () => {
+    const merged = mergeBlockLintels([
+      row('Trusses', 'toOrder'),
+      row('Block', 'toOrder', { neededBy: '2026-09-10' }),
+      row('Lintels', 'toOrder', { neededBy: '2026-09-01', vendor: 'Marion' }),
+    ])
+    expect(merged.map((o) => o.category)).toEqual(['Trusses', 'Block & Lintels'])
+    const combined = merged[1]
+    expect(combined.id).toBe('Block-id') // keeps the Block row's identity
+    expect(combined.neededBy).toBe('2026-09-01') // EARLIEST deadline wins
+    expect(combined.vendor).toBe('Marion') // hand-typed vendor survives
+  })
+
+  it('renames a lone to-order Block (or Lintels) row when its partner is absent', () => {
+    expect(mergeBlockLintels([row('Block', 'toOrder')])[0].category).toBe('Block & Lintels')
+    expect(mergeBlockLintels([row('Lintels', 'toOrder')])[0].category).toBe('Block & Lintels')
+  })
+
+  it('NEVER rewrites history: advanced rows and half-advanced pairs stay as-is', () => {
+    // Block already ordered, lone → untouched (renaming would claim it's pending).
+    const ordered = [row('Block', 'ordered')]
+    expect(mergeBlockLintels(ordered)).toEqual(ordered)
+    // Half-advanced pair: block ordered, lintels still pending → BOTH keep
+    // their original rows (their old names still map to the right vendors).
+    const half = [row('Block', 'ordered'), row('Lintels', 'toOrder')]
+    expect(mergeBlockLintels(half)).toEqual(half)
+    // Lone to-order Block whose Lintels partner is already installed →
+    // untouched (a combined label would claim lintels are still pending).
+    const partnerDone = [row('Block', 'toOrder'), row('Lintels', 'installed')]
+    expect(mergeBlockLintels(partnerDone)).toEqual(partnerDone)
+  })
+
+  it('is idempotent and leaves legacy-free lists alone (same reference back)', () => {
+    const once = mergeBlockLintels([row('Block', 'toOrder'), row('Lintels', 'toOrder')])
+    expect(mergeBlockLintels(once)).toBe(once) // second pass: nothing to do
+    const clean = [row('Trusses', 'toOrder')]
+    expect(mergeBlockLintels(clean)).toBe(clean)
   })
 })

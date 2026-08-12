@@ -13,8 +13,7 @@ export const ORDER_CATEGORIES: string[] = [
   'Trusses',
   'Framing package',
   'Slab package',
-  'Block',
-  'Lintels', // sand ships bundled IN the lintels package — no separate Sand order
+  'Block & Lintels', // ONE row, TWO suppliers — see CATEGORY_PORTIONS below
   'Windows', // installed at dry-in; a common long-lead item (see LEAD_TIME_DAYS)
   'Flooring',
   'Cabinets',
@@ -25,6 +24,29 @@ export const ORDER_CATEGORIES: string[] = [
   'Dumpster',
   'Porta-potty',
 ]
+
+/**
+ * COMBINED CATEGORIES — one order row, several suppliers. Block and lintels
+ * are ordered at the same construction moment but come from two different
+ * companies: block from DZ Block, lintels (+ the sand that ships bundled with
+ * them — no separate Sand order) from Marion Masonry. So the Materials tab
+ * shows ONE "Block & Lintels" line, and its order buttons draft BOTH vendor
+ * emails, each addressed to the supplier of its portion and worded for just
+ * that portion.
+ *
+ * Key = the combined category (what the order row says); values = the
+ * per-supplier portions. A portion name is what a vendor actually sells: it's
+ * matched against each vendor's `categories` (data/vendors.ts), it keys the
+ * model order lists (⚙️ Settings → Takeoffs), and it leads the email subject.
+ */
+export const CATEGORY_PORTIONS: Record<string, string[]> = {
+  'Block & Lintels': ['Block', 'Lintels'],
+}
+
+/** A category's per-supplier portions — just itself when it isn't combined. */
+export function portionsOf(category: string): string[] {
+  return CATEGORY_PORTIONS[category] ?? [category]
+}
 
 /** Just the materials — the manual "add an order" picker lists these in one
  *  group and the site-service actions below in another. (ORDER_CATEGORIES
@@ -65,8 +87,9 @@ export const LEAD_TIME_DAYS: Record<string, number> = {
   Flooring: 14,
   'Lighting package': 14,
   'Bathroom tile': 14,
-  Block: 7,
-  Lintels: 7, // sand ships bundled in this package (no separate Sand category)
+  // Legacy split 'Block' / 'Lintels' rows (pre-merge saves) fall back to the
+  // same 7-day default below, so old rows keep the same order-by math.
+  'Block & Lintels': 7,
   'Framing package': 7,
   'Slab package': 7,
   // site services are quick calls, not manufacturing:
@@ -89,8 +112,7 @@ export const DEFAULT_LEAD_TIME_DAYS = 7
 export const STANDARD_ORDER_CATEGORIES: string[] = [
   'Trusses',
   'Framing package',
-  'Block',
-  'Lintels',
+  'Block & Lintels',
   'Windows',
   'Slab package',
   'Cabinets',
@@ -133,10 +155,10 @@ export const CATEGORY_KEYWORDS: Record<string, string> = {
   frame: 'Framing package',
   slab: 'Slab package',
   slap: 'Slab package', // common typo
-  block: 'Block',
-  lintel: 'Lintels',
-  lentil: 'Lintels', // common spelling
-  sand: 'Lintels', // sand ships WITH the lintels package, so map it there (no standalone Sand category)
+  block: 'Block & Lintels',
+  lintel: 'Block & Lintels',
+  lentil: 'Block & Lintels', // common spelling
+  sand: 'Block & Lintels', // sand ships WITH the lintels package, so map it there (no standalone Sand category)
   floor: 'Flooring',
   cabinet: 'Cabinets',
   light: 'Lighting package',

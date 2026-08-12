@@ -230,8 +230,17 @@ distinct projects, `fire` = any attention item in that stream.
   house # is the strongest signal). `confident` = sole match OR top score
   strictly beats #2 — **a tie never auto-picks**.
 - Category match: keyword substrings from `CATEGORY_KEYWORDS`, including
-  Josh's spellings (`lentil`→Lintels, `slap`→Slab, `sand`→Lintels because sand
-  ships with the lintel package).
+  Josh's spellings (`lentil`→Block & Lintels, `slap`→Slab, `sand`→Block &
+  Lintels because sand ships with the lintel package).
+- **Block & Lintels is ONE combined category with TWO suppliers** (Aug 2026):
+  `CATEGORY_PORTIONS` in data/orders.ts splits it into its 'Block' portion
+  (→ DZ Block) and 'Lintels' portion (→ Marion Masonry); one order row drafts
+  BOTH vendor emails, each scoped/subject-lined to its own portion.
+- `mergeBlockLintels` normalizes legacy split rows on every load (idempotent,
+  no flag): a still-to-order Block+Lintels pair merges into one combined row
+  (Block row's id survives, **earliest needed-by wins**); a lone to-order row
+  whose partner category is absent is renamed; **anything ordered/delivered/
+  installed — including half-advanced pairs — is never rewritten**.
 - Materials done = **has orders and all installed** — zero orders is NOT done.
 
 ## tasks.ts — the two-operator queue

@@ -93,8 +93,12 @@ const CATEGORIES = [
   [/truss/, 'Trusses'],
   [/framing|frame pack/, 'Framing package'],
   [/slab|slap package/, 'Slab package'],
-  [/\bblock/, 'Block'],
-  [/lintel|lentil/, 'Lintels'],
+  // Block & lintels are ONE combined category in the app now (one order row,
+  // two vendor emails: block → DZ Block, lintels → Marion Masonry). Several
+  // patterns map to it; matchCategories de-dupes, so "block and lintels" in
+  // one text still adds a single row.
+  [/\bblock/, 'Block & Lintels'],
+  [/lintel|lentil/, 'Block & Lintels'],
   [/floor/, 'Flooring'],
   [/cabinet/, 'Cabinets'],
   [/\blight(ing)?\b/, 'Lighting package'],
@@ -102,7 +106,8 @@ const CATEGORIES = [
   [/garage door/, 'Garage door'],
   [/dumpster/, 'Dumpster'],
   [/porta|port o|ports potty|porta-potty/, 'Porta-potty'],
-  [/\bsand\b/, 'Sand'],
+  [/\bsand\b/, 'Block & Lintels'], // sand ships bundled with the lintel package — same as the app's Quick-Add
+
 ]
 
 function decodeAttributedBody(hex) {

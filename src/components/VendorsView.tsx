@@ -8,15 +8,19 @@
  * email here is a blank draft (no project context), since the directory is
  * global. Add/edit a supplier in 🛠 Settings → Vendor setup and it shows up here.
  */
-import { vendorCallHref, vendorPlainMailto, type Vendor } from '../data/vendors'
-import { ORDER_CATEGORIES } from '../data/orders'
+import { vendorCallHref, vendorCovers, vendorPlainMailto, type Vendor } from '../data/vendors'
+import { ORDER_CATEGORIES, portionsOf } from '../data/orders'
 
 function VendorsView({ vendors }: { vendors: Vendor[] }) {
   // Categories no vendor covers yet — surfaced so they're easy to fill in
   // (set a vendor's `categories` in Settings → Vendor setup and it lights up
-  // here + on the Materials tab's one-click order button).
-  const covered = new Set(vendors.flatMap((v) => v.categories ?? []))
-  const uncovered = ORDER_CATEGORIES.filter((c) => !covered.has(c))
+  // here + on the Materials tab's one-click order button). A combined
+  // category (Block & Lintels) counts as covered only when EVERY portion has
+  // a supplier — losing the lintel vendor should surface here even while the
+  // block vendor remains.
+  const uncovered = ORDER_CATEGORIES.filter(
+    (c) => !portionsOf(c).every((portion) => vendors.some((v) => vendorCovers(v, portion))),
+  )
 
   return (
     <section className="vendors-view">

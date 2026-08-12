@@ -469,15 +469,18 @@ function TasksView({
                       </span>
                     )}
                     <span className="otask-spacer" />
-                    {po.mailto && (
+                    {po.drafts.map((d) => (
                       <a
+                        key={d.href}
                         className="mini otask-send"
-                        href={po.mailto}
-                        title={`Draft the ${po.category} order${po.vendorName ? ` to ${po.vendorName}` : ''} — just press Send`}
+                        href={d.href}
+                        title={`Draft the ${d.portion} order to ${d.vendorName} — just press Send`}
                       >
-                        ✉️ Order{po.vendorName ? ` from ${po.vendorName}` : ''}
+                        {/* Two suppliers (Block & Lintels) → each button names
+                            its portion so it's clear both emails need sending. */}
+                        ✉️ Order{po.drafts.length > 1 ? ` ${d.portion.toLowerCase()}` : ''} from {d.vendorName}
                       </a>
-                    )}
+                    ))}
                     <button
                       className="mini otask-done"
                       onClick={() => onMarkOrdered?.(po.projectId, po.orderId)}
@@ -546,12 +549,12 @@ function TasksView({
   )
 }
 
-/** A pending order enriched (in App) with its one-click order email + vendor. */
+/** A pending order enriched (in App) with its one-click order emails.
+ *  Usually one draft; a combined category (Block & Lintels) carries one per
+ *  supplier — block → DZ Block, lintels → Marion Masonry. Empty when no
+ *  vendor covers the category (the row then has no ✉️ button). */
 export interface PendingOrderView extends PendingOrder {
-  /** mailto: draft for this order's vendor, or null when no vendor covers it. */
-  mailto: string | null
-  /** The covering vendor's name, for the button label (null when none). */
-  vendorName: string | null
+  drafts: { href: string; vendorName: string; portion: string }[]
 }
 
 interface Props {

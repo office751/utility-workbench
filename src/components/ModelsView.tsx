@@ -25,7 +25,7 @@ import { MODELS_DEFAULT, effectiveSpec } from '../data/models'
 import { cabinetLayoutsFor } from '../data/cabinets'
 import { missingTakeoffs } from '../lib/takeoffs'
 import { TAKEOFF_TYPES } from '../data/takeoffs'
-import { ORDER_CATEGORIES } from '../data/orders'
+import { ORDER_CATEGORIES, portionsOf } from '../data/orders'
 import DocumentsBox from './DocumentsBox'
 import CabinetLayoutEditor from './CabinetLayoutEditor'
 
@@ -262,7 +262,11 @@ function ModelsView({
           <div className="tko-add">
             <select value={addCat} onChange={(e) => setAddCat(e.target.value)}>
               <option value="">Add a list for…</option>
-              {ORDER_CATEGORIES.filter((c) => !lists[c]).map((c) => (
+              {/* Combined categories expand to their per-supplier portions:
+                  the BLOCK list (→ DZ Block's email) and the LINTEL list
+                  (→ Marion Masonry's) are different documents, so each keeps
+                  its own textarea keyed by portion name. */}
+              {ORDER_CATEGORIES.flatMap((c) => portionsOf(c)).filter((c) => !lists[c]).map((c) => (
                 <option key={c}>{c}</option>
               ))}
             </select>

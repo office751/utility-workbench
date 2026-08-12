@@ -113,6 +113,56 @@ export function parseQuickAdd(text: string, projects: Project[]): QuickAddParse 
   return { matches, confident, categories }
 }
 
+/* ---------------- legacy Block + Lintels rows → one combined row ---------- */
+
+/**
+ * Block and Lintels used to be two separate order categories; they're ordered
+ * together now as a single "Block & Lintels" row (one row, two vendor emails —
+ * see data/orders.ts CATEGORY_PORTIONS). This normalizes a project's legacy
+ * rows on every load (it's idempotent, so no one-time flag is needed):
+ *
+ *  - 'Block' + 'Lintels' rows BOTH still "to order" → ONE combined row.
+ *    Keeps the Block row's identity (id/createdAt); the EARLIEST needed-by
+ *    wins so no deadline gets lost in the merge.
+ *  - a lone to-order 'Block' or 'Lintels' row whose partner category doesn't
+ *    exist at all → simply renamed to the combined category.
+ *  - anything already ordered/delivered/installed is left EXACTLY as-is:
+ *    history is never rewritten, and a half-advanced pair (block ordered,
+ *    lintels still pending) keeps both original rows — their old category
+ *    names still map to the right vendor, so their ✉️ buttons keep working.
+ */
+export function mergeBlockLintels(orders: OrderItem[]): OrderItem[] {
+  const COMBINED = 'Block & Lintels'
+  const block = orders.find((o) => o.category === 'Block')
+  const lintels = orders.find((o) => o.category === 'Lintels')
+  if (!block && !lintels) return orders // the common case — untouched
+
+  if (block && lintels && block.status === 'toOrder' && lintels.status === 'toOrder') {
+    // ISO dates sort lexicographically, so [0] after sort = the earlier one.
+    const neededBy = [block.neededBy, lintels.neededBy]
+      .filter((d): d is string => !!d)
+      .sort()[0]
+    return orders
+      .filter((o) => o !== lintels)
+      .map((o) =>
+        o === block
+          ? {
+              ...o,
+              category: COMBINED,
+              neededBy,
+              orderedOn: block.orderedOn ?? lintels.orderedOn,
+              vendor: block.vendor ?? lintels.vendor,
+            }
+          : o,
+      )
+  }
+  if (block && !lintels && block.status === 'toOrder')
+    return orders.map((o) => (o === block ? { ...o, category: COMBINED } : o))
+  if (lintels && !block && lintels.status === 'toOrder')
+    return orders.map((o) => (o === lintels ? { ...o, category: COMBINED } : o))
+  return orders
+}
+
 /* ---------------- pending orders (the Tasks "Orders to place" list) ------- */
 
 /** One still-"to order" material, flattened out of its project for the

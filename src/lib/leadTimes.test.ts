@@ -22,7 +22,8 @@ describe('leadTimeDaysFor', () => {
   it('returns the tuned number for a known category', () => {
     expect(leadTimeDaysFor('Trusses')).toBe(21)
     expect(leadTimeDaysFor('Cabinets')).toBe(28)
-    expect(leadTimeDaysFor('Block')).toBe(7)
+    expect(leadTimeDaysFor('Block & Lintels')).toBe(7)
+    expect(leadTimeDaysFor('Block')).toBe(7) // legacy split rows ride the default
   })
 
   it('falls back to the one-week default for unknown categories', () => {
