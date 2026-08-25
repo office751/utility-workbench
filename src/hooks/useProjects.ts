@@ -252,6 +252,18 @@ export function migrate(parsed: Partial<WorkbenchState>): WorkbenchState {
       parsed.portalDates && typeof parsed.portalDates === 'object' && !Array.isArray(parsed.portalDates)
         ? parsed.portalDates
         : undefined,
+    // 🪄 Customize-page hides. Like scanMeta/portalDates: MUST be carried
+    // through migrate or every load strips the saved hides and the sections
+    // all come back (caught by a reload test the day it shipped, Aug 2026).
+    // Shape-guarded to per-page string arrays; anything malformed is dropped.
+    hiddenSections:
+      parsed.hiddenSections && typeof parsed.hiddenSections === 'object' && !Array.isArray(parsed.hiddenSections)
+        ? Object.fromEntries(
+            Object.entries(parsed.hiddenSections as Record<string, unknown>)
+              .filter(([, v]) => Array.isArray(v))
+              .map(([k, v]) => [k, (v as unknown[]).filter((s): s is string => typeof s === 'string')]),
+          )
+        : undefined,
   }
 
   // ONE-TIME (June 2026): the scanner used to turn inspection RESULTS into
@@ -1264,6 +1276,17 @@ export function useProjects() {
     })
   }
 
+  /** 🪄 Customize page: flip one section's hidden state on one page (a Detail
+   *  stream tab). Stored per-page in hiddenSections (cloud-synced), read by
+   *  the Hideable wrappers — see components/Hideable.tsx for the whole idea. */
+  function toggleHiddenSection(page: string, section: string) {
+    setState((prev) => {
+      const cur = prev.hiddenSections?.[page] ?? []
+      const next = cur.includes(section) ? cur.filter((s) => s !== section) : [...cur, section]
+      return { ...prev, hiddenSections: { ...(prev.hiddenSections ?? {}), [page]: next } }
+    })
+  }
+
   /** Replace the editable team list (names you can assign tasks to). */
   function setAssignees(names: string[]) {
     setState((prev) => ({ ...prev, assignees: names }))
@@ -1495,6 +1518,7 @@ export function useProjects() {
     dismissNotification,
     dismissInspection,
     setTemplate,
+    toggleHiddenSection,
     setAssignees,
     requestScan,
     setSelectionsCatalog,

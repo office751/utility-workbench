@@ -78,6 +78,7 @@ import SelectionsView from './SelectionsView'
 import FinancialsBody from './FinancialsBody'
 import Icon, { miForEmoji } from './Icon'
 import GuideCallout from './GuideCallout'
+import Hideable, { TidyContext } from './Hideable'
 import ClosingCard from './ClosingCard'
 import TerritoryCheck from './TerritoryCheck'
 
@@ -101,6 +102,9 @@ interface Updaters {
   /** 💧 Scout flavor (Aug 2026): same, PLUS waterSource → 'City' — the apply
    *  behind the "suspect city water?" check on undecided lots. */
   applyScoutedWaterUtility: (id: number, companyId: string, providerName: string) => void
+  /** 🪄 Customize page: flip one section's hidden state on one stream tab
+   *  (see components/Hideable.tsx for the whole idea). */
+  toggleHiddenSection: (page: string, section: string) => void
   addProjectFiles: (id: number, files: File[]) => Promise<{ ok: number; failed: string[] }>
   removeProjectFile: (id: number, index: number) => void
   addOrder: (id: number, order: { category: string; status: OrderStatus; orderedOn?: string }) => void
@@ -148,6 +152,11 @@ interface Props extends Updaters {
   /** Whether this role's tabs include 📐 Models — decides how the Materials
    *  missing-takeoffs banner phrases its "go gather them" advice. */
   canSeeModels: boolean
+  /** 🪄 Whether this login may customize page layout (admin: canManageSettings
+   *  — page layout is app configuration, same gate as Settings). */
+  canCustomize?: boolean
+  /** Per-page hidden sections from the blob (WorkbenchState.hiddenSections). */
+  hiddenSections?: Record<string, string[]>
   /** Whether this role may see money (data/roles.ts canSeeFinancials —
    *  admin + business owner). Gates the 💵 Draws tab pill AND its body. */
   canSeeFinancials: boolean
@@ -247,6 +256,7 @@ function Detail(props: Props) {
   const [activeTab, setActiveTab] = useState<DetailTab>(props.initialStream ?? 'overview')
   const [showSettings, setShowSettings] = useState(false)
   const [editingSteps, setEditingSteps] = useState(false) // step-editor open on the current stream tab
+  const [tidy, setTidy] = useState(false) // 🪄 customize-page mode (admin-only button below)
   // Investor portal: does THIS project have an investor grant? (Empty set
   // until the portal schema exists — the curation UI then never appears.)
   const [granted, setGranted] = useState<Set<number>>(new Set())
@@ -578,10 +588,38 @@ function Detail(props: Props) {
         />
       )}
 
-      {/* ---- STREAM tabs: contacts + the stream body + that stream's notes ---- */}
+      {/* ---- STREAM tabs: contacts + the stream body + that stream's notes.
+           Everything inside the TidyContext provider can be hidden per-page
+           via 🪄 Customize (Hideable wrappers; state in hiddenSections). ---- */}
       {activeTab !== 'overview' && activeTab !== 'selections' && activeTab !== 'financials' && (
-        <>
-          <ContactLinks stream={activeTab} p={p} ps={ps} utilities={props.utilities} />
+        <TidyContext.Provider
+          value={{
+            on: tidy,
+            isHidden: (id) => (props.hiddenSections?.[activeTab] ?? []).includes(id),
+            toggle: (id) => props.toggleHiddenSection(activeTab, id),
+          }}
+        >
+          {/* The customize toggle — admins only (page layout = app config,
+              same trust level as ⚙ Settings). Changes are shared: hiding a
+              section hides it for every login, on every device. */}
+          {props.canCustomize && (
+            <div className="tidy-bar">
+              {tidy && (
+                <span className="muted">
+                  Click a section's eye to hide/show it on this page — for everyone, on every
+                  device.
+                </span>
+              )}
+              <button className="btn btn-ghost btn-sm" onClick={() => setTidy((t) => !t)}>
+                <Icon name={tidy ? 'task_alt' : 'tune'} size={15} />
+                {tidy ? ' Done customizing' : ' Customize page'}
+              </button>
+            </div>
+          )}
+
+          <Hideable id="contacts" label="Contact buttons">
+            <ContactLinks stream={activeTab} p={p} ps={ps} utilities={props.utilities} />
+          </Hideable>
 
           {activeTab === 'electric' && <ElectricBody {...props} />}
           {activeTab === 'water' && <WaterBody {...props} />}
@@ -604,7 +642,9 @@ function Detail(props: Props) {
             />
           )}
 
-          {/* Edit the standard checklist for this stream (global, all houses). */}
+          {/* Edit the standard checklist for this stream (global, all houses).
+              Hideable — but only the closed BUTTON hides; an open editor
+              always shows so customize mode can't strand an editing session. */}
           {activeTab !== 'materials' &&
             (editingSteps ? (
               <StepEditor
@@ -623,22 +663,26 @@ function Detail(props: Props) {
                 onClose={() => setEditingSteps(false)}
               />
             ) : (
-              <button className="btn btn-ghost btn-sm edit-steps-btn" onClick={() => setEditingSteps(true)}>
-                <Icon name="edit" size={16} />
-                Edit {STREAM_TABS.find((s) => s.key === activeTab)?.name ?? activeTab} steps
-              </button>
+              <Hideable id="editsteps" label="Edit-steps button">
+                <button className="btn btn-ghost btn-sm edit-steps-btn" onClick={() => setEditingSteps(true)}>
+                  <Icon name="edit" size={16} />
+                  Edit {STREAM_TABS.find((s) => s.key === activeTab)?.name ?? activeTab} steps
+                </button>
+              </Hideable>
             ))}
 
-          <label className="notes-label">
-            {NOTE_LABEL[activeTab]}
-            <textarea
-              rows={3}
-              value={ps.notes[activeTab]}
-              onChange={(e) => setNote(p.id, activeTab, e.target.value)}
-              placeholder="Anything worth remembering…"
-            />
-          </label>
-        </>
+          <Hideable id="notes" label="Notes box">
+            <label className="notes-label">
+              {NOTE_LABEL[activeTab]}
+              <textarea
+                rows={3}
+                value={ps.notes[activeTab]}
+                onChange={(e) => setNote(p.id, activeTab, e.target.value)}
+                placeholder="Anything worth remembering…"
+              />
+            </label>
+          </Hideable>
+        </TidyContext.Provider>
       )}
     </section>
   )

@@ -30,6 +30,8 @@ const full: Partial<WorkbenchState> = {
   scanMeta: { lastScanAt: '2026-07-02T09:31:00Z', permitsRead: 56 },
   customOrderCategories: ['Gutters'],
   vendorCatalogsSeeded: true, // skip the one-time backfill for the passthrough test
+  portalDates: { '2025082884': { status: 'Issued' } },
+  hiddenSections: { materials: ['vendors', 'notes'] },
 }
 
 const out = migrate(full)
@@ -51,6 +53,15 @@ describe('migrate() round-trip', () => {
     expect(out.models?.ZZ).toBeDefined()
     expect(out.stepOverrides?.electric).toHaveLength(1)
     expect(out.tasks.some((t) => t.text === 'sentinel task')).toBe(true)
+  })
+
+  it('keeps 🪄 customize-page hides (the hiddenSections reload regression, Aug 2026)', () => {
+    // Day-one bug: migrate() rebuilt the state without this field, so every
+    // reload stripped the saved hides and the sections all came back.
+    expect(out.hiddenSections).toEqual({ materials: ['vendors', 'notes'] })
+    // Shape guard: malformed values are dropped, not crashed on.
+    const mangled = migrate({ ...full, hiddenSections: { ok: ['a'], bad: 'nope', worse: [1, 'b'] } as never })
+    expect(mangled.hiddenSections).toEqual({ ok: ['a'], worse: ['b'] })
   })
 
   it('keeps the scanner heartbeat stamp (drives the Today stale-scan alert)', () => {
@@ -122,6 +133,8 @@ describe('migrate() round-trip', () => {
       'scanMeta',
       'customOrderCategories',
       'vendorCatalogsSeeded',
+      'portalDates',
+      'hiddenSections',
     ]
     for (const k of EXPECTED_KEYS) expect(out).toHaveProperty(k)
   })

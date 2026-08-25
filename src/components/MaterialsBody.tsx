@@ -15,6 +15,7 @@ import { ordersOf } from '../lib/orders'
 import { orderLeadInfo } from '../lib/leadTimes'
 import { missingTakeoffs, permitIssued } from '../lib/takeoffs'
 import GuideCallout from './GuideCallout'
+import Hideable from './Hideable'
 
 interface Props {
   project: Project
@@ -272,7 +273,9 @@ function MaterialsBody({ project: p, ps, canSeeModels, templates, modelTakeoffs,
       {/* Add an order manually: pick a material OR a Florida Express site
           service (deliver / swap / remove), set the date you ordered it. The
           heading separates this composer from the list above (roadmap note —
-          it used to blend into the last order row). */}
+          it used to blend into the last order row). 🪄-hideable as one unit:
+          Quick-Add on the Projects landing covers intake if this is hidden. */}
+      <Hideable id="composer" label="Add-an-order form">
       <h3 className="order-add-head">＋ Add an order</h3>
       <div className="order-add">
         <select
@@ -379,10 +382,12 @@ function MaterialsBody({ project: p, ps, canSeeModels, templates, modelTakeoffs,
           ＋ Add order
         </button>
       </div>
+      </Hideable>
 
       {/* Ad-hoc email to any vendor NOT already on a to-order row above (those
           have their own one-click ✉️ button). For one-offs / questions. */}
       {otherVendors.length > 0 && (
+        <Hideable id="vendors" label="Other-vendors strip">
         <div className="vendor-row">
           <span className="vendor-label">Other vendors:</span>
           {otherVendors.map((v) => {
@@ -405,6 +410,7 @@ function MaterialsBody({ project: p, ps, canSeeModels, templates, modelTakeoffs,
             )
           })}
         </div>
+        </Hideable>
       )}
     </>
   )

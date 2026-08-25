@@ -7,6 +7,7 @@
  */
 import { useState } from 'react'
 import { WHO, guideById } from '../data/guides'
+import Hideable from './Hideable'
 
 interface Props {
   id: string
@@ -19,7 +20,7 @@ function GuideCallout({ id, defaultOpen = false }: Props) {
   const [open, setOpen] = useState(defaultOpen)
   if (!guide) return null // unknown id — render nothing rather than break the page
 
-  return (
+  const callout = (
     <div className={'guide-callout' + (open ? ' open' : '')}>
       <button className="guide-callout-head" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         <span>
@@ -49,6 +50,16 @@ function GuideCallout({ id, defaultOpen = false }: Props) {
         </div>
       )}
     </div>
+  )
+
+  // Every inline callout is 🪄-hideable under one shared 'guide' section id,
+  // so hiding "the how-this-works box" on a page hides ALL of that page's
+  // callouts at once. The 📖 Guide screen has no TidyContext provider, so
+  // the wrapper is inert there (default context: never hidden, no chips).
+  return (
+    <Hideable id="guide" label="How-this-works guide">
+      {callout}
+    </Hideable>
   )
 }
 

@@ -341,6 +341,48 @@
   margin-bottom: 14px;
 }
 
+/* ---------- 🪄 Customize page (Hideable.tsx) ---------- */
+/* The toggle row sits right-aligned above the tab content, quiet until used. */
+.tidy-bar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-size: calc(12px * var(--font-scale));
+}
+/* In customize mode each section gets a dashed outline + its eye chip, so
+   the page reads as "these are the blocks you can keep or cut". */
+.hideable {
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 6px 8px 8px;
+  margin-bottom: 12px;
+}
+.hideable-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: calc(12px * var(--font-scale));
+  cursor: pointer;
+  margin-bottom: 6px;
+}
+.hideable-chip:hover { border-color: var(--accent); color: var(--accent); }
+.hideable-state {
+  color: var(--muted);
+  font-size: calc(11px * var(--font-scale));
+}
+/* A hidden section stays visible in customize mode — dimmed, so you can see
+   what you'd be bringing back — and vanishes entirely once you're done. */
+.hideable.is-hidden .hideable-body { opacity: 0.35; }
+.hideable.is-hidden { border-color: var(--muted); }
+.hideable.is-hidden .hideable-state { font-weight: 600; }
+
 /* The water SCOUT banner (TerritoryCheck mode="scout") — an OFFER ("suspect
    city water? ask the county"), not an alarm, so it reads panel-calm instead
    of warning-red. Tokens keep it right in dark mode too (see the explicit

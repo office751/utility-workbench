@@ -128,5 +128,9 @@ export function mergeWorkbench(base: WorkbenchState, local: WorkbenchState, remo
     // permit # → per-key 3-way like every other map. Only the scanner writes
     // these, so conflicts are rare; remote-wins on one is the fresher scan.
     portalDates: rec((s) => s.portalDates),
+    // 🪄 Customize-page hides, keyed by page (Detail tab) → per-key 3-way:
+    // two people tidying DIFFERENT pages both keep; the same page at the
+    // same moment resolves like templates (committed remote wins that key).
+    hiddenSections: rec((s) => s.hiddenSections),
   }
 }

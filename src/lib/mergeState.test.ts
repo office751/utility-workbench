@@ -36,6 +36,9 @@ function baseState(): Required<WorkbenchState> {
     portalDates: {
       '2025082884': { status: 'Issued', issued: '2025-10-21', expires: '2026-11-02', checkedAt: '2026-07-14T10:52:00.000Z' },
     },
+    // 🪄 Customize-page hides — per-page string lists, merged per-key like
+    // templates (see mergeWorkbench).
+    hiddenSections: { materials: ['vendors'] },
   }
 }
 

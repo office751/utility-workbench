@@ -142,6 +142,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
     resetStepList,
     updateProjectFacts,
     setTemplate,
+    toggleHiddenSection,
     setAssignees,
     requestScan,
     setSelectionsCatalog,
@@ -538,6 +539,11 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
             // 💵 Draws (money) — admin + business owner only; other roles
             // never see the tab pill (data/roles.ts canSeeFinancials).
             canSeeFinancials={roleCfg.canSeeFinancials}
+            // 🪄 Customize page — page layout is app configuration, so the
+            // same gate as ⚙ Settings; hides are shared via the blob.
+            canCustomize={roleCfg.canManageSettings}
+            hiddenSections={state.hiddenSections}
+            toggleHiddenSection={toggleHiddenSection}
             drawTemplates={state.drawTemplates ?? DRAW_TEMPLATES_DEFAULT}
             setFinancials={setFinancials}
             updateDraw={updateDraw}

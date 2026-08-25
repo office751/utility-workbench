@@ -643,6 +643,16 @@ export interface WorkbenchState {
     string,
     { status?: string; issued?: string; expires?: string; checkedAt?: string }
   >
+  /**
+   * 🪄 Customize page (Aug 2026): per-page hidden sections. Key = a Detail
+   * stream tab ('electric' | 'water' | 'septic' | 'permit' | 'materials'),
+   * value = the section ids hidden on that page ('contacts' | 'guide' |
+   * 'editsteps' | 'notes' | 'composer' | 'vendors' — see the Hideable
+   * wrappers in Detail.tsx / MaterialsBody.tsx). Edited via the admin-only
+   * customize mode; cloud-synced so every device gets the same tidy pages.
+   * MUST be carried through mergeWorkbench (completeness test enforces it).
+   */
+  hiddenSections?: Record<string, string[]>
 }
 
 /** One model's library page: its plan files + editable facts. */
