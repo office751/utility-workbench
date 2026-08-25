@@ -386,19 +386,23 @@ export function permitNeedsAction(ps: ProjectState): boolean {
  * this app, so checklists were never ticked — but a county issued date or a
  * permit number on file is proof enough of where things really stand. Order:
  *   1. C.O. house           → 'co'         (closed out; outranks everything)
- *   2. issued               → 'issued'     (final step checked, a typed/county
+ *   2. Dead lot             → 'dead'       (not building — its own review
+ *                                           bucket, Aug 2026, so dead lots
+ *                                           never inflate issued/in-review)
+ *   3. issued               → 'issued'     (final step checked, a typed/county
  *                                           issued date — believe the county)
- *   3. Owner/GC responsible → 'not-ours'   (tracked, but not ours to push)
- *   4. any evidence of an application — a checked step, a county record, or a
+ *   4. Owner/GC responsible → 'not-ours'   (tracked, but not ours to push)
+ *   5. any evidence of an application — a checked step, a county record, or a
  *      permit # on file (the county assigns numbers AT application)
  *                           → 'in-review'
- *   5. otherwise            → 'not-applied'
+ *   6. otherwise            → 'not-applied'
  */
-export type PermitStatus = 'co' | 'issued' | 'not-ours' | 'in-review' | 'not-applied'
+export type PermitStatus = 'co' | 'dead' | 'issued' | 'not-ours' | 'in-review' | 'not-applied'
 
 /** Display labels for the buckets (chips + row pills use these verbatim). */
 export const PERMIT_STATUS_LABEL: Record<PermitStatus, string> = {
   co: 'C.O.',
+  dead: 'Dead',
   issued: 'Issued',
   'not-ours': 'Owner/GC',
   'in-review': 'In review',
@@ -407,6 +411,7 @@ export const PERMIT_STATUS_LABEL: Record<PermitStatus, string> = {
 
 export function permitStatus(p: Project, ps: ProjectState): PermitStatus {
   if (p.listStatus === 'CO') return 'co'
+  if (p.listStatus === 'Dead') return 'dead'
   if (isPermitDone(ps) || permitIssuedOf(p, ps) !== '') return 'issued'
   const who = permitResponsibleOf(ps)
   if (who === 'Owner' || who === 'GC') return 'not-ours'

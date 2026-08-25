@@ -44,7 +44,9 @@ export function countActive(f: FilterState): number {
 
 /** The chip/dropdown order: workflow order, finished states last. */
 // eslint-disable-next-line react-refresh/only-export-components -- deliberately colocated with its component
-export const PERMIT_FILTER_ORDER: PermitStatus[] = ['not-applied', 'in-review', 'issued', 'not-ours', 'co']
+// 'dead' rides last — a review bucket for decided-against lots (its chip,
+// like every chip, only appears once at least one house is in the bucket).
+export const PERMIT_FILTER_ORDER: PermitStatus[] = ['not-applied', 'in-review', 'issued', 'not-ours', 'co', 'dead']
 
 interface Props {
   filters: FilterState

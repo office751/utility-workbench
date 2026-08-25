@@ -157,7 +157,7 @@ function ProjectList({ projects, onSelect, onAdd, onBatchApply, onStatusReport, 
   // Per-bucket chip counts. The buckets partition the roster (a C.O. house is
   // ONLY 'co'), so hide-CO never skews a specific bucket's count — it only
   // decides whether the default "All" view includes finished homes.
-  const chipCount: Record<PermitStatus, number> = { co: 0, issued: 0, 'not-ours': 0, 'in-review': 0, 'not-applied': 0 }
+  const chipCount: Record<PermitStatus, number> = { co: 0, dead: 0, issued: 0, 'not-ours': 0, 'in-review': 0, 'not-applied': 0 }
   for (const r of pool) chipCount[r.status]++
   // hide-CO hides FINISHED homes — but one still walking its closing checklist
   // (under contract, July 2026) is active sale work, so it stays visible until

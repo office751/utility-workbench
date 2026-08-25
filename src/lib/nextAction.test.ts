@@ -340,6 +340,14 @@ describe('permitStatus — the coarse bucket behind the Projects permit filter',
     expect(permitStatus(makeProject({ listStatus: 'CO', permit: '' }), emptyProjectState())).toBe('co')
   })
 
+  it("a Dead lot is 'dead' — its own review bucket, even with an issued permit", () => {
+    // The whole point (Aug 2026): dead lots get a chip to review, and they
+    // never inflate the issued/in-review counts.
+    const ps = emptyProjectState()
+    ps.permitIssuedDate = '2026-01-15' // permit WAS issued before the lot died
+    expect(permitStatus(makeProject({ listStatus: 'Dead' }), ps)).toBe('dead')
+  })
+
   it('issued: final step checked, a typed date, or the county snapshot', () => {
     const byStep = emptyProjectState()
     byStep.steps.permit = { issued: { done: true } }
