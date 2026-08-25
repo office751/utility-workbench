@@ -61,6 +61,9 @@ import { GEORGES } from '../data/contacts'
 // SECO's real load form, pre-filled from this project — same helper Batch
 // Apply uses (lib/secoForm.ts); this just adds a second place to download it.
 import { SECO_BLANK_FORM_URL, fillSecoLoadForm } from '../lib/secoForm'
+// INRB recorded-notice: fills the official DOH form for this house and opens
+// it as a print-ready PDF (Septic tab, INRB systems only — lib/inrbNotice.ts).
+import { fillInrbNotice, inrbDefaults, lotBlockFromParcel, type InrbValues } from '../lib/inrbNotice'
 // Duke's load form (Residential Service Information Form), generated pre-filled
 // so Adam can attach it to the WO# reply instead of retyping Duke's blank.
 import { fillDukeLoadForm } from '../lib/dukeForm'
@@ -1040,7 +1043,115 @@ function WaterBody({
 
 /* ================= SEPTIC / SEWER ================= */
 
-function SepticBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps }: Props) {
+/**
+ * 🖨 INRB notice — fill & print (INRB systems only).
+ *
+ * The DOH requires a written notice, signed by the property owner + two
+ * witnesses and notarized, RECORDED at the courthouse before final approval.
+ * This fills the six data fields on the OFFICIAL blank form (the same layout
+ * the county already accepted) and opens it as a PDF to print — the
+ * owner/witness/notary lines stay blank for wet-ink signing.
+ */
+function InrbNoticeCard({ p, ps, setField }: { p: Project; ps: ProjectState; setField: Props['setField'] }) {
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [v, setV] = useState<InrbValues | null>(null)
+
+  // Lot & block are pre-filled by READING THE PARCEL # (SECTION-BLOCK-LOT).
+  // Good guess, but this document gets recorded — so we say it out loud below.
+  const derived = lotBlockFromParcel(p.parcel) != null
+
+  async function generate() {
+    if (!v) return
+    setBusy(true)
+    try {
+      // Remember the permit # on the project (single setField — gotcha #1),
+      // so the next print (and the CLI twin) starts prefilled.
+      const permit = v.permit.trim()
+      if (permit && permit !== (ps.septicPermit ?? '')) setField(p.id, 'septicPermit', permit)
+      const bytes = await fillInrbNotice(v)
+      const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'application/pdf' }))
+      window.open(url, '_blank', 'noopener') // browser's PDF viewer → 🖨
+      // Revoke later, not immediately — the new tab needs the URL to load.
+      setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    } catch (e) {
+      alert(`Couldn't build the INRB notice: ${(e as Error).message}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (!open) {
+    return (
+      <div className="contact-row">
+        <button
+          className="contact tc-apply"
+          onClick={() => {
+            setV(inrbDefaults(p, ps)) // prefill fresh each open (state may have changed)
+            setOpen(true)
+          }}
+        >
+          <Icon name="print" size={15} /> INRB notice — fill &amp; print
+        </button>
+      </div>
+    )
+  }
+  if (!v) return null
+  const set = (k: keyof InrbValues) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setV({ ...v, [k]: e.target.value })
+
+  return (
+    <div className="inrb-card">
+      <div className="form-grid">
+        <label>
+          DOH septic permit #
+          <input value={v.permit} onChange={set('permit')} placeholder="42-S1-…" />
+        </label>
+        <label>
+          Property ID (parcel)
+          <input value={v.propertyId} onChange={set('propertyId')} />
+        </label>
+        <label>
+          Lot
+          <input value={v.lot} onChange={set('lot')} />
+        </label>
+        <label>
+          Block
+          <input value={v.block} onChange={set('block')} />
+        </label>
+        <label className="span2">
+          Subdivision
+          <input value={v.subdivision} onChange={set('subdivision')} />
+        </label>
+        <label className="span2">
+          Property owner (printed name — they sign by hand)
+          <input value={v.owner} onChange={set('owner')} />
+        </label>
+      </div>
+      {derived && (
+        <p className="inrb-note">
+          <Icon name="info" size={13} /> Lot &amp; block were read from the parcel # — check them against
+          the plat / deed before recording.
+        </p>
+      )}
+      <div className="contact-row">
+        <button
+          className="contact tc-apply"
+          disabled={busy || !v.permit.trim()}
+          title={v.permit.trim() ? undefined : 'Type the DOH septic permit # first — the notice must include it'}
+          onClick={generate}
+        >
+          <Icon name="print" size={15} /> {busy ? 'Building…' : 'Generate & print'}
+        </button>
+        <button className="contact" onClick={() => setOpen(false)}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function SepticBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps, setField }: Props) {
   const source = septicSourceOf(ps)
   const system = septicSystemOf(ps)
   const next = nextSepticAction(ps)
@@ -1063,10 +1174,15 @@ function SepticBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps }: P
       {/* The INRB conditional: picking INRB (in ⚙️ Settings) adds a step to the
           checklist (see septicStepsFor in lifecycles.ts) — this flag explains why. */}
       {source === 'Septic' && system === 'INRB' && (
-        <div className="flag">
-          <Icon name="description" size={15} /> INRB system — a recorded INRB notice must be sent to Georges Plumbing
-          (it appears as a checklist step below).
-        </div>
+        <>
+          <div className="flag">
+            <Icon name="description" size={15} /> INRB system — a recorded INRB notice must be sent to Georges Plumbing
+            (it appears as a checklist step below).
+          </div>
+          {/* Fill & print the notice right here — Adam: "a button at the top
+              of the septic column that generates the INRB form". */}
+          <InrbNoticeCard p={p} ps={ps} setField={setField} />
+        </>
       )}
 
       <p className="next-line">

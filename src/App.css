@@ -355,6 +355,27 @@
   gap: 6px;
 }
 
+/* 🖨 INRB notice mini-form (Septic tab, INRB systems only): prefilled fields
+   → the official DOH form as a print-ready PDF. Inputs ride .form-grid. */
+.inrb-card {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: var(--radius);
+  padding: 12px 14px 10px;
+  margin: 0 0 12px;
+}
+.inrb-card .form-grid {
+  margin-bottom: 10px;
+}
+.inrb-note {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: calc(12px * var(--font-scale));
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+
 /* ⏰ The expired-permit "Taken care of?" row: label + the four resolutions,
    wrapping on phones so no button falls off-screen. */
 .permit-expiry-fix {

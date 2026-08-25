@@ -340,6 +340,10 @@ export interface ProjectState {
   waterCompanyId?: string
   septicSource?: SepticSource
   septicSystem?: SepticSystem
+  /** The DOH septic construction permit # (e.g. "42-S1-5167182") — used on the
+   *  INRB notice. Backfilled from the SharePoint list's "Septic Permit" column;
+   *  editable in the INRB-notice form on the Septic tab. */
+  septicPermit?: string
   /** Overrides the default septic/sewer contact (Georges Plumbing / Marion
    *  County Utilities) with a data/utilities.ts roster entry id (kind
    *  'sewer'). Leaving it unset preserves today's behavior exactly. */
@@ -734,6 +738,14 @@ export interface CabinetRun {
    * what the last box/appliance sits against. Drawing-only.
    */
   endWall?: boolean
+  /**
+   * Run CM8 4″ crown molding along this run's cabinet tops. OPT-IN on
+   * purpose — uppers that run flush to the ceiling (the Independence
+   * default) take flat scribe, NOT crown. Feeds the crown order estimate
+   * (lib/cabinets.ts crownEstimate) and the 3D drawing; never touches the
+   * fit math or the box BOM.
+   */
+  crown?: boolean
 }
 
 /** A named cabinet layout for a model (usually “Kitchen”). */
@@ -742,4 +754,10 @@ export interface CabinetLayout {
   name: string
   notes?: string
   runs: CabinetRun[]
+  /**
+   * Which 3D views ride along in 🖨 Print (ids from Cabinet3DView's
+   * VIEWS_3D). Absent = the corner ¾ view only; [] = none — an explicit
+   * un-check sticks, same "blob owns it after first write" rule as layouts.
+   */
+  print3d?: string[]
 }

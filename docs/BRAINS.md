@@ -329,6 +329,29 @@ filtered `WATER='Yes'` (the layer mixes water and sewer rows).
   company → null → one-click set only via a matching Settings roster entry
   (kind 'water'), same never-guess rule as electric.
 
+## inrbNotice.ts — the recorded INRB notice, filled & print-ready (Aug 2026)
+
+Fills the official Marion County DOH "In-ground Nitrogen-Reducing Biofilter"
+notice (public/templates/INRB_NOTICE_BLANK.pdf) for the Septic tab's
+"INRB notice — fill & print" card (INRB systems only). Rules:
+
+- Fill ONLY the six data fields (permit / property id / lot / block /
+  subdivision / owner's printed name). Signature, witness and notary lines
+  stay blank — the document is wet-ink signed, notarized, then RECORDED.
+- Field coordinates were measured from a county-accepted filled example
+  (INRB_NOTICE_42-S1-5167182.pdf in the Construction Archive). Never nudge
+  them by eye; re-measure from a real accepted document.
+  scanner/inrb-notice.py is the CLI twin — keep the two tables in sync.
+- `lotBlockFromParcel`: parcels reading SECTION-BLOCK-LOT (1801-015-006 →
+  block 15, lot 6) pre-fill lot/block, leading zeros stripped. Anything
+  else → BLANK, never a guess — a wrong lot/block gets recorded at the
+  courthouse. The UI flags derived values for a human check.
+- Owner default: blank `ownerName` = our own spec build → "Iron Shield
+  Construction LLC" (same convention as ownership everywhere else).
+- `ps.septicPermit` holds the DOH permit # (backfilled from the SharePoint
+  list's "Septic Permit" column; generating a notice saves any edit back).
+- pdf-lib stays a lazy import (same rule as SheetJS).
+
 ## draws.ts — construction-loan draw tracking (July 2026)
 
 The 💵 Draws tab's brain. A project's `financials.draws` is that CONTRACT's
@@ -419,6 +442,35 @@ is computed HERE, once, never re-tallied in a component.
   wall (wall-to-wall measurement). The side's wall band stops at the run
   end and a short perpendicular stub closes it — but only when EVERY run
   on that side ends there (a mixed side keeps the full-length wall).
+- **Crown molding — CM8 4″ = a 4″ × 96″ FGT stick** (verified off a real
+  FGT invoice; takeoffs write the order line as `CM8 4″`, same 8-ft family
+  as SM8 scribe / TK8 toe kick). `crownEstimate` sizes the order for runs
+  the owner ticks **`crown` — OPT-IN on purpose**: uppers flush to the
+  ceiling take flat scribe, not crown, so the shipped Independence default
+  orders ZERO crown. Rules:
+  - Crown runs continuously across `cab`/`sink`/`corner`/`fill` tops and
+    **breaks at `appl`/`open`** (no cabinet, no crown — the window over the
+    sink splits the wall into two stretches).
+  - A shared corner's length counts ONCE: the `count:false` twin adds 0″
+    but does NOT break the span (crown turns the corner and keeps going).
+  - Every face piece carries **+4″ miter allowance**; faces longer than a
+    stick splice into full sticks + remainder.
+  - A span end that is neither a corner unit at the run's first/last slot
+    (miters around the room corner) nor an `endWall` (dies into the return
+    wall) is EXPOSED → add a **return = run depth + 6″**.
+  - Sticks = first-fit-decreasing **bin packing, never ceil(total/96)** —
+    a face can't be glued from two offcuts, so three 60″ faces are three
+    sticks. Crown never touches fit math or the box BOM.
+- **3D elevations (drawing only, Cabinet3DView)**: `skuHeight`/`skuDepth`
+  read the code's first digit-run as WWHH(DD) — 4+ digits carry a height
+  (W3042→42, UP2484→84), 6+ a depth (W362424→24″ deep); 2-digit codes are
+  width-only (B36, LS33, BBC42 → null — never mistake a blind corner's
+  width for a height). UPPER runs top-align at 54″ + the tallest regular
+  box — that's how a 30″ bridge lands at 66″ over the range and the deep
+  box at 72″ over the fridge in a 42″-to-96″-ceiling kitchen; other runs
+  top-align at the 34½″ base line (which floats an island's 30″ W-boxes
+  4½″ up — exactly the Surf Blvd site-built platform); ≥60″ talls stand
+  on the floor. Fillers stretch the run's full band.
 
 ## data/models.ts — owner-edited model specs (July 2026)
 
