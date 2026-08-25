@@ -116,7 +116,13 @@ vendors.ts), user overrides in `WorkbenchState.templates`, edited in
    login skipped. The file is gitignored (`*.local`) — recreate it if missing.
 3. Deploy = `git push` on `main`; confirm with
    `curl -s https://utility-workbench.vercel.app/ | grep -o '/assets/index-[^"]*\.js'`
-   (hash changes when the new build is live).
+   (hash changes when the new build is live). Two gotchas that once caused a
+   false "deploy is broken" alarm (Aug 2026): (a) Vercel builds this project
+   in ~11–17s — a fast success is NORMAL, not a skipped build; (b) the app is
+   code-split, so a feature string may live in a LAZY chunk (e.g. most of the
+   per-project UI is in `Detail-*.js`), not `index-*.js` — to verify by
+   content, find the chunk name inside the index bundle first, then grep THAT
+   file. The index-hash change is the reliable quick signal.
 
 ## Domain cheat-sheet
 
