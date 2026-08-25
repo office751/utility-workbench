@@ -341,6 +341,16 @@
   margin-bottom: 14px;
 }
 
+/* The water SCOUT banner (TerritoryCheck mode="scout") — an OFFER ("suspect
+   city water? ask the county"), not an alarm, so it reads panel-calm instead
+   of warning-red. Tokens keep it right in dark mode too (see the explicit
+   dark override next to the .banner dark rule). */
+.banner.scout {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
 /* The Duke "what to do next" hint — green (a success/next-step note, not a
    warning), with the exact phrase to say to Claude highlighted. */
 .banner.duke-next {
@@ -1830,6 +1840,8 @@ button.danger:hover {
 [data-theme='dark'] .badge.done     { background: #1f3a29; color: #86dba6; }
 [data-theme='dark'] .flag { background: #3a3320; border-color: #5a4d2a; color: #e8cf9a; }
 [data-theme='dark'] .banner       { background: #42291d; color: #f0b285; }
+/* Scout stays panel-calm in the dark too — must out-rank the rule above. */
+[data-theme='dark'] .banner.scout { background: var(--panel); color: var(--text); }
 [data-theme='dark'] .due  { color: #f0876c; }
 [data-theme='dark'] .warn { color: #e6c860; }
 [data-theme='dark'] .shutoff.warn { color: #e6c860; }

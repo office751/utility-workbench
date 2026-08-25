@@ -96,10 +96,12 @@ export function needsVerify(p: Project, ps: ProjectState): boolean {
  * Water flavor of needsVerify — CITY-WATER LOTS ONLY (Adam, July 2026): a
  * well lot has no water company to verify, and an unset source means the
  * well-vs-city decision itself is still open ('wsrc' step), which the GIS
- * can't make for you. Confirmed = a company was explicitly chosen
- * (ps.waterCompanyId — the 'MCU' sentinel counts) OR availability was
- * already confirmed with the utility ('cavail' done — you can't confirm
- * availability without knowing who you asked).
+ * can't make for you. (Aug 2026: unset lots instead get the SCOUT check —
+ * TerritoryCheck mode="scout" on the Water tab — which INFORMS that decision
+ * without making it; this gate stays city-only.) Confirmed = a company was
+ * explicitly chosen (ps.waterCompanyId — the 'MCU' sentinel counts) OR
+ * availability was already confirmed with the utility ('cavail' done — you
+ * can't confirm availability without knowing who you asked).
  */
 export function needsWaterVerify(p: Project, ps: ProjectState): boolean {
   const source = waterSourceOf(p, ps)

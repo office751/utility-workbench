@@ -754,6 +754,43 @@ export function useProjects() {
   }
 
   /**
+   * 💧 SCOUT flavor (Aug 2026): the same county-GIS answer applied to a lot
+   * whose water source was still UNDECIDED — the Water tab's "suspect city
+   * water?" check. One setState makes the whole decision Adam just confirmed:
+   * waterSource → 'City' (well-vs-city, informed by the franchise map) PLUS
+   * waterCompanyId + the provenance note on 'cavail' — which stays UNCHECKED,
+   * same rule as the verify flavor: a franchise area is not a main at the lot.
+   * (Splitting this into setField + applyVerifiedWaterUtility would clobber —
+   * same closure lesson as markApplied.)
+   */
+  function applyScoutedWaterUtility(id: number, companyId: string, providerName: string) {
+    setState((prev) => {
+      const cur = prev.projects[id] ?? emptyProjectState()
+      // Preserve the step's done/date exactly — only the note is ours to write.
+      const existing: StepState = cur.steps.water.cavail ?? { done: false }
+      const water = {
+        ...cur.steps.water,
+        cavail: {
+          ...existing,
+          note: `County GIS · ${providerName} · ${new Date().toLocaleDateString()}`,
+        },
+      }
+      return {
+        ...prev,
+        projects: {
+          ...prev.projects,
+          [id]: {
+            ...cur,
+            waterSource: 'City',
+            waterCompanyId: companyId,
+            steps: { ...cur.steps, water },
+          },
+        },
+      }
+    })
+  }
+
+  /**
    * ⏩ "Catch up": mark several EARLIER checklist steps done — or undo exactly
    * that — in ONE state update. This is the writer behind the catch-up row on
    * checklists (Checklist.tsx); WHICH steps qualify is decided by the pure
@@ -1443,6 +1480,7 @@ export function useProjects() {
     markApplied,
     applyVerifiedUtility,
     applyVerifiedWaterUtility,
+    applyScoutedWaterUtility,
     catchUpSteps,
     setClosingStep,
     setStepNote,

@@ -98,6 +98,9 @@ interface Updaters {
   /** 💧 Water flavor: waterCompanyId + provenance note on 'cavail' (which
    *  stays UNCHECKED — availability is still a human call). */
   applyVerifiedWaterUtility: (id: number, companyId: string, providerName: string) => void
+  /** 💧 Scout flavor (Aug 2026): same, PLUS waterSource → 'City' — the apply
+   *  behind the "suspect city water?" check on undecided lots. */
+  applyScoutedWaterUtility: (id: number, companyId: string, providerName: string) => void
   addProjectFiles: (id: number, files: File[]) => Promise<{ ok: number; failed: string[] }>
   removeProjectFile: (id: number, index: number) => void
   addOrder: (id: number, order: { category: string; status: OrderStatus; orderedOn?: string }) => void
@@ -907,6 +910,7 @@ function WaterBody({
   catchUpSteps,
   utilities,
   applyVerifiedWaterUtility,
+  applyScoutedWaterUtility,
 }: Props) {
   const source = waterSourceOf(p, ps)
   const next = nextWaterAction(p, ps)
@@ -926,6 +930,21 @@ function WaterBody({
           kind="water"
           utilities={utilities}
           applyVerified={applyVerifiedWaterUtility}
+        />
+      )}
+
+      {/* Source still UNDECIDED but you suspect city water? SCOUT the county
+          franchise map (Aug 2026): a hit sets source + company in one click;
+          "outside every polygon" reads as the strong well signal it is. The
+          well-vs-city call stays yours — this just informs it. Wells still
+          never see any GIS banner. */}
+      {!source && (
+        <TerritoryCheck
+          p={p}
+          kind="water"
+          mode="scout"
+          utilities={utilities}
+          applyVerified={applyScoutedWaterUtility}
         />
       )}
 

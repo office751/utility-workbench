@@ -294,10 +294,17 @@ SECO disclaimed 14845 SW 77th Ave — Marion Oaks' western edge is Duke).
 county's Utility Service Areas layer (MCU + ~24 private companies), always
 filtered `WATER='Yes'` (the layer mixes water and sewer rows).
 
-- **City-water lots ONLY** (`needsWaterVerify` in nextAction.ts): source
-  City/CityWM shows the check; Well and unset never do — a well lot has no
-  company to verify, and an unset source means well-vs-city itself is
-  undecided (Adam's rule).
+- **Two water modes** (`TerritoryCheck` prop `mode`): the VERIFY banner shows
+  for city-water lots only (`needsWaterVerify` in nextAction.ts — source
+  City/CityWM with no confirmed company); the SCOUT check (Aug 2026) shows
+  for UNSET-source lots ("suspect city water? ask the county"). Well lots
+  never see either — a well lot has no company to verify.
+- **Scout informs the well-vs-city decision, never makes it.** Its apply
+  (`applyScoutedWaterUtility`) sets `waterSource: 'City'` + `waterCompanyId`
+  + the 'cavail' provenance note in ONE setState — but only on Adam's click.
+  An "outside every polygon" result is an ANSWER there, not an error
+  (`TerritoryMiss.outside` + `point` + best-effort `nearby` = who's within a
+  mile): no franchise ⇒ well country on paper, and nothing is auto-set.
 - **Territory ≠ availability.** A water territory is a franchise area, not a
   main at the lot. The apply writes `waterCompanyId` + a provenance NOTE on
   the 'cavail' step but NEVER checks it — confirming a main reaches the lot

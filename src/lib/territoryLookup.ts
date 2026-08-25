@@ -104,6 +104,18 @@ export interface TerritoryMiss {
   ok: false
   /** Human-readable, already phrased for the banner. */
   reason: string
+  /** Set when the lot WAS located but sits outside every polygon on the
+   *  layer. For the water SCOUT flow that's an ANSWER, not a failure — no
+   *  franchise here is a strong "this is well country" signal — so the UI
+   *  can render it as information instead of an error. */
+  outside?: true
+  /** Where we looked (present whenever the lot was located, even on a miss)
+   *  so the UI can still offer a map link centered on the lot. */
+  point?: { lon: number; lat: number }
+  /** Outside-only, best-effort: providers whose territory starts within a
+   *  mile. "Nobody claims the lot, but Sunshine is close — call them" is
+   *  the useful half of a no-franchise answer. */
+  nearby?: string[]
 }
 
 export type TerritoryResult = TerritoryHit | TerritoryMiss
@@ -257,7 +269,8 @@ async function getJson(url: string): Promise<unknown> {
 /**
  * The whole pipeline: locate the lot (parcel first, address fallback), then
  * ask the county whose territory it's in, plus who else is within a mile.
- * `kind` picks the layer: 'electric' (default) or 'water' (city-water lots;
+ * `kind` picks the layer: 'electric' (default) or 'water' (used both to
+ * verify a city-water lot's company AND to scout an undecided lot;
  * territory = franchise area, NOT main-at-the-lot — the availability call
  * stays human).
  *
@@ -294,9 +307,21 @@ export async function lookupTerritory(
     // ---- 2. whose polygon is the lot in?
     const providers = parseProviders(await getJson(territoryUrl(where.lon, where.lat, kind)))
     if (providers.length === 0) {
+      // Located fine, claimed by nobody. Still ask who's within a mile —
+      // for the water scout flow "nobody here, but Sunshine is close" is
+      // most of the answer. Best-effort, same as the seam check below.
+      let nearby: string[] = []
+      try {
+        nearby = parseProviders(await getJson(seamUrl(where.lon, where.lat, kind)))
+      } catch {
+        /* advisory only */
+      }
       return {
         ok: false,
         reason: `The lot is outside every polygon on the county ${kind}-territory layer — verify by phone.`,
+        outside: true,
+        point: { lon: where.lon, lat: where.lat },
+        nearby,
       }
     }
     // Overlapping polygons at the point = the county data itself is ambiguous
@@ -307,6 +332,7 @@ export async function lookupTerritory(
         reason: `County layer shows OVERLAPPING territories here (${providers.join(
           ' + ',
         )}) — verify by phone.`,
+        point: { lon: where.lon, lat: where.lat },
       }
     }
 
