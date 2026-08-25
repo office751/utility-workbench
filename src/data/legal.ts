@@ -43,6 +43,7 @@ export const LEGAL: Record<string, string> = {
   '1811-011-001': 'Sec 19 / Twp 15 / Rge 18 · Blk 11 · Lot 1',
   '1812-020-011': 'Sec 30 / Twp 15 / Rge 18 · Blk 20 · Lot 11',
   '1814-022-064': 'Sec 07 / Twp 15 / Rge 18 · Blk 22 · Lot 64',
+  '3295-131-002': 'Sec 14 / Twp 16 / Rge 18 · Blk 131 · Lot 2',
   '3301-002-002': 'Sec 11 / Twp 16 / Rge 18 · Blk B · Lot 2',
   '3302-010-009': 'Sec 11 / Twp 16 / Rge 18 · Blk J · Lot 9',
   '3341-007-021': 'Sec 25 / Twp 16 / Rge 18 · Blk 7 · Lots 21 & 22',

@@ -64,6 +64,10 @@ import { SECO_BLANK_FORM_URL, fillSecoLoadForm } from '../lib/secoForm'
 // INRB recorded-notice: fills the official DOH form for this house and opens
 // it as a print-ready PDF (Septic tab, INRB systems only — lib/inrbNotice.ts).
 import { fillInrbNotice, inrbDefaults, lotBlockFromParcel, type InrbValues } from '../lib/inrbNotice'
+// Notice of Commencement: same idea on the Permit tab — fills Marion County's
+// PMT 5 form from the roster + the county PA's deeded-owner record
+// (lib/nocForm.ts); signature/notary stay blank for wet ink, then recording.
+import { fillNoc, nocDefaults, nocOwner, type NocValues } from '../lib/nocForm'
 // Duke's load form (Residential Service Information Form), generated pre-filled
 // so Adam can attach it to the WO# reply instead of retyping Duke's blank.
 import { fillDukeLoadForm } from '../lib/dukeForm'
@@ -1204,6 +1208,113 @@ function SepticBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps, set
 
 /* ===================== PERMITTING ===================== */
 
+/** The NOC form's fields, in the order they appear on the county form.
+ *  Everything is editable; the prefill does the work on a normal house. */
+const NOC_FIELDS: Array<{ k: keyof NocValues; label: string; span2?: boolean }> = [
+  { k: 'permit', label: 'Permit no.' },
+  { k: 'parcel', label: 'Tax folio / Parcel ID' },
+  { k: 'legal', label: '1. Legal description + street address', span2: true },
+  { k: 'improvement', label: '2. General description of improvement' },
+  { k: 'interest', label: '3b. Interest in property' },
+  { k: 'owner', label: '3a. Owner name & address', span2: true },
+  { k: 'feeSimple', label: '3c. Fee simple titleholder' },
+  { k: 'contractor', label: '4. Contractor / Qualifier' },
+  { k: 'contractorAddr', label: '4a. Qualifier name & address', span2: true },
+  { k: 'contractorPhone', label: '4b. Contractor phone' },
+  { k: 'surety', label: '5. Surety' },
+  { k: 'bond', label: '5c. Bond amount' },
+  { k: 'lender', label: '6. Lender' },
+  { k: 'designated', label: '7. Designated person' },
+  { k: 'designee', label: '8. Owner also designates' },
+  { k: 'designeeOf', label: '8. …of (company)' },
+  { k: 'designeePhone', label: '8. Designee phone' },
+  { k: 'expiration', label: '9. Expiration date' },
+]
+
+/**
+ * 🖨 Notice of Commencement — fill & print (Permit tab).
+ *
+ * Must be signed by the owner (William, as Owner), notarized, RECORDED at
+ * the courthouse, and posted on the job site before the first inspection.
+ * This fills every informational field on the official Marion County PMT 5
+ * form; signature, date, title, and the notary block stay blank for wet ink.
+ */
+function NocCard({ p, ps }: { p: Project; ps: ProjectState }) {
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [v, setV] = useState<NocValues | null>(null)
+
+  async function generate() {
+    if (!v) return
+    setBusy(true)
+    try {
+      const bytes = await fillNoc(v)
+      const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'application/pdf' }))
+      window.open(url, '_blank', 'noopener') // browser's PDF viewer → 🖨
+      setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    } catch (e) {
+      alert(`Couldn't build the NOC: ${(e as Error).message}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (!open) {
+    return (
+      <div className="contact-row">
+        <button
+          className="contact tc-apply"
+          onClick={() => {
+            setV(nocDefaults(p, ps)) // prefill fresh each open
+            setOpen(true)
+          }}
+        >
+          <Icon name="print" size={15} /> Notice of Commencement — fill &amp; print
+        </button>
+      </div>
+    )
+  }
+  if (!v) return null
+  const set = (k: keyof NocValues) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setV({ ...v, [k]: e.target.value })
+
+  return (
+    <div className="inrb-card">
+      <div className="form-grid">
+        {NOC_FIELDS.map(({ k, label, span2 }) => (
+          <label key={k} className={span2 ? 'span2' : undefined}>
+            {label}
+            <input value={v[k]} onChange={set(k)} />
+          </label>
+        ))}
+      </div>
+      {nocOwner(p).fromPa && (
+        <p className="inrb-note">
+          <Icon name="info" size={13} /> Owner came from the county Property Appraiser's record — verify the
+          exact company name on Sunbiz, and watch for a deed the PA hasn't posted yet.
+        </p>
+      )}
+      <p className="inrb-note">
+        <Icon name="info" size={13} /> Print → William signs as Owner → notarize → record at the courthouse →
+        post on the job site BEFORE the first inspection.
+      </p>
+      <div className="contact-row">
+        <button
+          className="contact tc-apply"
+          disabled={busy || !v.permit.trim()}
+          title={v.permit.trim() ? undefined : 'Type the permit number first'}
+          onClick={generate}
+        >
+          <Icon name="print" size={15} /> {busy ? 'Building…' : 'Generate & print'}
+        </button>
+        <button className="contact" onClick={() => setOpen(false)}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function PermitBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps, tasks, addTask, updateTask, removeTask, dismissNotification, dismissInspection, markPermitIssued, parkAwaitingInvestor, setField, updateProjectFacts }: Props) {
   // ✅ Mark-issued date — defaults to today; local-time parts, NOT
   // toISOString (UTC would land yesterday for an evening click in Florida).
@@ -1278,6 +1389,10 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps, tas
         {countyStatus && <> · County: {countyStatus}</>}
         {issued && <> · Issued {issued}</>}
       </p>
+
+      {/* 🖨 NOC generator — Adam: "same as the INRB button, but in the
+          permit column". Collapsed to one row until it's needed. */}
+      <NocCard p={p} ps={ps} />
 
       {/* ✅ The paperwork moment, one click (Adam: "when a permit gets
           issued there's not an easy way to mark it"). Sets the issued date
