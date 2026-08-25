@@ -23,7 +23,7 @@
  * screen) fall back to the default context — never hidden, never in
  * customize mode — so wrapping is always safe.
  */
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, useContext, useState, type ReactNode } from 'react'
 import Icon from './Icon'
 
 export interface TidyCtl {
@@ -41,6 +41,56 @@ export const TidyContext = createContext<TidyCtl>({
   isHidden: () => false,
   toggle: () => {},
 })
+
+/**
+ * TidyPage — the whole customize apparatus for ONE page in a self-contained
+ * wrapper: hosts the on/off state, renders the admin-only "Customize page"
+ * bar, and provides the TidyContext its children's <Hideable> wrappers read.
+ * Used by top-level pages (🏠 Today); Detail hosts its own provider because
+ * its page key changes with the active tab.
+ */
+export function TidyPage({
+  page,
+  hiddenSections,
+  toggle,
+  canCustomize,
+  children,
+}: {
+  /** The hiddenSections key this page's hides live under (e.g. 'today'). */
+  page: string
+  hiddenSections?: Record<string, string[]>
+  /** useProjects.toggleHiddenSection */
+  toggle: (page: string, section: string) => void
+  /** Admin-only (canManageSettings) — others never see the bar. */
+  canCustomize: boolean
+  children: ReactNode
+}) {
+  const [on, setOn] = useState(false)
+  return (
+    <TidyContext.Provider
+      value={{
+        on,
+        isHidden: (id) => (hiddenSections?.[page] ?? []).includes(id),
+        toggle: (id) => toggle(page, id),
+      }}
+    >
+      {canCustomize && (
+        <div className="tidy-bar">
+          {on && (
+            <span className="muted">
+              Click a section's eye to hide/show it on this page — for everyone, on every device.
+            </span>
+          )}
+          <button className="btn btn-ghost btn-sm" onClick={() => setOn((t) => !t)}>
+            <Icon name={on ? 'task_alt' : 'tune'} size={15} />
+            {on ? ' Done customizing' : ' Customize page'}
+          </button>
+        </div>
+      )}
+      {children}
+    </TidyContext.Provider>
+  )
+}
 
 interface Props {
   /** Stable section id — this is what's stored in the blob, so renaming one

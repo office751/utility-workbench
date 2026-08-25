@@ -1276,6 +1276,47 @@ export function useProjects() {
     })
   }
 
+  /**
+   * ✅ One-click "the permit is ISSUED" (Aug 2026 — Adam: "when a permit gets
+   * issued there's not an easy way to mark it"). ONE setState does the whole
+   * paperwork moment:
+   *   - permitIssuedDate ← the picked date (shows in the summary line and
+   *     everywhere permitIssuedOf reads; editable later in ⚙ Settings)
+   *   - the 'issued' step gets a REAL date + doneAt — a manual trace, so
+   *     migrate()'s county re-derive can never clobber it
+   *   - the earlier chain (submitted/review/approved) that isn't already
+   *     checked gets the '(caught up)' sentinel — we know that work is behind
+   *     us, not when it happened (same honesty rule as the catch-up row);
+   *     'corrections' is the optional aside and is left alone
+   * Expiry is deliberately NOT set: it keeps flowing from county data (the
+   * nightly scanner tracks inspection-driven extensions a guess would mask).
+   * Step ids are the DEFAULT permit list's; on an owner-customized list the
+   * date still lands and 'issued' still checks if that id survives.
+   */
+  function markPermitIssued(id: number, isoDate: string) {
+    setState((prev) => {
+      const cur = prev.projects[id] ?? emptyProjectState()
+      const permit = { ...cur.steps.permit }
+      for (const sid of ['submitted', 'review', 'approved']) {
+        if (!permit[sid]?.done) permit[sid] = { ...permit[sid], done: true, date: CAUGHT_UP_DATE }
+      }
+      permit.issued = {
+        ...permit.issued,
+        done: true,
+        // "T00:00:00" pins to local midnight so timezones can't shift the date.
+        date: new Date(isoDate + 'T00:00:00').toLocaleDateString(),
+        doneAt: new Date().toISOString(),
+      }
+      return {
+        ...prev,
+        projects: {
+          ...prev.projects,
+          [id]: { ...cur, permitIssuedDate: isoDate, steps: { ...cur.steps, permit } },
+        },
+      }
+    })
+  }
+
   /** 🪄 Customize page: flip one section's hidden state on one page (a Detail
    *  stream tab). Stored per-page in hiddenSections (cloud-synced), read by
    *  the Hideable wrappers — see components/Hideable.tsx for the whole idea. */
@@ -1519,6 +1560,7 @@ export function useProjects() {
     dismissInspection,
     setTemplate,
     toggleHiddenSection,
+    markPermitIssued,
     setAssignees,
     requestScan,
     setSelectionsCatalog,

@@ -105,6 +105,9 @@ interface Updaters {
   /** 🪄 Customize page: flip one section's hidden state on one stream tab
    *  (see components/Hideable.tsx for the whole idea). */
   toggleHiddenSection: (page: string, section: string) => void
+  /** ✅ One-click "permit is issued": issued date + checklist chain in ONE
+   *  setState (see useProjects.markPermitIssued). */
+  markPermitIssued: (id: number, isoDate: string) => void
   addProjectFiles: (id: number, files: File[]) => Promise<{ ok: number; failed: string[] }>
   removeProjectFile: (id: number, index: number) => void
   addOrder: (id: number, order: { category: string; status: OrderStatus; orderedOn?: string }) => void
@@ -1077,7 +1080,13 @@ function SepticBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps }: P
 
 /* ===================== PERMITTING ===================== */
 
-function PermitBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps, tasks, addTask, updateTask, removeTask, dismissNotification, dismissInspection, templates }: Props) {
+function PermitBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps, tasks, addTask, updateTask, removeTask, dismissNotification, dismissInspection, templates, markPermitIssued }: Props) {
+  // ✅ Mark-issued date — defaults to today; local-time parts, NOT
+  // toISOString (UTC would land yesterday for an evening click in Florida).
+  const [issuedDate, setIssuedDate] = useState(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  })
   // 📨 Email Jennifer needs a moment to mint download links for the project's
   // files (a cloud call per file), so it's a button with a busy state rather
   // than a plain link.
@@ -1223,6 +1232,31 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps, tas
           <Icon name={drafting ? 'hourglass_top' : 'mail'} size={15} />
           {drafting ? ' Creating download links…' : ' Email Jennifer — permit package'}
         </button>
+
+        {/* ✅ The paperwork moment, one click (Adam: "when a permit gets
+            issued there's not an easy way to mark it"). Sets the issued date
+            AND checks the checklist chain in one update; disappears once the
+            permit already reads issued (typed date, county record, or a
+            checked final step). Expiry stays county-driven — the scanner
+            tracks inspection extensions a hand-guess would mask. */}
+        {!isPermitDone(ps) && permitIssuedOf(p, ps) === '' && (
+          <span className="permit-issue-inline">
+            <input
+              type="date"
+              value={issuedDate}
+              onChange={(e) => setIssuedDate(e.target.value)}
+              aria-label="Date the permit was issued"
+              title="Date the permit was issued"
+            />
+            <button
+              className="contact tc-apply"
+              disabled={!issuedDate}
+              onClick={() => markPermitIssued(p.id, issuedDate)}
+            >
+              <Icon name="verified" size={15} /> Mark issued
+            </button>
+          </span>
+        )}
       </div>
 
       {/* Feedback after drafting: ✓ links minted (plain) or ⚠️ fallback (warn). */}

@@ -33,6 +33,7 @@ const BatchApply = lazy(() => import('./components/BatchApply'))
 const StatusReport = lazy(() => import('./components/StatusReport'))
 const Detail = lazy(() => import('./components/Detail'))
 import Today from './components/Today'
+import { TidyPage } from './components/Hideable'
 import TasksView from './components/TasksView'
 const ModelsView = lazy(() => import('./components/ModelsView'))
 const InspectionsView = lazy(() => import('./components/InspectionsView'))
@@ -143,6 +144,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
     updateProjectFacts,
     setTemplate,
     toggleHiddenSection,
+    markPermitIssued,
     setAssignees,
     requestScan,
     setSelectionsCatalog,
@@ -391,16 +393,26 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
         <>
           {/* Unread investor messages float to the top of the day. */}
           <InvestorInbox roster={projects} />
-          <Today
-          ac={ac}
-          tasks={state.tasks}
-          me={me}
-          scanMeta={state.scanMeta}
-          onRequestScan={requestScan}
-          onOpen={openProject}
-          onCompleteTask={(id) => updateTask(id, { done: true, doneAt: new Date().toISOString() })}
-          onGoTasks={() => setTab('tasks')}
-          />
+          {/* 🪄 Same customize treatment as the Detail stream tabs — the
+              tasks-flavored sections (⭐ Focus, ⏳ Waiting) are hideable;
+              deadline alarms are not. Hides live under hiddenSections.today. */}
+          <TidyPage
+            page="today"
+            hiddenSections={state.hiddenSections}
+            toggle={toggleHiddenSection}
+            canCustomize={roleCfg.canManageSettings}
+          >
+            <Today
+              ac={ac}
+              tasks={state.tasks}
+              me={me}
+              scanMeta={state.scanMeta}
+              onRequestScan={requestScan}
+              onOpen={openProject}
+              onCompleteTask={(id) => updateTask(id, { done: true, doneAt: new Date().toISOString() })}
+              onGoTasks={() => setTab('tasks')}
+            />
+          </TidyPage>
         </>
       )}
 
@@ -544,6 +556,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
             canCustomize={roleCfg.canManageSettings}
             hiddenSections={state.hiddenSections}
             toggleHiddenSection={toggleHiddenSection}
+            markPermitIssued={markPermitIssued}
             drawTemplates={state.drawTemplates ?? DRAW_TEMPLATES_DEFAULT}
             setFinancials={setFinancials}
             updateDraw={updateDraw}

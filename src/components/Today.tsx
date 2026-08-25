@@ -29,6 +29,7 @@ import { daysUntilDue, dueLabel, dueSoonTasks, focusTasks, forOperator, unassign
 import { hatOf } from '../data/hats'
 import { scanHealth, scanPending } from '../lib/scanHealth'
 import Icon, { miForEmoji as miFor } from './Icon'
+import Hideable from './Hideable'
 
 interface Props {
   /**
@@ -259,25 +260,29 @@ function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks, me, scanMeta, onR
         </div>
       )}
 
-      {/* ⭐ Today's Focus — your chosen few (rust-accented card) */}
-      <section className="t-sec">
-        <SecHead icon="star" label="Today's focus" count={focus.length} color="var(--gold)" fill />
-        {focus.length === 0 ? (
-          <div className="t-card t-card--accent t-empty">
-            Nothing starred yet.{' '}
-            <button className="linklike" onClick={onGoTasks}>
-              Open Tasks
-            </button>{' '}
-            and star a few must-dos — they’ll live right here.
-          </div>
-        ) : (
-          <div className="t-card t-card--accent">
-            {focus.map((t) => (
-              <TaskRow key={t.id} t={t} badge={dueLabel(t)} badgeTone="neutral" bodyWaiting onCompleteTask={onCompleteTask} />
-            ))}
-          </div>
-        )}
-      </section>
+      {/* ⭐ Today's Focus — your chosen few (rust-accented card). 🪄-hideable:
+          if the task system isn't part of your day, this whole lane (and its
+          "star a few must-dos" nag) can be gone. */}
+      <Hideable id="focus" label="Today's focus (starred tasks)">
+        <section className="t-sec">
+          <SecHead icon="star" label="Today's focus" count={focus.length} color="var(--gold)" fill />
+          {focus.length === 0 ? (
+            <div className="t-card t-card--accent t-empty">
+              Nothing starred yet.{' '}
+              <button className="linklike" onClick={onGoTasks}>
+                Open Tasks
+              </button>{' '}
+              and star a few must-dos — they’ll live right here.
+            </div>
+          ) : (
+            <div className="t-card t-card--accent">
+              {focus.map((t) => (
+                <TaskRow key={t.id} t={t} badge={dueLabel(t)} badgeTone="neutral" bodyWaiting onCompleteTask={onCompleteTask} />
+              ))}
+            </div>
+          )}
+        </section>
+      </Hideable>
 
       {/* 🔥 Needs attention — task fires first, then construction deadlines */}
       {(attnTasks.length > 0 || fires.length > 0) && (
@@ -306,7 +311,10 @@ function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks, me, scanMeta, onR
         </section>
       )}
 
-      {/* ⏳ Waiting on you — people you're holding up */}
+      {/* ⏳ Waiting on you — people you're holding up. 🪄-hideable (a tasks
+          lane); the 🔥 Needs-attention section above is deliberately NOT —
+          hard deadlines (permit expiry, shut-offs) must never be hideable. */}
+      <Hideable id="waiting" label="Waiting on you (tasks)">
       {waiting.length > 0 && (
         <section className="t-sec">
           <SecHead
@@ -336,6 +344,7 @@ function Today({ ac, tasks, onOpen, onCompleteTask, onGoTasks, me, scanMeta, onR
           </div>
         </section>
       )}
+      </Hideable>
 
     </section>
   )
