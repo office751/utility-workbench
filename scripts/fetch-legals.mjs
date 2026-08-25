@@ -19,8 +19,14 @@
  *
  * Re-run with --write whenever new projects (parcels) are added.
  * Read-only against county systems; ~1 polite request per parcel.
+ *
+ * WHERE THE PARCELS COME FROM (Aug 2026): the roster's real source of truth
+ * is the CLOUD blob — houses added in the app never touch data/projects.ts.
+ * So this script now reads the LIVE roster from Supabase when scanner/.env
+ * is present (Adam's Mac), and falls back to scanning data/projects.ts
+ * (seed roster) otherwise. Cloud read is read-only; nothing is written back.
  */
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
@@ -32,15 +38,60 @@ const PRC = 'https://www.pa.marion.fl.us/PRC.aspx?key='
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
-/** All unique parcels in the roster (source of truth: data/projects.ts). */
-function rosterParcels() {
+/** The seed roster's parcels (data/projects.ts) — the offline fallback. */
+function seedParcels() {
   const src = readFileSync(join(ROOT, 'src/data/projects.ts'), 'utf8')
   const out = new Set()
   for (const m of src.matchAll(/parcel:\s*["']([^"']+)["']/g)) {
     const p = m[1].trim()
     if (p && !/tbd/i.test(p)) out.add(p)
   }
-  return [...out].sort()
+  return out
+}
+
+/** The LIVE roster's parcels from the cloud blob (read-only), when
+ *  scanner/.env creds are available — null otherwise. */
+async function cloudParcels() {
+  const envPath = join(ROOT, 'scanner/.env')
+  if (!existsSync(envPath)) return null
+  const env = Object.fromEntries(
+    readFileSync(envPath, 'utf8')
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l && !l.startsWith('#') && l.includes('='))
+      .map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)]),
+  )
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return null
+  const res = await fetch(`${env.SUPABASE_URL}/rest/v1/workbench?id=eq.main&select=data`, {
+    headers: { apikey: env.SUPABASE_SERVICE_KEY, authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}` },
+  })
+  if (!res.ok) throw new Error(`cloud roster read failed: HTTP ${res.status}`)
+  const rows = await res.json()
+  const roster = rows?.[0]?.data?.roster
+  if (!Array.isArray(roster)) return null
+  const out = new Set()
+  for (const r of roster) {
+    const p = String(r?.parcel ?? '').trim()
+    if (p && !/tbd/i.test(p)) out.add(p)
+  }
+  return out
+}
+
+/** All unique parcels: live cloud roster when reachable (union'd with the
+ *  seed, so a seed-only parcel never drops out), seed alone otherwise. */
+async function rosterParcels() {
+  const seed = seedParcels()
+  try {
+    const cloud = await cloudParcels()
+    if (cloud) {
+      console.log(`(live cloud roster: ${cloud.size} parcels · seed file: ${seed.size})`)
+      for (const p of seed) cloud.add(p)
+      return [...cloud].sort()
+    }
+  } catch (e) {
+    console.log(`(cloud roster unavailable — ${e.message}; using the seed file)`)
+  }
+  return [...seed].sort()
 }
 
 /** Parcel → ALT_Key for a batch of parcels, via the county GIS layer. */
@@ -105,7 +156,7 @@ function compact(raw) {
   return rest ? `${head} · ${rest}` : head
 }
 
-const parcels = rosterParcels()
+const parcels = await rosterParcels()
 console.log(`Roster parcels: ${parcels.length}`)
 
 const keys = await altKeys(parcels)
