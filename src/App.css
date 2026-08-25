@@ -355,6 +355,16 @@
   gap: 6px;
 }
 
+/* ⏰ The expired-permit "Taken care of?" row: label + the four resolutions,
+   wrapping on phones so no button falls off-screen. */
+.permit-expiry-fix {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 12px;
+}
+
 /* ---------- 🪄 Customize page (Hideable.tsx) ---------- */
 /* The toggle row sits right-aligned above the tab content, quiet until used. */
 .tidy-bar {
@@ -3607,6 +3617,8 @@ a.map-btn {
 .prow-pill.uc { background: var(--info-bg); color: var(--info); }
 /* SOLD — the happy ending: same green family as C.O. (deed recorded). */
 .prow-pill.sold { background: var(--success-bg); color: var(--success); }
+/* DEAD — a lot we've decided not to build on: deliberately flat and gray. */
+.prow-pill.dead { background: var(--border); color: var(--muted); }
 .prow-investor {
   display: inline-flex;
   align-items: center;

@@ -34,7 +34,7 @@ function BatchApply({ projects, getProjectState, templates, markApplied, onClose
 
   // Houses that still need an application: active, electric 'submit' not done.
   const candidates = projects.filter((p) => {
-    if (p.listStatus === 'CO' || p.listStatus === 'Hold') return false
+    if (p.listStatus === 'CO' || p.listStatus === 'Hold' || p.listStatus === 'Dead') return false
     const ps = getProjectState(p.id)
     return !ps.steps.electric.submit?.done
   })

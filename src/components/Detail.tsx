@@ -106,6 +106,9 @@ interface Updaters {
   /** ✅ One-click "permit is issued": issued date + checklist chain in ONE
    *  setState (see useProjects.markPermitIssued). */
   markPermitIssued: (id: number, isoDate: string) => void
+  /** ⏳ Expired-permit resolution "waiting on investor": Hold + a why-note on
+   *  the permit stream in ONE setState (see useProjects). */
+  parkAwaitingInvestor: (id: number) => void
   addProjectFiles: (id: number, files: File[]) => Promise<{ ok: number; failed: string[] }>
   removeProjectFile: (id: number, index: number) => void
   addOrder: (id: number, order: { category: string; status: OrderStatus; orderedOn?: string }) => void
@@ -306,6 +309,7 @@ function Detail(props: Props) {
             <div className="pd-badges">
               {p.listStatus === 'CO' && <span className="prow-pill co">C.O.</span>}
               {p.listStatus === 'Hold' && <span className="prow-pill hold">HOLD</span>}
+              {p.listStatus === 'Dead' && <span className="prow-pill dead">DEAD</span>}
               {/* Shown alongside the C.O. pill too — a finished house that's
                   selling wears both hats (Adam, July 2026). Once the deed
                   records ('deedclosed' checked) it reads SOLD instead. */}
@@ -1084,7 +1088,7 @@ function SepticBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps }: P
 
 /* ===================== PERMITTING ===================== */
 
-function PermitBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps, tasks, addTask, updateTask, removeTask, dismissNotification, dismissInspection, markPermitIssued, setField, updateProjectFacts }: Props) {
+function PermitBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps, tasks, addTask, updateTask, removeTask, dismissNotification, dismissInspection, markPermitIssued, parkAwaitingInvestor, setField, updateProjectFacts }: Props) {
   // ✅ Mark-issued date — defaults to today; local-time parts, NOT
   // toISOString (UTC would land yesterday for an evening click in Florida).
   const [issuedDate, setIssuedDate] = useState(() => {
@@ -1203,7 +1207,7 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps, tas
       )}
 
       {/* ⏰ "Taken care of" resolver (Adam, Aug 2026): an expiring/expired
-          permit is only ever resolved two ways —
+          permit is resolved one of FOUR ways —
             1. EXTENSION granted → record the NEW expiry date. Writes the
                ps.permitExpiresDate override (the typed-date-wins escape
                hatch permitExpiresOf already honors), which re-arms the
@@ -1212,9 +1216,20 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps, tas
                at the county. Sets listStatus 'CO' — the app's "finished
                house" state (leaves active lists/Today, same as the Settings
                status dropdown).
-          Shown only when the alarm is warm (≤30 days or expired); earlier
-          edits live in ⚙ Settings like before. */}
-      {expiry && expiry.daysLeft <= 30 && (
+            3. DEAD LOT → we've decided not to build on it. Sets the Dead
+               status (Aug 2026): hidden with C.O. by default, skipped by
+               Today/orders/batch-apply — its expired permit stops nagging.
+            4. WAITING ON INVESTOR → the go-ahead never came, so the permit
+               lapsed on purpose. Parks the house On Hold AND stamps the why
+               into the permit notes (one setState — parkAwaitingInvestor).
+          Shown only when the alarm is warm (≤30 days or expired) AND the
+          house is still active — a parked/finished/dead house has already
+          answered the question. */}
+      {expiry &&
+        expiry.daysLeft <= 30 &&
+        p.listStatus !== 'CO' &&
+        p.listStatus !== 'Hold' &&
+        p.listStatus !== 'Dead' && (
         <div className="permit-expiry-fix">
           <span className="muted">Taken care of?</span>
           <span className="permit-issue-inline">
@@ -1250,6 +1265,34 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps, tas
             }}
           >
             <Icon name="task_alt" size={14} /> Completed — C.O. issued
+          </button>
+          <button
+            className="mini"
+            title="We're not building on this lot — mark it DEAD (hidden with C.O. homes; changeable in ⚙ Settings)"
+            onClick={() => {
+              if (
+                window.confirm(
+                  `Mark ${p.address} as a DEAD lot? It hides with finished homes and stops all alerts (status changeable in ⚙ Settings).`,
+                )
+              )
+                updateProjectFacts(p.id, { listStatus: 'Dead' })
+            }}
+          >
+            <Icon name="block" size={14} /> Dead lot
+          </button>
+          <button
+            className="mini"
+            title="The investor hasn't pulled the trigger — park the house On Hold and note why on the permit"
+            onClick={() => {
+              if (
+                window.confirm(
+                  `Park ${p.address} On Hold — waiting on the investor's go-ahead? The reason is noted on the permit; flip the status in ⚙ Settings when they commit.`,
+                )
+              )
+                parkAwaitingInvestor(p.id)
+            }}
+          >
+            <Icon name="hourglass_top" size={14} /> Waiting on investor
           </button>
         </div>
       )}

@@ -57,7 +57,7 @@ function Filters({ filters, onChange }: Props) {
     <div className="filters">
       <label className="check">
         <input type="checkbox" checked={filters.hideCO} onChange={(e) => set({ hideCO: e.target.checked })} />
-        Hide finished (C.O.)
+        Hide finished (C.O.) &amp; dead lots
       </label>
       <label className="check">
         <input

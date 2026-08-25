@@ -125,13 +125,17 @@ describe('collectPendingOrders', () => {
     const done = withOrders(4, 'Done House', [{ id: 'e', category: 'Flooring', status: 'toOrder', createdAt: '' }], {
       listStatus: 'CO', // finished house → skipped entirely
     })
+    const dead = withOrders(5, 'Dead Lot', [{ id: 'f', category: 'Windows', status: 'toOrder', createdAt: '' }], {
+      listStatus: 'Dead', // not building → skipped entirely (Aug 2026)
+    })
 
-    const roster = [future.p, undated.p, past.p, done.p]
+    const roster = [future.p, undated.p, past.p, done.p, dead.p]
     const byId = new Map([
       [1, past.ps],
       [2, future.ps],
       [3, undated.ps],
       [4, done.ps],
+      [5, dead.ps],
     ])
     const pending = collectPendingOrders(roster, (id) => byId.get(id)!)
 

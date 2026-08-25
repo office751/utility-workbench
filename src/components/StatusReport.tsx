@@ -34,7 +34,10 @@ function StatusReport({ projects, getProjectState, templates, modelTakeoffs, onC
   // Which houses end up in the report.
   const selected = useMemo(() => {
     if (scope === 'pick') return projects.filter((p) => picked.has(p.id))
-    return includeCO ? projects : projects.filter((p) => p.listStatus !== 'CO')
+    // Dead lots ride the same include-C.O. switch: both are "not active work".
+    return includeCO
+      ? projects
+      : projects.filter((p) => p.listStatus !== 'CO' && p.listStatus !== 'Dead')
   }, [scope, picked, includeCO, projects])
 
   const scopeLabel =

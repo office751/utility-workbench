@@ -161,9 +161,11 @@ function ProjectList({ projects, onSelect, onAdd, onBatchApply, onStatusReport, 
   for (const r of pool) chipCount[r.status]++
   // hide-CO hides FINISHED homes — but one still walking its closing checklist
   // (under contract, July 2026) is active sale work, so it stays visible until
-  // the deed records and the checklist completes.
+  // the deed records and the checklist completes. DEAD lots (Aug 2026) hide
+  // under the same switch — decided-against lots are even less "working list".
   const coHidden = (r: (typeof rows)[number]) =>
-    filters.hideCO && r.p.listStatus === 'CO' && !closingPending(r.p, r.ps)
+    filters.hideCO &&
+    ((r.p.listStatus === 'CO' && !closingPending(r.p, r.ps)) || r.p.listStatus === 'Dead')
   const allCount = pool.filter((r) => !coHidden(r)).length
 
   // A specific chip BYPASSES hide-CO: clicking "C.O." is an explicit ask to see
@@ -259,6 +261,7 @@ function ProjectList({ projects, onSelect, onAdd, onBatchApply, onStatusReport, 
                 <span className="prow-addr">{p.address}</span>
                 {p.listStatus === 'CO' && <span className="prow-pill co">C.O.</span>}
                 {p.listStatus === 'Hold' && <span className="prow-pill hold">HOLD</span>}
+                {p.listStatus === 'Dead' && <span className="prow-pill dead">DEAD</span>}
                 {/* Shown alongside the C.O. pill too — a finished house that's
                     selling wears both hats (Adam, July 2026). Once the deed
                     records ('deedclosed' checked) it reads SOLD instead. */}

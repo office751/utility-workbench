@@ -1317,6 +1317,24 @@ export function useProjects() {
     })
   }
 
+  /**
+   * ⏳ "Waiting on investor" (Aug 2026): a permit left to expire because the
+   * investor hasn't pulled the trigger on building. ONE setState parks the
+   * house On Hold (leaves Today/active lists) AND stamps WHY into the permit
+   * notes — a bare HOLD pill loses the reason. (Two calls — updateProjectFacts
+   * then setNote — would clobber: setNote reads getProjectState from the
+   * closure, the same lesson as markApplied.)
+   */
+  function parkAwaitingInvestor(id: number) {
+    setState((prev) => {
+      const next = applyFactsPatch(prev, id, { listStatus: 'Hold' })
+      const cur = next.projects[id] ?? emptyProjectState()
+      const stamp = `⏳ Permit left to expire — waiting on the investor's go-ahead (${new Date().toLocaleDateString()})`
+      const notes = { ...cur.notes, permit: cur.notes.permit ? `${cur.notes.permit}\n${stamp}` : stamp }
+      return { ...next, projects: { ...next.projects, [id]: { ...cur, notes } } }
+    })
+  }
+
   /** 🪄 Customize page: flip one section's hidden state on one page (a Detail
    *  stream tab). Stored per-page in hiddenSections (cloud-synced), read by
    *  the Hideable wrappers — see components/Hideable.tsx for the whole idea. */
@@ -1561,6 +1579,7 @@ export function useProjects() {
     setTemplate,
     toggleHiddenSection,
     markPermitIssued,
+    parkAwaitingInvestor,
     setAssignees,
     requestScan,
     setSelectionsCatalog,

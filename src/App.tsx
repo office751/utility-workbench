@@ -145,6 +145,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
     setTemplate,
     toggleHiddenSection,
     markPermitIssued,
+    parkAwaitingInvestor,
     setAssignees,
     requestScan,
     setSelectionsCatalog,
@@ -597,6 +598,7 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
             hiddenSections={state.hiddenSections}
             toggleHiddenSection={toggleHiddenSection}
             markPermitIssued={markPermitIssued}
+            parkAwaitingInvestor={parkAwaitingInvestor}
             drawTemplates={state.drawTemplates ?? DRAW_TEMPLATES_DEFAULT}
             setFinancials={setFinancials}
             updateDraw={updateDraw}

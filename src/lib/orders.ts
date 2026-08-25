@@ -207,7 +207,7 @@ export function collectPendingOrders(
 ): PendingOrder[] {
   const out: PendingOrder[] = []
   for (const p of projects) {
-    if (p.listStatus === 'CO' || p.listStatus === 'Hold') continue
+    if (p.listStatus === 'CO' || p.listStatus === 'Hold' || p.listStatus === 'Dead') continue
     const ps = getProjectState(p.id)
     for (const o of ordersOf(ps)) {
       if (o.status !== 'toOrder') continue

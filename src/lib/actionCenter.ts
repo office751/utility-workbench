@@ -78,9 +78,11 @@ export function buildActionCenter(
   let toOrderTotal = 0
 
   for (const p of projects) {
-    // Parked (Hold) homes never belong in "needs attention" or the to-do
-    // moves — skip them entirely so the command center stays focused.
-    if (p.listStatus === 'Hold') continue
+    // Parked (Hold) and dead-lot (Dead) homes never belong in "needs
+    // attention" or the to-do moves — skip them entirely so the command
+    // center stays focused. (Dead, Aug 2026: a lot we've decided not to
+    // build on — its expired permit is expected, not an alarm.)
+    if (p.listStatus === 'Hold' || p.listStatus === 'Dead') continue
     const ps = getProjectState(p.id)
     const base = { projectId: p.id, address: p.address, meta: `${p.model} · ${p.subdivision}` }
 

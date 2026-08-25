@@ -87,6 +87,7 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: 'PowerOn', label: 'Power on' },
   { value: 'Hold', label: 'On hold' },
   { value: 'CO', label: 'C.O. — finished' },
+  { value: 'Dead', label: 'Dead — not building' },
 ]
 
 function ProjectSettings({ project: p, ps, setField, updateFacts, utilities, onClose }: Props) {

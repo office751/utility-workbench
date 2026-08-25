@@ -37,7 +37,7 @@ import {
   renderTemplate,
 } from './templates'
 
-const STATUS_WORD: Record<string, string> = { CO: 'C.O.', Hold: 'ON HOLD' }
+const STATUS_WORD: Record<string, string> = { CO: 'C.O.', Hold: 'ON HOLD', Dead: 'DEAD LOT' }
 
 /** done → "✓ Complete", otherwise the next action's label. */
 function line(done: boolean, next: string): string {

@@ -71,6 +71,7 @@ export type ListStatus =
   | 'InProgress'
   | 'CO' // Certificate of Occupancy — house finished / closed out
   | 'Hold' // paused per the Construction Job List
+  | 'Dead' // dead lot — not building on it (Aug 2026); hidden + skipped like CO
 
 /** One house. The fixed facts — see src/data/projects.ts. */
 export interface Project {
