@@ -28,7 +28,10 @@ const FORCE_ON = process.argv.includes('--force')
 const FORCE = []
 const SITE_HOST = 'netorg13901770.sharepoint.com'
 const SITE_PATH = '/sites/ProcesstoBuildingaHouse'
-const LIST_NAME = 'Construction Jobs Permitting'
+// The list has been RENAMED in SharePoint before (Aug 2026: "Construction Jobs
+// Permitting" → "Construction Job List"), which silently killed the sync. Match
+// any known name, newest first — add to this list if it's ever renamed again.
+const LIST_NAMES = ['Construction Job List', 'Construction Jobs Permitting']
 
 // ---- env -----------------------------------------------------------------
 const env = readFileSync(new URL('.env', import.meta.url), 'utf8')
@@ -88,8 +91,8 @@ async function main() {
   // 1) Resolve site → list → columns (display name → internal field name).
   const site = await g(`/sites/${SITE_HOST}:${SITE_PATH}`)
   const lists = await g(`/sites/${site.id}/lists?$select=id,displayName,name&$top=200`)
-  const list = lists.value.find((l) => l.displayName === LIST_NAME || l.name === LIST_NAME)
-  if (!list) { console.error(`List "${LIST_NAME}" not found. Lists: ${lists.value.map((l) => l.displayName).join(', ')}`); process.exit(1) }
+  const list = lists.value.find((l) => LIST_NAMES.includes(l.displayName) || LIST_NAMES.includes(l.name))
+  if (!list) { console.error(`No list named ${LIST_NAMES.join(' / ')} found. Lists: ${lists.value.map((l) => l.displayName).join(', ')}`); process.exit(1) }
   const cols = await g(`/sites/${site.id}/lists/${list.id}/columns?$select=name,displayName,readOnly&$top=200`)
   const internal = {} // displayName -> WRITABLE internal name
   // skip read-only columns (e.g. "LinkTitle", the computed link alias of Title)
