@@ -232,15 +232,27 @@ distinct projects, `fire` = any attention item in that stream.
 - Category match: keyword substrings from `CATEGORY_KEYWORDS`, including
   Josh's spellings (`lentil`→Block & Lintels, `slap`→Slab, `sand`→Block &
   Lintels because sand ships with the lintel package).
-- **Block & Lintels is ONE combined category with TWO suppliers** (Aug 2026):
-  `CATEGORY_PORTIONS` in data/orders.ts splits it into its 'Block' portion
-  (→ DZ Block) and 'Lintels' portion (→ Marion Masonry); one order row drafts
-  BOTH vendor emails, each scoped/subject-lined to its own portion.
-- `mergeBlockLintels` normalizes legacy split rows on every load (idempotent,
-  no flag): a still-to-order Block+Lintels pair merges into one combined row
-  (Block row's id survives, **earliest needed-by wins**); a lone to-order row
-  whose partner category is absent is renamed; **anything ordered/delivered/
-  installed — including half-advanced pairs — is never rewritten**.
+- **TWO combined categories** (`CATEGORY_PORTIONS`, data/orders.ts):
+  **Block & Lintels** = one row, TWO suppliers — 'Block' portion → DZ Block,
+  'Lintels' portion → Marion Masonry; the row drafts BOTH vendor emails, each
+  scoped/subject-lined to its own portion. **Trusses & Framing** (Aug 2026) =
+  one row, ONE supplier — Tibbetts covers BOTH portions, so the row drafts a
+  single email ordering the whole package (+ roofing underlayment, per Adam's
+  real sent wording in the vendor's bodyDefault).
+- **A vendor covering EVERY portion gets the combined treatment**
+  (`vendorCoversAll`, data/vendors.ts): its portion label is the combined
+  category itself, its draft subject comes from ITS OWN subject template
+  ("Trusses & Framing Packages — <address>, <city>") instead of the generic
+  "<material> order — <address>" line, and {{items}} renders one line per
+  portion (each with its own model order list). Single-portion vendors
+  (DZ/Marion) keep the per-portion behavior exactly as before.
+- `mergeBlockLintels` / `mergeTrussesFraming` (one shared `mergeCategoryPair`)
+  normalize legacy split rows on every load (idempotent, no flag): a
+  still-to-order pair merges into one combined row (the FIRST partner's id
+  survives — Block's / Trusses' — and **earliest needed-by wins**); a lone
+  to-order row whose partner category is absent is renamed; **anything
+  ordered/delivered/installed — including half-advanced pairs — is never
+  rewritten**.
 - Materials done = **has orders and all installed** — zero orders is NOT done.
 
 ## tasks.ts — the two-operator queue

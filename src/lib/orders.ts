@@ -113,54 +113,68 @@ export function parseQuickAdd(text: string, projects: Project[]): QuickAddParse 
   return { matches, confident, categories }
 }
 
-/* ---------------- legacy Block + Lintels rows → one combined row ---------- */
+/* ------------- legacy split category pairs → one combined row ------------- */
 
 /**
- * Block and Lintels used to be two separate order categories; they're ordered
- * together now as a single "Block & Lintels" row (one row, two vendor emails —
- * see data/orders.ts CATEGORY_PORTIONS). This normalizes a project's legacy
- * rows on every load (it's idempotent, so no one-time flag is needed):
+ * Some categories that used to be two separate order rows are ordered together
+ * now as a single combined row (see data/orders.ts CATEGORY_PORTIONS):
+ * Block & Lintels (Aug 2026 — one row, two vendor emails) and Trusses &
+ * Framing (Aug 2026 — one row, ONE Tibbetts email for the whole package).
+ * This normalizes a project's legacy rows on every load (it's idempotent, so
+ * no one-time flag is needed):
  *
- *  - 'Block' + 'Lintels' rows BOTH still "to order" → ONE combined row.
- *    Keeps the Block row's identity (id/createdAt); the EARLIEST needed-by
- *    wins so no deadline gets lost in the merge.
- *  - a lone to-order 'Block' or 'Lintels' row whose partner category doesn't
- *    exist at all → simply renamed to the combined category.
+ *  - both partner rows still "to order" → ONE combined row. Keeps the FIRST
+ *    partner's identity (id/createdAt); the EARLIEST needed-by wins so no
+ *    deadline gets lost in the merge.
+ *  - a lone to-order partner row whose other category doesn't exist at all →
+ *    simply renamed to the combined category.
  *  - anything already ordered/delivered/installed is left EXACTLY as-is:
- *    history is never rewritten, and a half-advanced pair (block ordered,
- *    lintels still pending) keeps both original rows — their old category
+ *    history is never rewritten, and a half-advanced pair (trusses ordered,
+ *    framing still pending) keeps both original rows — their old category
  *    names still map to the right vendor, so their ✉️ buttons keep working.
  */
-export function mergeBlockLintels(orders: OrderItem[]): OrderItem[] {
-  const COMBINED = 'Block & Lintels'
-  const block = orders.find((o) => o.category === 'Block')
-  const lintels = orders.find((o) => o.category === 'Lintels')
-  if (!block && !lintels) return orders // the common case — untouched
+function mergeCategoryPair(
+  orders: OrderItem[],
+  combined: string,
+  catA: string,
+  catB: string,
+): OrderItem[] {
+  const a = orders.find((o) => o.category === catA)
+  const b = orders.find((o) => o.category === catB)
+  if (!a && !b) return orders // the common case — untouched
 
-  if (block && lintels && block.status === 'toOrder' && lintels.status === 'toOrder') {
+  if (a && b && a.status === 'toOrder' && b.status === 'toOrder') {
     // ISO dates sort lexicographically, so [0] after sort = the earlier one.
-    const neededBy = [block.neededBy, lintels.neededBy]
-      .filter((d): d is string => !!d)
-      .sort()[0]
+    const neededBy = [a.neededBy, b.neededBy].filter((d): d is string => !!d).sort()[0]
     return orders
-      .filter((o) => o !== lintels)
+      .filter((o) => o !== b)
       .map((o) =>
-        o === block
+        o === a
           ? {
               ...o,
-              category: COMBINED,
+              category: combined,
               neededBy,
-              orderedOn: block.orderedOn ?? lintels.orderedOn,
-              vendor: block.vendor ?? lintels.vendor,
+              orderedOn: a.orderedOn ?? b.orderedOn,
+              vendor: a.vendor ?? b.vendor,
             }
           : o,
       )
   }
-  if (block && !lintels && block.status === 'toOrder')
-    return orders.map((o) => (o === block ? { ...o, category: COMBINED } : o))
-  if (lintels && !block && lintels.status === 'toOrder')
-    return orders.map((o) => (o === lintels ? { ...o, category: COMBINED } : o))
+  if (a && !b && a.status === 'toOrder')
+    return orders.map((o) => (o === a ? { ...o, category: combined } : o))
+  if (b && !a && b.status === 'toOrder')
+    return orders.map((o) => (o === b ? { ...o, category: combined } : o))
   return orders
+}
+
+/** Legacy 'Block' + 'Lintels' rows → one "Block & Lintels" row. */
+export function mergeBlockLintels(orders: OrderItem[]): OrderItem[] {
+  return mergeCategoryPair(orders, 'Block & Lintels', 'Block', 'Lintels')
+}
+
+/** Legacy 'Trusses' + 'Framing package' rows → one "Trusses & Framing" row. */
+export function mergeTrussesFraming(orders: OrderItem[]): OrderItem[] {
+  return mergeCategoryPair(orders, 'Trusses & Framing', 'Trusses', 'Framing package')
 }
 
 /* ---------------- pending orders (the Tasks "Orders to place" list) ------- */

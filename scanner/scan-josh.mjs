@@ -90,8 +90,11 @@ function buildLookup(roster) {
 
 // --- item keywords (incl. Josh's real-world spellings) -----------------------
 const CATEGORIES = [
-  [/truss/, 'Trusses'],
-  [/framing|frame pack/, 'Framing package'],
+  // Trusses & framing are ONE combined category in the app now (one order
+  // row, one Tibbetts email for the whole package). matchCategories de-dupes,
+  // so "truss and framing" in one text still adds a single row.
+  [/truss/, 'Trusses & Framing'],
+  [/framing|frame pack/, 'Trusses & Framing'],
   [/slab|slap package/, 'Slab package'],
   // Block & lintels are ONE combined category in the app now (one order row,
   // two vendor emails: block → DZ Block, lintels → Marion Masonry). Several

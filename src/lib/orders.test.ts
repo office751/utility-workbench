@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { collectPendingOrders, isMaterialsDone, mergeBlockLintels, ordersSummary, parseQuickAdd, toOrderCount } from './orders'
+import { collectPendingOrders, isMaterialsDone, mergeBlockLintels, mergeTrussesFraming, ordersSummary, parseQuickAdd, toOrderCount } from './orders'
 import { emptyProjectState } from '../data/seed'
 import { makeProject } from './testUtils'
 import type { OrderItem, OrderStatus } from '../types'
@@ -47,7 +47,13 @@ describe('parseQuickAdd', () => {
     const r = parseQuickAdd('5560 trusses', roster)
     expect(r.matches[0]).toBe(p1)
     expect(r.confident).toBe(true)
-    expect(r.categories).toEqual(['Trusses'])
+    expect(r.categories).toEqual(['Trusses & Framing'])
+  })
+
+  it('truss AND framing in one text collapse to the ONE combined category', () => {
+    expect(parseQuickAdd('truss and framing package on site', roster).categories).toEqual([
+      'Trusses & Framing',
+    ])
   })
 
   it('house numbers count DOUBLE — they beat shared subdivision words', () => {
@@ -182,7 +188,44 @@ describe('mergeBlockLintels', () => {
   it('is idempotent and leaves legacy-free lists alone (same reference back)', () => {
     const once = mergeBlockLintels([row('Block', 'toOrder'), row('Lintels', 'toOrder')])
     expect(mergeBlockLintels(once)).toBe(once) // second pass: nothing to do
-    const clean = [row('Trusses', 'toOrder')]
+    const clean = [row('Windows', 'toOrder')]
     expect(mergeBlockLintels(clean)).toBe(clean)
+  })
+})
+
+// Same shared pair-merge, second pair (Aug 2026): legacy Trusses + Framing
+// package rows → one "Trusses & Framing" row (one row, ONE Tibbetts email).
+// The merge rules themselves are pinned hard by the mergeBlockLintels suite
+// above; this pins the pair mapping + the promises that matter per-pair.
+describe('mergeTrussesFraming', () => {
+  const row = (category: string, status: OrderStatus, patch: Partial<OrderItem> = {}): OrderItem => ({
+    id: `${category}-id`,
+    category,
+    status,
+    createdAt: '6/1/2026',
+    ...patch,
+  })
+
+  it('merges a still-to-order Trusses + Framing pair into ONE combined row', () => {
+    const merged = mergeTrussesFraming([
+      row('Trusses', 'toOrder', { neededBy: '2026-09-10' }),
+      row('Framing package', 'toOrder', { neededBy: '2026-09-01' }),
+      row('Block & Lintels', 'toOrder'),
+    ])
+    expect(merged.map((o) => o.category)).toEqual(['Trusses & Framing', 'Block & Lintels'])
+    expect(merged[0].id).toBe('Trusses-id') // keeps the Trusses row's identity
+    expect(merged[0].neededBy).toBe('2026-09-01') // EARLIEST deadline wins
+  })
+
+  it('renames a lone to-order Trusses (or Framing) row when its partner is absent', () => {
+    expect(mergeTrussesFraming([row('Trusses', 'toOrder')])[0].category).toBe('Trusses & Framing')
+    expect(mergeTrussesFraming([row('Framing package', 'toOrder')])[0].category).toBe(
+      'Trusses & Framing',
+    )
+  })
+
+  it('NEVER rewrites history: half-advanced pairs keep their original rows', () => {
+    const half = [row('Trusses', 'ordered'), row('Framing package', 'toOrder')]
+    expect(mergeTrussesFraming(half)).toEqual(half)
   })
 })

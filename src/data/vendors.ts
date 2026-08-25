@@ -66,7 +66,27 @@ export const VENDORS: Vendor[] = [
     contact: 'Tina',
     icon: '🪵',
     supplies: 'Truss & framing packages',
+    // Both portions of the combined "Trusses & Framing" category
+    // (data/orders.ts CATEGORY_PORTIONS) — one row, ONE Tibbetts email
+    // ordering the whole package. Kept as the legacy portion names so old
+    // split rows and saved model order lists still resolve.
     categories: ['Trusses', 'Framing package'],
+    // Adam's real order wording (Aug 2026 sent mail): the whole package plus
+    // the roofing underlayment in one ask, model code as the spec (Tibbetts
+    // holds the per-model takeoffs, same as DZ does for block). The "7 rolls"
+    // is today's standing number — edit it here / in ⚙ Settings → Templates
+    // (or per-draft in Mail) if a model ever needs a different count.
+    subjectDefault: 'Trusses & Framing Packages — {{address}}, {{city}}',
+    bodyDefault: [
+      'Hi,',
+      '',
+      'We would like to order the truss & framing package along with 7 rolls of roofing underlayment for our job site:',
+      '',
+      '{{site}}',
+      '{{model}}',
+      '',
+      'Please confirm the earliest delivery date.',
+    ].join('\n'),
   },
   {
     id: 'marion-masonry',
@@ -156,11 +176,23 @@ export function vendorCovers(v: Vendor, category: string): boolean {
 /** What THIS vendor's email should call an order category: for a combined
  *  category, the portion(s) the vendor actually sells ("Block" for DZ Block,
  *  "Lintels" for Marion Masonry); the category itself otherwise. Keeps each
- *  supplier's email scoped to what they supply — DZ never sees "Lintels". */
+ *  supplier's email scoped to what they supply — DZ never sees "Lintels".
+ *  A vendor covering EVERY portion (Tibbetts = all of Trusses & Framing)
+ *  gets the combined name itself — it's ordering the whole thing. */
 export function vendorPortionLabel(v: Vendor, category: string): string {
   const portions = CATEGORY_PORTIONS[category]
   const mine = portions?.filter((c) => coversDirect(v, c)) ?? []
+  if (portions && mine.length === portions.length) return category
   return mine.length > 0 ? mine.join(' & ') : category
+}
+
+/** Does this vendor supply EVERY portion of a combined category? (Tibbetts →
+ *  Trusses & Framing.) Such an order is the vendor's whole package, so its
+ *  draft uses the vendor's own subject template instead of the generic
+ *  "<material> order — <address>" line. False for plain categories. */
+export function vendorCoversAll(v: Vendor, category: string): boolean {
+  const portions = CATEGORY_PORTIONS[category]
+  return !!portions && portions.every((c) => coversDirect(v, c))
 }
 
 /** The live values a vendor-email template's {{tokens}} can use. When the
@@ -181,19 +213,23 @@ export function vendorTemplateVars(
   const items = (ps.orders ?? [])
     .filter((o) => o.status === 'toOrder' && (!hasCoverage || vendorCovers(v, o.category)))
     .filter((o) => !onlyCategory || o.category === onlyCategory)
-    .map((o) => {
+    .flatMap((o) => {
       // Name each line the way THIS vendor knows it: a combined category
-      // renders as the vendor's own portion (DZ Block sees "Block", Marion
-      // Masonry sees "Lintels"). Model order lists are keyed by portion too,
-      // with the raw category as a fallback for custom/edge cases.
-      const label = vendorPortionLabel(v, o.category)
-      const list = modelLists?.[label] ?? modelLists?.[o.category]
-      if (!list) return `  • ${label}`
-      const detail = list
-        .split('\n')
-        .map((l) => `      ${l}`)
-        .join('\n')
-      return `  • ${label}:\n${detail}`
+      // renders as the vendor's own portion(s) (DZ Block sees "Block", Marion
+      // Masonry sees "Lintels", Tibbetts sees BOTH "Trusses" and "Framing
+      // package" as separate lines). Model order lists are keyed by portion
+      // too, with the raw category as a fallback for custom/edge cases.
+      const mine = portionsOf(o.category).filter((c) => coversDirect(v, c))
+      const parts = mine.length > 0 ? mine : [o.category]
+      return parts.map((part) => {
+        const list = modelLists?.[part] ?? modelLists?.[o.category]
+        if (!list) return `  • ${part}`
+        const detail = list
+          .split('\n')
+          .map((l) => `      ${l}`)
+          .join('\n')
+        return `  • ${part}:\n${detail}`
+      })
     })
   const onlyLabel = onlyCategory ? vendorPortionLabel(v, onlyCategory) : ''
   return {
@@ -287,7 +323,13 @@ export function orderMailtos(
     // Material-specific subject (the template's subject serves the all-items
     // vendor button; a single order reads better with the material up front) —
     // scoped to this vendor's portion so DZ's subject says "Block order".
-    const subject = `${portion} order — ${p.address}, ${p.city}`
+    // EXCEPT when one vendor supplies the whole combined category (Tibbetts =
+    // all of Trusses & Framing): that order IS the vendor's package, so its
+    // own subject template wins ("Trusses & Framing Packages — <address>…",
+    // matching Adam's real sent mail).
+    const subject = vendorCoversAll(v, category)
+      ? renderTemplate(t.subject, vars)
+      : `${portion} order — ${p.address}, ${p.city}`
     return { href: vendorDraftUrl(v, subject, renderTemplate(t.body, vars)), vendor: v, portion }
   })
 }

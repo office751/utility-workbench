@@ -10,8 +10,7 @@ import type { OrderStatus } from '../types'
 
 /** The things you order. Edit freely — the dropdown reads this list. */
 export const ORDER_CATEGORIES: string[] = [
-  'Trusses',
-  'Framing package',
+  'Trusses & Framing', // ONE row, ONE supplier for both (Tibbetts) — see CATEGORY_PORTIONS
   'Slab package',
   'Block & Lintels', // ONE row, TWO suppliers — see CATEGORY_PORTIONS below
   'Windows', // installed at dry-in; a common long-lead item (see LEAD_TIME_DAYS)
@@ -38,9 +37,16 @@ export const ORDER_CATEGORIES: string[] = [
  * per-supplier portions. A portion name is what a vendor actually sells: it's
  * matched against each vendor's `categories` (data/vendors.ts), it keys the
  * model order lists (⚙️ Settings → Takeoffs), and it leads the email subject.
+ *
+ * Trusses & Framing (Aug 2026) is the same merge with a twist: BOTH portions
+ * come from the SAME company (Tibbetts), so the one row drafts ONE email that
+ * orders the whole package — even nicer than block/lintels. The portions keep
+ * the legacy category names so old split rows and saved model order lists
+ * still resolve.
  */
 export const CATEGORY_PORTIONS: Record<string, string[]> = {
   'Block & Lintels': ['Block', 'Lintels'],
+  'Trusses & Framing': ['Trusses', 'Framing package'],
 }
 
 /** A category's per-supplier portions — just itself when it isn't combined. */
@@ -80,7 +86,10 @@ export const SITE_SERVICES: string[] = [
  * Keys must match ORDER_CATEGORIES above.
  */
 export const LEAD_TIME_DAYS: Record<string, number> = {
-  Trusses: 21, // engineered + built to order — the classic schedule-killer
+  // The combined row inherits the TRUSS lead — the long pole of the pair
+  // (engineered + built to order, the classic schedule-killer).
+  'Trusses & Framing': 21,
+  Trusses: 21, // legacy split rows (pre-merge saves) keep their own math
   Cabinets: 28, // longest lead in the house; FGT builds per order
   Windows: 35, // made-to-size for new construction — often 5–6 weeks; tune to your supplier
   'Garage door': 21, // sized/ordered per opening
@@ -90,7 +99,7 @@ export const LEAD_TIME_DAYS: Record<string, number> = {
   // Legacy split 'Block' / 'Lintels' rows (pre-merge saves) fall back to the
   // same 7-day default below, so old rows keep the same order-by math.
   'Block & Lintels': 7,
-  'Framing package': 7,
+  'Framing package': 7, // legacy split rows only
   'Slab package': 7,
   // site services are quick calls, not manufacturing:
   Dumpster: 3,
@@ -110,8 +119,7 @@ export const DEFAULT_LEAD_TIME_DAYS = 7
  * ⚙️ Settings → Takeoffs as model order lists.)
  */
 export const STANDARD_ORDER_CATEGORIES: string[] = [
-  'Trusses',
-  'Framing package',
+  'Trusses & Framing',
   'Block & Lintels',
   'Windows',
   'Slab package',
@@ -150,9 +158,11 @@ export const ORDER_STATUSES: { key: OrderStatus; label: string }[] = [
  * keywords can point at the same category.
  */
 export const CATEGORY_KEYWORDS: Record<string, string> = {
-  truss: 'Trusses',
-  framing: 'Framing package',
-  frame: 'Framing package',
+  // truss & framing are ONE combined category now (one row, one Tibbetts
+  // email) — several keywords map to it; the parser de-dupes.
+  truss: 'Trusses & Framing',
+  framing: 'Trusses & Framing',
+  frame: 'Trusses & Framing',
   slab: 'Slab package',
   slap: 'Slab package', // common typo
   block: 'Block & Lintels',
