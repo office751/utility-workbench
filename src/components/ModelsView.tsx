@@ -11,7 +11,7 @@
  *     plan sets already live, no re-uploading needed just to browse them
  *   - 🧰 FGT cabinet layouts (CabinetLayoutEditor) — runs, fit-checks, BOM
  *   - a plans locker — the same upload/share/copy-link box projects have
- *     (DocumentsBox) for signed ~1-year download links (Jennifer/mailclip
+ *     (DocumentsBox) for signed ~1-year download links (mailclip/county
  *     flows still need real uploads; the folder link doesn't replace this)
  *
  * Model FILES live under models/<key>/ in the same private bucket; the

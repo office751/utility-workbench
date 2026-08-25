@@ -16,7 +16,6 @@ import { templateSpecs, type TemplateSpec } from '../data/templates'
 import { effectiveTemplate, renderTemplate } from '../lib/templates'
 import { VENDORS, vendorTemplateVars } from '../data/vendors'
 import { buildDukePacket, buildSecoPacket } from '../lib/loadForm'
-import { DOCS_MARKER, permitHandoffVars } from '../lib/permitHandoff'
 import { projectStatusVars } from '../lib/statusReport'
 
 interface Props {
@@ -102,14 +101,8 @@ function previewVars(spec: TemplateSpec, sample: Project | undefined, getPS: (id
       packet: spec.id === 'apply:SECO' ? buildSecoPacket(sample, ps) : buildDukePacket(sample, ps),
     }
   }
-  if (spec.id.startsWith('permit:') && sample) {
-    // Preview exactly what the draft will contain: the {{docs}} section is
-    // the [PASTE HERE] marker (the real download links ride the clipboard,
-    // minted at click time — not on a settings page).
-    const vars = permitHandoffVars(sample, getPS(sample.id))
-    vars.docs = DOCS_MARKER
-    return vars
-  }
+  // (The 'permit:' handoff preview branch was removed Aug 2026 with the
+  //  Jennifer handoff — permitting is in-house now.)
   if (spec.id.startsWith('status:') && sample) {
     // Subject tokens (date/count/scope) + the per-project body tokens together,
     // so the card previews both the header line and a sample project block.

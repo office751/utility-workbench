@@ -158,6 +158,13 @@
   flex-direction: column;
   gap: 2px;
 }
+/* Thin divider between More-menu groups (e.g. above the tab-visibility toggles). */
+.menu-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 6px 4px;
+}
+
 .menu-item {
   display: flex;
   align-items: center;
@@ -1393,8 +1400,7 @@ button.gear.on {
   margin: 0 0 14px;
 }
 
-/* Some "contacts" are links, some are buttons that do async work first
-   (e.g. 📨 Email Jennifer mints download links before opening the draft) —
+/* Some "contacts" are links, some are buttons that do async work first —
    style them identically so the row reads as one set of actions. */
 a.contact,
 button.contact {
@@ -3599,6 +3605,8 @@ a.map-btn {
 .prow-pill.co { background: var(--success-bg); color: var(--success); }
 .prow-pill.hold { background: var(--warn-bg); color: var(--warn); }
 .prow-pill.uc { background: var(--info-bg); color: var(--info); }
+/* SOLD — the happy ending: same green family as C.O. (deed recorded). */
+.prow-pill.sold { background: var(--success-bg); color: var(--success); }
 .prow-investor {
   display: inline-flex;
   align-items: center;

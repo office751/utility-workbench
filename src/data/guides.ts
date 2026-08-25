@@ -74,22 +74,8 @@ export const GUIDES: Guide[] = [
     ],
     tip: 'If a row shows a yellow ⚠ warning (e.g. "legal description needs lookup"), fix it first — that field will be blank on the downloaded form. The 👁 Preview button shows the full form data before you draft anything.',
   },
-  {
-    id: 'permit-jennifer',
-    icon: '📋',
-    title: 'Hand a new permit to Jennifer',
-    when: 'A house is ready for permitting and you want Jennifer\'s Permitting Service to submit it.',
-    steps: [
-      { who: 'you', text: 'First, make sure the plan set, surveys, and the signed authorization form are uploaded in the 📂 Files box on the project\'s OVERVIEW tab — the email shares them as download links, so anything missing won\'t reach her.' },
-      { who: 'you', text: 'Go to the project\'s 📋 Permit tab and click "Email Jennifer — permit package". It briefly shows "Creating download links…".' },
-      { who: 'app', text: 'A ready-to-send email to Jennifer opens (William is CC\'d), pre-filled with the address, parcel, model, the standard subcontractor lineup, and the septic line — and the file links are copied to your clipboard as clickable names.' },
-      { who: 'you', text: 'In the email, paste (Cmd+V) over the [PASTE HERE] line — the clickable file names replace it. (If the note under the button says it couldn\'t copy, share the links from the 📂 Files box instead.)' },
-      { who: 'you', text: 'Fill the two [FILL IN] blanks — the job cost (contract $) and the financing (cash, or lender name & address). These are the only details the app can\'t pre-fill.' },
-      { who: 'you', text: 'Send it.' },
-      { who: 'wait', text: 'Jennifer prepares and records the Notice of Commencement, obtains any documents you didn\'t send, and submits the permit to the county.' },
-    ],
-    tip: 'Don\'t send before pasting over [PASTE HERE] — the file links only become clickable names after you paste, or Jennifer gets no documents.',
-  },
+  // (The 'permit-jennifer' handoff guide was removed Aug 2026 — permitting
+  //  is 100% in-house now; permits are submitted to the county ourselves.)
   {
     id: 'order-materials',
     icon: '🛒',

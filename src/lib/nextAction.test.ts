@@ -4,6 +4,7 @@ import {
   closingPending,
   closingProgress,
   closingStepDone,
+  isSold,
   closingStepsFor,
   confirmedUtility,
   electricNeedsAction,
@@ -136,6 +137,19 @@ describe('closing helpers — the sale workflow bucket', () => {
     expect(closingStepDone(ps, 'contract')).toBe(false)
     ps.closingSteps = { contract: { done: true } }
     expect(closingStepDone(ps, 'contract')).toBe(true)
+  })
+
+  it("SOLD = under contract + 'deedclosed' checked (the pill flip, Aug 2026)", () => {
+    const ps = emptyProjectState()
+    expect(isSold(ps)).toBe(false) // not even under contract
+    ps.underContract = true
+    expect(isSold(ps)).toBe(false) // still UNDER CONTRACT
+    ps.closingSteps = { deedclosed: { done: true } }
+    expect(isSold(ps)).toBe(true) // deed recorded → SOLD
+    // A checked deed WITHOUT the under-contract flag never claims a sale.
+    const stray = emptyProjectState()
+    stray.closingSteps = { deedclosed: { done: true } }
+    expect(isSold(stray)).toBe(false)
   })
 
   it('progress counts the effective list, xfer included via transferred', () => {

@@ -18,6 +18,7 @@ import {
   isElectricDone,
   isPermitDone,
   isSepticDone,
+  isSold,
   isWaterDone,
   nextElectricAction,
   nextPermitAction,
@@ -259,12 +260,18 @@ function ProjectList({ projects, onSelect, onAdd, onBatchApply, onStatusReport, 
                 {p.listStatus === 'CO' && <span className="prow-pill co">C.O.</span>}
                 {p.listStatus === 'Hold' && <span className="prow-pill hold">HOLD</span>}
                 {/* Shown alongside the C.O. pill too — a finished house that's
-                    selling wears both hats (Adam, July 2026). */}
-                {ps.underContract && (
-                  <span className="prow-pill uc" title="Under contract — closing checklist on this house's Overview">
-                    UNDER CONTRACT
-                  </span>
-                )}
+                    selling wears both hats (Adam, July 2026). Once the deed
+                    records ('deedclosed' checked) it reads SOLD instead. */}
+                {ps.underContract &&
+                  (isSold(ps) ? (
+                    <span className="prow-pill sold" title="Sold — deed recorded">
+                      SOLD
+                    </span>
+                  ) : (
+                    <span className="prow-pill uc" title="Under contract — closing checklist on this house's Overview">
+                      UNDER CONTRACT
+                    </span>
+                  ))}
                 {/* Under the investor filter the right side already names them. */}
                 {ps.isInvestorProject && !filters.investorOnly && (
                   <span className="prow-investor" title={`Investor project — ${ps.investorName || 'investor not named'}`}>

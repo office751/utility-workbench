@@ -660,8 +660,8 @@ export interface ModelState {
   /** Plan files (PDFs, calcs, zips) — bytes live in Supabase Storage under
    *  models/<key>/, these are the pointers (same shape as project docs). */
   docs?: ProjectDoc[]
-  /** Master-filed with the county: plans are on file, so permits reference
-   *  the master file and energy calcs ride along (E2 is; see Jennifer flow). */
+  /** Master-filed with the county: plans are on file, so permit applications
+   *  reference the master file and energy calcs ride along (E2 is). */
   masterFiled?: boolean
   /** Free-form notable info — revisions, engineer notes, quirks. */
   notes?: string
@@ -684,7 +684,7 @@ export interface ModelState {
    * The model's OneDrive/SharePoint folder (plans, calcs, takeoff PDFs) —
    * pasted once from OneDrive's "Copy link", rendered as a 📂 button. This
    * LINKS to where files already live; the docs locker above still exists for
-   * signed-link sharing (Jennifer flow, mailclip pastes).
+   * signed-link sharing (mailclip pastes, county submittals).
    */
   folderUrl?: string
 }

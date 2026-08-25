@@ -227,6 +227,14 @@ export function closingStepsFor(p: Project, ps: ProjectState): StepDef[] {
   return closingSteps().filter((s) => municipal || s.id !== 'wstop')
 }
 
+/** SOLD = under contract AND the final 'deedclosed' closing step is checked
+ *  (deed recorded). Replaces the UNDER CONTRACT pill with a green SOLD one
+ *  (Adam, Aug 2026: "instead of it still saying 'under contract' I'd rather
+ *  it say Sold"). Matched by step id, so an owner-renamed label keeps it. */
+export function isSold(ps: ProjectState): boolean {
+  return !!ps.underContract && closingStepDone(ps, 'deedclosed')
+}
+
 /** Checked/total across THIS house's effective closing list — powers the
  *  "3/8" progress on the Closing card and header pill. */
 export function closingProgress(p: Project, ps: ProjectState): { done: number; total: number } {

@@ -28,6 +28,7 @@ import {
   engineerOf,
   isElectricDone,
   isPermitDone,
+  isSold,
   isSepticDone,
   isWaterDone,
   needsVerify,
@@ -49,13 +50,10 @@ import {
   waterSourceOf,
 } from '../lib/nextAction'
 import { permitExpiryFor } from '../lib/permitExpiry'
-import { permitHandoffDraft, permitHandoffDraftWithLinks, type HandoffDraft } from '../lib/permitHandoff'
 import { confirmSend } from '../lib/confirmSend'
 import { DUKE_PORTAL_URL, dukeWebPayloadText, dukeWebPayloadTextWithDirections } from '../lib/dukeWebApply'
 import { meterNotifyDraft } from '../lib/loadForm'
-import { getShareUrl } from '../lib/files'
 import { grantedProjectIds, shareFileToInvestor } from '../lib/investor'
-import { writeRichClipboard } from '../lib/richCopy'
 import { isMaterialsDone, ordersOf, ordersSummary } from '../lib/orders'
 import { GEORGES } from '../data/contacts'
 // (Utility closeout / disconnect-at-sale moved to ClosingCard.tsx — sale
@@ -309,12 +307,18 @@ function Detail(props: Props) {
               {p.listStatus === 'CO' && <span className="prow-pill co">C.O.</span>}
               {p.listStatus === 'Hold' && <span className="prow-pill hold">HOLD</span>}
               {/* Shown alongside the C.O. pill too — a finished house that's
-                  selling wears both hats (Adam, July 2026). */}
-              {ps.underContract && (
-                <span className="prow-pill uc" title="Under contract — closing checklist on the Overview">
-                  UNDER CONTRACT · {closingProgress(p, ps).done}/{closingProgress(p, ps).total}
-                </span>
-              )}
+                  selling wears both hats (Adam, July 2026). Once the deed
+                  records ('deedclosed' checked) it reads SOLD instead. */}
+              {ps.underContract &&
+                (isSold(ps) ? (
+                  <span className="prow-pill sold" title="Sold — deed recorded">
+                    SOLD
+                  </span>
+                ) : (
+                  <span className="prow-pill uc" title="Under contract — closing checklist on the Overview">
+                    UNDER CONTRACT · {closingProgress(p, ps).done}/{closingProgress(p, ps).total}
+                  </span>
+                ))}
               {ps.isInvestorProject ? (
                 <span className="pd-badge investor">
                   <Icon name="person" size={14} />
@@ -1080,84 +1084,21 @@ function SepticBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps }: P
 
 /* ===================== PERMITTING ===================== */
 
-function PermitBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps, tasks, addTask, updateTask, removeTask, dismissNotification, dismissInspection, templates, markPermitIssued }: Props) {
+function PermitBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps, tasks, addTask, updateTask, removeTask, dismissNotification, dismissInspection, markPermitIssued, setField, updateProjectFacts }: Props) {
   // ✅ Mark-issued date — defaults to today; local-time parts, NOT
   // toISOString (UTC would land yesterday for an evening click in Florida).
   const [issuedDate, setIssuedDate] = useState(() => {
     const d = new Date()
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   })
-  // 📨 Email Jennifer needs a moment to mint download links for the project's
-  // files (a cloud call per file), so it's a button with a busy state rather
-  // than a plain link.
-  const [drafting, setDrafting] = useState(false)
-  const [draftNote, setDraftNote] = useState<string | null>(null)
+  // ⏰ Expired-permit resolver: the extension's NEW expiry date. Deliberately
+  // starts EMPTY — a real extension letter states a date; a guessed default
+  // could silence a real alarm ("loud beats blank").
+  const [extDate, setExtDate] = useState('')
 
-  async function emailJennifer() {
-    if (
-      !confirmSend(`Hand off the permit for ${p.address} to Jennifer?`, [
-        'The draft has a [PASTE HERE] line — paste the file links (copied to your clipboard) over it before sending.',
-        'Job cost + financing are filled in by hand.',
-      ])
-    )
-      return
-    setDrafting(true)
-    setDraftNote(null)
-
-    // Kick off the link minting, but DON'T await it yet — see the Safari
-    // note below. We hand this same promise to the clipboard and then await
-    // it ourselves for the mailto.
-    const draftPromise = permitHandoffDraftWithLinks(p, ps, templates, getShareUrl)
-
-    // Raw signed URLs are 300+ characters of token soup, so they don't go in
-    // the draft. The docs section is a [PASTE HERE] marker and the CLIPBOARD
-    // gets the links as rich text — clickable file names. writeRichClipboard
-    // handles the browser quirks (Safari needs promise-based writes inside
-    // the click; some Chromes need resolved blobs). If no links get minted,
-    // the content promises reject and the clipboard is left exactly as it was.
-    const contentOf = (pick: (d: HandoffDraft) => string) =>
-      draftPromise.then((d) => {
-        if (d.linked === 0) throw new Error('nothing to copy')
-        return pick(d)
-      })
-    let clipboardOk = false
-    try {
-      await writeRichClipboard(contentOf((d) => d.docsHtml), contentOf((d) => d.docsText))
-      clipboardOk = true
-    } catch {
-      /* clipboard unavailable, or nothing to copy — handled below */
-    }
-
-    try {
-      const draft = await draftPromise
-      if (draft.linked === 0) {
-        // Nothing linkable (no files, or every mint failed) — names-only draft.
-        window.location.href = draft.mailto
-        if (draft.failed > 0) {
-          setDraftNote('⚠️ Could not create download links — the draft lists file names only. Share links from the 📂 Files box instead.')
-        }
-      } else if (clipboardOk) {
-        window.location.href = draft.mailto // [PASTE HERE] marker flavor
-        setDraftNote(
-          draft.failed > 0
-            ? `⚠️ ${draft.linked} download link(s) are on your clipboard — paste them over the [PASTE HERE] line. ${draft.failed} file(s) couldn't be linked and show "(link to follow)".`
-            : `✓ Draft opened. ${draft.linked} download link(s) are on your clipboard as clickable file names — paste them over the [PASTE HERE] line.`,
-        )
-      } else {
-        // Links exist but the clipboard write failed — never leave a
-        // [PASTE HERE] marker pointing at an empty clipboard. Fall back to
-        // the flavor with raw URLs in the body: uglier, still works.
-        window.location.href = draft.mailtoWithUrls
-        setDraftNote("⚠️ Couldn't copy the clickable links, so the draft carries the raw URLs instead.")
-      }
-    } catch {
-      // Couldn't build the linked draft at all — still open one, names only.
-      setDraftNote('⚠️ Could not create download links — the draft lists file names only. Share links from the 📂 Files box instead.')
-      window.location.href = permitHandoffDraft(p, ps, templates).mailto
-    } finally {
-      setDrafting(false)
-    }
-  }
+  // (The "Email Jennifer — permit package" handoff that lived here was
+  // removed Aug 2026: permitting is 100% in-house now. The Templates entry,
+  // guide, and lib/permitHandoff.ts went with it.)
 
   const next = nextPermitAction(ps)
   // (folder + permitUrl moved to the main Detail() header — see "Project
@@ -1218,28 +1159,14 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps, tas
         {issued && <> · Issued {issued}</>}
       </p>
 
-      {/* Permit-package handoff. (The "Open project folder" and "Open permit
-          record" links that used to live here moved UP to the project header —
-          "Project Documents" and "Permit Portal" — so they're reachable from
-          any tab, not just this one.) */}
-      <div className="contact-row">
-        {/* New-permit handoff: drafts the package email to Jennifer's
-            Permitting Service, pre-filled with site facts and the standard
-            sub lineup. File download links land on the CLIPBOARD as clickable
-            names — paste them over the draft's [PASTE HERE] marker, fill the
-            [FILL IN] blanks, send. */}
-        <button className="contact" onClick={emailJennifer} disabled={drafting}>
-          <Icon name={drafting ? 'hourglass_top' : 'mail'} size={15} />
-          {drafting ? ' Creating download links…' : ' Email Jennifer — permit package'}
-        </button>
-
-        {/* ✅ The paperwork moment, one click (Adam: "when a permit gets
-            issued there's not an easy way to mark it"). Sets the issued date
-            AND checks the checklist chain in one update; disappears once the
-            permit already reads issued (typed date, county record, or a
-            checked final step). Expiry stays county-driven — the scanner
-            tracks inspection extensions a hand-guess would mask. */}
-        {!isPermitDone(ps) && permitIssuedOf(p, ps) === '' && (
+      {/* ✅ The paperwork moment, one click (Adam: "when a permit gets
+          issued there's not an easy way to mark it"). Sets the issued date
+          AND checks the checklist chain in one update; disappears once the
+          permit already reads issued (typed date, county record, or a
+          checked final step). Expiry stays county-driven — the scanner
+          tracks inspection extensions a hand-guess would mask. */}
+      {!isPermitDone(ps) && permitIssuedOf(p, ps) === '' && (
+        <div className="contact-row">
           <span className="permit-issue-inline">
             <input
               type="date"
@@ -1256,13 +1183,8 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps, tas
               <Icon name="verified" size={15} /> Mark issued
             </button>
           </span>
-        )}
-      </div>
-
-      {/* Feedback after drafting: ✓ links minted (plain) or ⚠️ fallback (warn). */}
-      {draftNote && <p className={'shutoff' + (draftNote.startsWith('⚠️') ? ' warn' : '')}>{draftNote}</p>}
-
-      <GuideCallout id="permit-jennifer" />
+        </div>
+      )}
 
       {/* Expiry reminder (only when a date is known), colored by urgency. */}
       {expiry && (
@@ -1278,6 +1200,58 @@ function PermitBody({ project: p, ps, toggleStep, setStepNote, catchUpSteps, tas
             </>
           )}
         </p>
+      )}
+
+      {/* ⏰ "Taken care of" resolver (Adam, Aug 2026): an expiring/expired
+          permit is only ever resolved two ways —
+            1. EXTENSION granted → record the NEW expiry date. Writes the
+               ps.permitExpiresDate override (the typed-date-wins escape
+               hatch permitExpiresOf already honors), which re-arms the
+               countdown at the new date.
+            2. COMPLETED → the house has its C.O., so the permit is closed
+               at the county. Sets listStatus 'CO' — the app's "finished
+               house" state (leaves active lists/Today, same as the Settings
+               status dropdown).
+          Shown only when the alarm is warm (≤30 days or expired); earlier
+          edits live in ⚙ Settings like before. */}
+      {expiry && expiry.daysLeft <= 30 && (
+        <div className="permit-expiry-fix">
+          <span className="muted">Taken care of?</span>
+          <span className="permit-issue-inline">
+            <input
+              type="date"
+              value={extDate}
+              onChange={(e) => setExtDate(e.target.value)}
+              aria-label="New expiry date from the extension"
+              title="The new expiry date on the extension"
+            />
+            <button
+              className="mini"
+              disabled={!extDate}
+              title="Extension granted — record the new expiry date"
+              onClick={() => {
+                setField(p.id, 'permitExpiresDate', extDate)
+                setExtDate('')
+              }}
+            >
+              <Icon name="more_time" size={14} /> Extension → new expiry
+            </button>
+          </span>
+          <button
+            className="mini"
+            title="The house has its Certificate of Occupancy — mark it C.O. (finished)"
+            onClick={() => {
+              if (
+                window.confirm(
+                  `Mark ${p.address} as C.O. — finished? It leaves the active lists and Today (same as setting the status in ⚙ Settings).`,
+                )
+              )
+                updateProjectFacts(p.id, { listStatus: 'CO' })
+            }}
+          >
+            <Icon name="task_alt" size={14} /> Completed — C.O. issued
+          </button>
+        </div>
       )}
 
       <p className="next-line">

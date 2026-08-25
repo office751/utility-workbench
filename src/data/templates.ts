@@ -19,8 +19,6 @@ import {
   DEFAULT_DRAW_REQUEST_SUBJECT,
   DEFAULT_METERNOTIFY_BODY,
   DEFAULT_METERNOTIFY_SUBJECT,
-  DEFAULT_PERMIT_HANDOFF_BODY,
-  DEFAULT_PERMIT_HANDOFF_SUBJECT,
   DEFAULT_STATUS_DETAILED_BODY,
   DEFAULT_STATUS_SIMPLE_BODY,
   DEFAULT_STATUS_SUBJECT,
@@ -118,34 +116,11 @@ const DRAW_REQUEST_VARS: TemplateVar[] = [
   { token: '{{evidence}}', desc: 'bulleted list of the draw\'s CHECKED-OFF checklist items' },
 ]
 
-// What the permit-handoff email to Jennifer can auto-fill. Job cost and
-// financing are deliberately NOT tokens — the app doesn't know them, so the
-// default body carries [FILL IN — …] markers instead.
-const PERMIT_HANDOFF_VARS: TemplateVar[] = [
-  { token: '{{address}}', desc: 'street address' },
-  { token: '{{site}}', desc: 'full site line — address, city, FL zip' },
-  { token: '{{parcel}}', desc: 'parcel number' },
-  { token: '{{model}}', desc: 'house model' },
-  { token: '{{subs}}', desc: 'the standard sub lineup with county-portal Contact IDs + emails (data/contacts.ts)' },
-  { token: '{{docs}}', desc: 'the whole documents section — a [PASTE HERE] marker for the clickable links on your clipboard (plain names if links fail)' },
-  { token: '{{septic_line}}', desc: '"septic required — please apply…" or "sewer connection — no septic permit needed"' },
-  { token: '{{septic_type}}', desc: 'Sewer / Septic / Septic (ATU…)' },
-]
-
-/** Every editable template, grouped. (Future: more workflows register here.) */
+/** Every editable template, grouped. (Future: more workflows register here.)
+ *  (The 'permit:handoff' Jennifer entry was removed Aug 2026 — permitting is
+ *  100% in-house; an old saved override in the blob is just never read.) */
 export function templateSpecs(): TemplateSpec[] {
   return [
-    {
-      id: 'permit:handoff',
-      group: 'Permitting',
-      icon: '📨',
-      name: 'Permit package — Jennifer',
-      description:
-        'Drafted by "📨 Email Jennifer" on a project\'s Permit tab — the new-permit handoff to Jennifer\'s Permitting Service. File download links land on your clipboard as clickable names: paste them over the [PASTE HERE] marker, fill the [FILL IN] blanks (job cost, financing), send.',
-      vars: PERMIT_HANDOFF_VARS,
-      subject: DEFAULT_PERMIT_HANDOFF_SUBJECT,
-      body: DEFAULT_PERMIT_HANDOFF_BODY,
-    },
     {
       id: 'status:simple',
       group: 'Status reports',

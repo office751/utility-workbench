@@ -193,6 +193,15 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
   // Shared UI state, lifted up to App:
   const [tab, setTab] = useState<View>('today') // default = the command center
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  // A 🪄-hidden top tab is fully retired: if you're ON it when it hides (your
+  // click, or a sync from another device) — or you land on a hidden default —
+  // bounce to Projects, the never-hideable home.
+  useEffect(() => {
+    if (tab !== 'projects' && (state.hiddenSections?.nav ?? []).includes(tab)) {
+      setTab('projects')
+      setSelectedId(null)
+    }
+  }, [tab, state.hiddenSections])
   const [adding, setAdding] = useState(false) // is the Add form open?
   const [applying, setApplying] = useState(false) // is ⚡ Batch Apply open?
   const [reporting, setReporting] = useState(false) // is 📋 Status report open?
@@ -282,9 +291,16 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
           <span className="sr-only"> — your command center</span>
         </div>
 
-        {/* Pill nav — the role's visible tabs, active = rust-tint */}
+        {/* Pill nav — the role's visible tabs, active = rust-tint. Tabs can
+            also be 🪄-hidden (hiddenSections.nav, toggled in More ▾ — Adam:
+            "hide the tasks tab, I haven't been using it"). Projects is never
+            hideable — the app needs a home even against bad data. */}
         <nav className="nav-pills">
-          {TABS.filter((t) => (roleCfg.tabs as string[]).includes(t.key)).map((t) => (
+          {TABS.filter(
+            (t) =>
+              (roleCfg.tabs as string[]).includes(t.key) &&
+              (t.key === 'projects' || !(state.hiddenSections?.nav ?? []).includes(t.key)),
+          ).map((t) => (
             <button
               key={t.key}
               className={'nav-pill' + (tab === t.key ? ' act' : '')}
@@ -375,6 +391,30 @@ function App({ role = 'admin', me = '' }: { role?: AppRole; me?: string }) {
             <button className="menu-item" onClick={toggleDensity}>
               {density === 'comfortable' ? '⊟ Compact spacing' : '⊞ Comfortable spacing'}
             </button>
+            {/* 🪄 Top-tab visibility (admins) — same hiddenSections store as
+                the page customize modes, under the 'nav' key. Projects is
+                never listed (the app's home). A hidden ACTIVE tab bounces to
+                Projects via the effect in App below. */}
+            {roleCfg.canManageSettings && (
+              <>
+                <div className="menu-sep" aria-hidden />
+                {TABS.filter((t) => t.key !== 'projects' && (roleCfg.tabs as string[]).includes(t.key)).map(
+                  (t) => {
+                    const hidden = (state.hiddenSections?.nav ?? []).includes(t.key)
+                    return (
+                      <button
+                        key={t.key}
+                        className="menu-item"
+                        onClick={() => toggleHiddenSection('nav', t.key)}
+                        title={hidden ? `Put the ${t.label} tab back in the top bar` : `Remove the ${t.label} tab from the top bar (for everyone)`}
+                      >
+                        {hidden ? `👁 Show ${t.label} tab` : `🚫 Hide ${t.label} tab`}
+                      </button>
+                    )
+                  },
+                )}
+              </>
+            )}
             <div className="menu-item menu-item--wrap" onClick={(e) => e.stopPropagation()}>
               <ExportImport state={state} onImport={replaceState} />
             </div>

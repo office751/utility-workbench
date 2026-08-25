@@ -292,6 +292,6 @@ if (!NO_FOLDERS) {
 console.log(`
 Next steps for ${ADDRESS} (all in the app's 📖 Guide too):
    • Order the boundary survey (D.W. Hirst) and soil test (Rapid) — 🚚 Vendors has one-click emails.
-   • Permit handoff to Jennifer — Permit tab 📨 button.
+   • Submit the permit to the county (in-house) — track it on the Permit tab.
    • Electric application when ready — ⚡ ${electric || 'check the Electric tab banner'}.
 `)

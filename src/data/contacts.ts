@@ -63,24 +63,14 @@ export const MARION_PERMITTING = {
   address: '2710 E. Silver Springs Blvd, Ocala, FL 34470',
 }
 
-/**
- * Jennifer's Permitting Service — our permitting agent. Every NEW permit
- * (anything we haven't already started permitting ourselves) gets handed off
- * to her via the 📨 button on a project's Permit tab. $400 per residential
- * new home; she obtains whatever documents we don't send.
- */
-export const JENNIFER = {
-  name: "Jennifer's Permitting Service, LLC",
-  contact: 'Jennifer M. Privateer',
-  phone: '352-817-4988',
-  email: 'jenniferpermitting@yahoo.com',
-}
+// (Jennifer's Permitting Service was removed Aug 2026 — permitting is 100%
+//  in-house now; permits are submitted to the county ourselves.)
 
-/** William Stiles — CC'd on permit handoffs (Adam added him on the first
- *  real send, June 2026). */
+/** William Stiles — the licensed qualifier (CGC1533513); permit/utility
+ *  filings ride his name. */
 export const WILLIAM = { name: 'William Stiles', email: 'wfstiles@gmail.com' }
 
-/** Preferred soil technician — Jennifer routes soil tests through him. */
+/** Preferred soil technician for septic soil tests. */
 export const SOIL_TECH = {
   name: 'Craig Davis',
   company: 'Rapid Septic Consulting',
@@ -88,13 +78,11 @@ export const SOIL_TECH = {
 }
 
 /**
- * The standard subcontractor lineup that goes on every permit application.
- * This is the list Jennifer files with the county — when a sub changes,
- * edit it HERE and every future handoff email follows.
+ * The standard subcontractor lineup that goes on every permit application —
+ * when a sub changes, edit it HERE.
  *
  * `contactId` is the contact record ID in the Marion County permit portal
- * (EnerGov) — Jennifer attaches these existing contacts to new applications,
- * so the handoff email passes ID + email along with each name.
+ * (EnerGov) — attach these existing contacts to new applications.
  * (Georges Plumbing is intentionally NOT in this list — they're our septic
  * contractor above, not the permitted plumbing sub.)
  */

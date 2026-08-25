@@ -27,11 +27,12 @@ buttons paste as clickable file names.
 
 Systems already built — don't reinvent these, use them:
 
-- **Permits:** ALL new permits go to Jennifer's Permitting Service via the 📨
-  button on a project's Permit tab (template auto-fills subs with county
-  Contact IDs, septic + soil-tech routing via Craig Davis, CC's William;
-  Jennifer records the NOC; only job cost + financing are hand-filled). Docs
-  ride as download links pasted from the clipboard.
+- **Permits:** 100% IN-HOUSE (Aug 2026 — the Jennifer's Permitting Service
+  handoff was removed). We submit to the county ourselves; the standard sub
+  lineup with county Contact IDs lives in data/contacts.ts (PERMIT_SUBS),
+  soil tests via Craig Davis (Rapid Septic Consulting), filings ride
+  William's license. Track status on the Permit tab (✅ Mark issued,
+  extension/C.O. resolver, nightly portal scanner).
 - **Duke electric:** the ⚡ button on a DUKE project preps the payload (incl.
   auto-computed driving directions from the nearest main road); Claude drives
   my Chrome through builderportal.duke-energy.app per

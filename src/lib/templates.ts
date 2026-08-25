@@ -117,46 +117,9 @@ export const DEFAULT_DISCONNECT_WATER_BODY = [
 ].join('\n')
 // ^ No sign-off — the mail client appends Adam's real signature.
 
-/** Default wording for the permit-package handoff email to Jennifer's
- *  Permitting Service ("📨 Email Jennifer" on the Permit tab). Built from her
- *  own checklist (her email, May 13 2026): location, job cost, subs, AC/energy
- *  docs, septic, and cash-vs-lender for the Notice of Commencement.
- *
- *  Two things the app can't know — JOB COST and FINANCING — appear as loud
- *  [FILL IN — …] markers so they can't sneak out unfinished. Everything else
- *  ({{subs}}, {{docs}}, {{septic_line}}, site facts) fills itself in.
- *  Jennifer prepares and records the Notice of Commencement, so the financing
- *  line exists to hand her the lender details the NOC form needs.
- *
- *  NOTE: {{docs}} fills with its OWN header + content and changes shape with
- *  reality: a [PASTE HERE] marker when clickable links are on the clipboard,
- *  a plain name list when links couldn't be minted, a loud warning when no
- *  files are uploaded. Don't add a second header above it. */
-export const DEFAULT_PERMIT_HANDOFF_SUBJECT = '{{address}} — New Permit Package (Parcel {{parcel}})'
-export const DEFAULT_PERMIT_HANDOFF_BODY = [
-  'Hi Jennifer,',
-  '',
-  'We have a new project ready for permitting. Per your checklist:',
-  '',
-  '• Location: {{site}} (Parcel {{parcel}}) — model {{model}}, new single-family residence',
-  '• Job cost: [FILL IN — contract $ amount]',
-  '• Subcontractors:',
-  '{{subs}}',
-  '• Energy calcs: attached — this is a master-filed model',
-  '• Authorization form: attached (signed)',
-  '• Septic: {{septic_line}}',
-  '• Financing: [FILL IN — cash, or lender name & address] — please prepare and record the Notice of Commencement',
-  '',
-  '{{docs}}',
-  '',
-  'Let me know if you need anything else to get this submitted.',
-].join('\n')
-// ^ Wording matched to Adam's first real send (June 10 2026): no company
-//   prefix in the subject, the authorization-form bullet (it got forgotten
-//   once — never again), and the soil-test instruction rides inside
-//   {{septic_line}} for septic projects.
-// ^ No sign-off here on purpose: the mail client appends the real signature.
-//   Adding one in the template means deleting a duplicate from every draft.
+// (The permit-package handoff template to Jennifer's Permitting Service was
+//  removed Aug 2026 — permitting is 100% in-house now. Any saved override
+//  under 'permit:handoff' in the blob is simply never read again.)
 
 /** Default wording for the status report. The SUBJECT is the whole report's
  *  subject ({{date}}/{{count}}/{{scope}}); the BODY is a PER-PROJECT block

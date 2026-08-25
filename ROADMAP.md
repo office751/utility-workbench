@@ -174,8 +174,8 @@ medium ≈ 1–2 sessions.
       the safety net)* — **DONE June 27 2026** (audit pass 4). `src/lib/confirmSend.ts`
       shows a one-dialog checklist before the irreversible drafts fire:
       Batch Apply SECO/Duke ("right utility/office? attach signed load form +
-      site plan"; Duke keeps WO# in subject), Jennifer handoff ("paste the file
-      links over [PASTE HERE]"), meter-notify ("this email only LISTS the photos —
+      site plan"; Duke keeps WO# in subject), the permit handoff (feature since
+      removed — permitting went in-house Aug 2026), meter-notify ("this email only LISTS the photos —
       attach them yourself"). Plus ✓ Mark applied is now gated behind a confirm
       when the row still shows a ⚠ warning. DELIBERATELY NOT gated: routine
       vendor-order emails (fire many times a day; a mis-sent order is easily
@@ -370,7 +370,7 @@ automations ship INACTIVE pending the one-time steps in `automation/README.md`.
 - Auto-reminder to export a backup every N days
 - ~~**Real document storage for the permit tab**~~ — DONE: files live in the
   private Supabase `project-files` bucket (lib/files.ts), shareable via signed
-  ~1-year links from the 📂 Files box and the 📨 Jennifer permit handoff.
+  ~1-year links from the 📂 Files box.
 - ~~**Pretty link copy in the 📂 Files box share menu**~~ — DONE *(June
   2026)*: "📋 Copy link" copies rich text via `lib/richCopy.ts` — pasting
   into Mail/Word/Teams shows the clickable file name; plain fields still get
