@@ -25,6 +25,13 @@ const shareToken = /^#\/select\/([A-Za-z0-9-]{4,64})$/.exec(window.location.hash
 // eslint-disable-next-line react-refresh/only-export-components -- entry file, never hot-reloaded; the lazy() wrapper must live outside render
 const PublicSelect = lazy(() => import('./components/PublicSelect.tsx'))
 
+// The Monday.com "Runbook" item view (#/monday-runbook). It runs inside a
+// Monday iframe with Monday's own login, so it must bypass Root's auth gate
+// exactly like the share link does. See src/monday/.
+const isMondayRunbook = window.location.hash.startsWith('#/monday-runbook')
+// eslint-disable-next-line react-refresh/only-export-components -- entry file, same reason as above
+const MondayRunbook = lazy(() => import('./monday/MondayRunbook.tsx'))
+
 // Find the empty <div id="root"> in index.html and mount React there.
 // The "!" tells TypeScript "trust me, this element definitely exists".
 createRoot(document.getElementById('root')!).render(
@@ -32,7 +39,11 @@ createRoot(document.getElementById('root')!).render(
   // common React mistakes. It renders nothing visible and is automatically
   // stripped out of production builds.
   <StrictMode>
-    {shareToken ? (
+    {isMondayRunbook ? (
+      <Suspense fallback={null}>
+        <MondayRunbook />
+      </Suspense>
+    ) : shareToken ? (
       <Suspense fallback={null}>
         <PublicSelect token={shareToken} />
       </Suspense>

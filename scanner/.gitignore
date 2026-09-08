@@ -1,6 +1,7 @@
 # Never commit secrets or the logged-in browser session.
 node_modules/
 .env
+.env.*
 profile/
 backups/
 logs/

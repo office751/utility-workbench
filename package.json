@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.107.0",
+    "monday-sdk-js": "^0.5.5",
     "pdf-lib": "^1.17.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
