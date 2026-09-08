@@ -181,9 +181,11 @@ export async function loadHouse(itemId: number): Promise<{ house: House; steps: 
     if (!key) continue // a hand-made subitem, not one of ours
     const stageLabel = (sv[SUB.stage]?.text ?? '').trim()
     const stage = (Object.keys(STAGE_LABEL) as StageKey[]).find((k) => STAGE_LABEL[k] === stageLabel) ?? 'permit'
+    // Monday returns checked as true (boolean) on read but wants "true" (string) on write.
     let done = false
     try {
-      done = sv[SUB.done]?.value ? JSON.parse(sv[SUB.done].value as string).checked === 'true' : false
+      const c = sv[SUB.done]?.value ? (JSON.parse(sv[SUB.done].value as string) as { checked?: unknown }).checked : false
+      done = c === true || c === 'true'
     } catch {
       done = false
     }
