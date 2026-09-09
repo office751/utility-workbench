@@ -262,7 +262,7 @@ export function toLodestar(h: House): { p: Project; ps: ProjectState } {
 
 /** One template row, as read off the Runbook Template board. */
 export interface TemplateStep extends StepDef {
-  stage: StageKey
+  stage: StageKey | '' // '' = no stage set on the template row (flat list)
   order: number
   applies: string[] // 'Applies to' labels
   tip: string
@@ -286,8 +286,7 @@ export async function loadTemplate(): Promise<TemplateStep[]> {
       const key = (cv[TCOL.key]?.text ?? '').trim()
       if (!key) continue // a row without a Step Key can't be tracked — skipped
       const stageLabel = (cv[TCOL.stage]?.text ?? '').trim()
-      const stage = (Object.keys(STAGE_LABEL) as StageKey[]).find((k) => STAGE_LABEL[k] === stageLabel)
-      if (!stage) continue
+      const stage = (Object.keys(STAGE_LABEL) as StageKey[]).find((k) => STAGE_LABEL[k] === stageLabel) ?? ''
       const applies = (cv[TCOL.applies]?.text ?? '').split(',').map((x) => x.trim()).filter(Boolean)
       out.push({ id: key, label: it.name.trim(), stage, order: Number(cv[TCOL.order]?.text || 0) || 0, applies, tip: (cv[TCOL.tip]?.text ?? '').trim() })
     }
@@ -322,47 +321,44 @@ function codeTemplate(h: House): TemplateStep[] {
   ]
 }
 
-/** Which template steps this house gets, grouped by stage in order. */
-export function stagesFor(h: House, template: TemplateStep[]): Stage[] {
+/** Which template steps this house gets — ONE flat list in template order. */
+export function stepsFor(h: House, template: TemplateStep[]): TemplateStep[] {
   const rows = template.length ? template : codeTemplate(h)
   const prof = profileOf(h)
-  const applies = (t: TemplateStep) => !t.applies.length || t.applies.some((a) => prof.has(a))
-  return STAGE_ORDER.map((key) => ({ key, title: STAGE_TITLE[key], steps: rows.filter((t) => t.stage === key && applies(t)) }))
+  return rows.filter((t) => !t.applies.length || t.applies.some((a) => prof.has(a))).sort((a, b) => a.order - b.order)
+}
+
+/** Kept for callers that still think in stages (subitem Stage label, counters). */
+export function stagesFor(h: House, template: TemplateStep[]): Stage[] {
+  const steps = stepsFor(h, template)
+  return STAGE_ORDER.map((key) => ({ key, title: STAGE_TITLE[key], steps: steps.filter((t) => t.stage === key) }))
 }
 
 /** Template steps this house is missing (added to the template after its runbook started). */
-export function missingSteps(stages: Stage[], rows: StepRow[]): { stage: Stage; step: TemplateStep }[] {
+export function missingSteps(steps: TemplateStep[], rows: StepRow[]): TemplateStep[] {
   const have = new Set(rows.map((r) => r.key).filter(Boolean))
-  const out: { stage: Stage; step: TemplateStep }[] = []
-  for (const stage of stages) for (const step of stage.steps) if (!have.has(step.id)) out.push({ stage, step })
-  return out
+  return steps.filter((t) => !have.has(t.id))
 }
 
-/** Subitems that aren't in the template any more (or were added by hand) — still shown, still tickable. */
-export function extraRows(stages: Stage[], rows: StepRow[]): StepRow[] {
-  const keys = new Set(stages.flatMap((s) => s.steps.map((t) => t.id)))
+/** Subitems not in the template (removed from it, or added by hand) — still shown, still tickable. */
+export function extraRows(steps: TemplateStep[], rows: StepRow[]): StepRow[] {
+  const keys = new Set(steps.map((t) => t.id))
   return rows.filter((r) => !r.key || !keys.has(r.key))
 }
 
 export interface NextStep {
-  stage: Stage
   step: TemplateStep
   row: StepRow | undefined
 }
 
-/** The first unfinished step, walking stages in order. Closing only counts
- *  once the house is under contract (has a closing date) — before that the
- *  build stages are the work. */
-export function nextStep(h: House, stages: Stage[], rows: StepRow[]): NextStep | null {
-  const done = new Set(rows.filter((r) => r.done).map((r) => `${r.stage}:${r.key}`))
-  for (const stage of stages) {
-    if (stage.key === 'closing' && !h.closingDate) continue
-    for (const step of stage.steps) {
-      if (step.id === 'corrections') continue // optional aside, never "next"
-      if (!done.has(`${stage.key}:${step.id}`)) {
-        return { stage, step, row: rows.find((r) => r.stage === stage.key && r.key === step.id) }
-      }
-    }
+/** The first unticked step from the top. Closing steps wait until the house
+ *  has a Closing Date; the optional "corrections" step is never "next". */
+export function nextStep(h: House, steps: TemplateStep[], rows: StepRow[]): NextStep | null {
+  const done = new Set(rows.filter((r) => r.done).map((r) => r.key))
+  for (const step of steps) {
+    if (step.stage === 'closing' && !h.closingDate) continue
+    if (step.id === 'corrections') continue
+    if (!done.has(step.id)) return { step, row: rows.find((r) => r.key === step.id) }
   }
   return null
 }
@@ -382,7 +378,7 @@ function mailto(to: string, subject: string, body: string, cc = OFFICE_CC): stri
 }
 const site = (h: House) => `${h.name}, ${h.city}, FL ${h.zip}`
 
-export function actionsFor(h: House, stage: StageKey, stepId: string): Action[] {
+export function actionsFor(h: House, stage: StageKey | '', stepId: string): Action[] {
   const { p, ps } = toLodestar(h)
   const u = utilityOf(h)
   const phone = UTILITY_PHONES[u]
@@ -490,10 +486,11 @@ export function routineFor(h: House): Routine[] {
 
 /* ---------------- Writes ---------------- */
 
-/** Create subitems for the given template steps (Start runbook = all; Sync = the missing ones). */
-export async function addSteps(h: House, steps: { stage: Stage; step: TemplateStep }[]): Promise<void> {
-  for (const { stage, step } of steps) {
-    const vals = { [SUB.stage]: { label: STAGE_LABEL[stage.key] }, [SUB.key]: step.id, [SUB.order]: String(step.order) }
+/** Create subitems for the given template steps (Start runbook = all; auto-sync = the missing ones). */
+export async function addSteps(h: House, steps: TemplateStep[]): Promise<void> {
+  for (const step of steps) {
+    const vals: Record<string, unknown> = { [SUB.key]: step.id, [SUB.order]: String(step.order) }
+    if (step.stage) vals[SUB.stage] = { label: STAGE_LABEL[step.stage] }
     await api(`mutation ($p: ID!, $n: String!, $v: JSON!) { create_subitem(parent_item_id: $p, item_name: $n, column_values: $v) { id } }`, {
       p: String(h.id),
       n: step.label,
@@ -503,8 +500,8 @@ export async function addSteps(h: House, steps: { stage: Stage; step: TemplateSt
 }
 
 /** Start runbook = add every applicable template step. */
-export async function startRunbook(h: House, stages: Stage[]): Promise<void> {
-  await addSteps(h, stages.flatMap((stage) => stage.steps.map((step) => ({ stage, step }))))
+export async function startRunbook(h: House, steps: TemplateStep[]): Promise<void> {
+  await addSteps(h, steps)
 }
 
 /** Tick / untick one step (Done + Done On). */
