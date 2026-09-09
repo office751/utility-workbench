@@ -54,6 +54,16 @@ export async function getItemId(): Promise<number | null> {
 export async function api<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
   const r = (await monday.api(query, { variables })) as { data?: T; errors?: { message: string; extensions?: unknown }[]; error_message?: string }
   if (r.error_message) throw new Error(r.error_message)
-  if (r.errors?.length) throw new Error(r.errors.map((e) => e.message + (e.extensions ? ' ' + JSON.stringify(e.extensions) : '')).join('; '))
+  if (r.errors?.length) {
+    // Monday's daily API budget is account-wide; when it's spent, every call fails
+    // until the reset. Say so plainly instead of the generic "validation errors".
+    const limit = r.errors.find((e) => /DAILY_LIMIT|RATE_LIMIT|limit exceeded/i.test(e.message + JSON.stringify(e.extensions ?? {})))
+    if (limit) {
+      const secs = Number((limit.extensions as { retry_in_seconds?: number } | undefined)?.retry_in_seconds ?? 0)
+      const when = secs ? ` Try again after ${new Date(Date.now() + secs * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.` : ''
+      throw new Error(`Monday's daily API limit for this account is used up for today, so the Runbook can't load or save.${when}`)
+    }
+    throw new Error(r.errors.map((e) => e.message + (e.extensions ? ' ' + JSON.stringify(e.extensions) : '')).join('; '))
+  }
   return r.data as T
 }
