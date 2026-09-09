@@ -22,6 +22,10 @@ import { api } from './mondayClient'
 
 export const CJL_BOARD_ID = 18429393869
 export const SUBITEM_BOARD_ID = 18429428473
+/** The editable "Runbook Template" board — one item per step (Sep 2026). */
+export const TEMPLATE_BOARD_ID = 18430320313
+export const TEMPLATE_BOARD_URL = `https://the-network-empire.monday.com/boards/${TEMPLATE_BOARD_ID}`
+const TCOL = { stage: 'color_mm71eac2', order: 'numeric_mm71jmpr', applies: 'dropdown_mm71c4gw', tip: 'long_text_mm71yc3e', key: 'text_mm71pvdw' } as const
 export const ORDERS_BOARD_URL = 'https://the-network-empire.monday.com/boards/18430202808'
 export const LODESTAR_URL = 'https://utility-workbench.vercel.app'
 const ENERGOV_HOME = 'https://selfservice.marionfl.org/energov_prod/selfservice#/home'
@@ -114,7 +118,8 @@ export interface House {
 export interface StepRow {
   subitemId: number
   stage: StageKey
-  key: string
+  key: string // '' for a hand-added subitem (no Step Key)
+  name: string
   done: boolean
   doneOn: string
 }
@@ -177,8 +182,7 @@ export async function loadHouse(itemId: number): Promise<{ house: House; steps: 
   const steps: StepRow[] = []
   for (const s of it.subitems ?? []) {
     const sv = Object.fromEntries(s.column_values.map((c) => [c.id, c]))
-    const key = (sv[SUB.key]?.text ?? '').trim()
-    if (!key) continue // a hand-made subitem, not one of ours
+    const key = (sv[SUB.key]?.text ?? '').trim() // '' = a hand-added step, kept as an "extra"
     const stageLabel = (sv[SUB.stage]?.text ?? '').trim()
     const stage = (Object.keys(STAGE_LABEL) as StageKey[]).find((k) => STAGE_LABEL[k] === stageLabel) ?? 'permit'
     // Monday returns checked as true (boolean) on read but wants "true" (string) on write.
@@ -189,7 +193,7 @@ export async function loadHouse(itemId: number): Promise<{ house: House; steps: 
     } catch {
       done = false
     }
-    steps.push({ subitemId: Number(s.id), stage, key, done, doneOn: (sv[SUB.doneOn]?.text ?? '').trim() })
+    steps.push({ subitemId: Number(s.id), stage, key, name: s.name, done, doneOn: (sv[SUB.doneOn]?.text ?? '').trim() })
   }
   return { house, steps }
 }
@@ -256,26 +260,93 @@ export function toLodestar(h: House): { p: Project; ps: ProjectState } {
 
 /* ---------------- The template: which steps this house gets ---------------- */
 
+/** One template row, as read off the Runbook Template board. */
+export interface TemplateStep extends StepDef {
+  stage: StageKey
+  order: number
+  applies: string[] // 'Applies to' labels
+  tip: string
+}
+
 export interface Stage {
   key: StageKey
   title: string
-  steps: StepDef[]
+  steps: TemplateStep[]
 }
 
-export function stagesFor(h: House): Stage[] {
+type TemplateQ = { boards: { items_page: { items: { id: string; name: string; column_values: ColVal[] }[] } }[] }
+
+/** Read the template board. Empty array = board unreachable/empty → caller falls back to code. */
+export async function loadTemplate(): Promise<TemplateStep[]> {
+  try {
+    const d = await api<TemplateQ>(`{ boards(ids: [${TEMPLATE_BOARD_ID}]) { items_page(limit: 200) { items { id name column_values { id text value } } } } }`)
+    const out: TemplateStep[] = []
+    for (const it of d.boards[0]?.items_page.items ?? []) {
+      const cv = Object.fromEntries(it.column_values.map((c) => [c.id, c]))
+      const key = (cv[TCOL.key]?.text ?? '').trim()
+      if (!key) continue // a row without a Step Key can't be tracked — skipped
+      const stageLabel = (cv[TCOL.stage]?.text ?? '').trim()
+      const stage = (Object.keys(STAGE_LABEL) as StageKey[]).find((k) => STAGE_LABEL[k] === stageLabel)
+      if (!stage) continue
+      const applies = (cv[TCOL.applies]?.text ?? '').split(',').map((x) => x.trim()).filter(Boolean)
+      out.push({ id: key, label: it.name.trim(), stage, order: Number(cv[TCOL.order]?.text || 0) || 0, applies, tip: (cv[TCOL.tip]?.text ?? '').trim() })
+    }
+    return out.sort((a, b) => a.order - b.order)
+  } catch {
+    return []
+  }
+}
+
+/** The 'Applies to' labels a house matches (plus 'All lots'). */
+export function profileOf(h: House): Set<string> {
+  const set = new Set<string>(['All lots'])
+  const w = waterSourceOf(h)
+  if (w === 'Well') set.add('Well')
+  if (w === 'City') set.add('City water')
+  if (w === 'CityWM') { set.add('City water'); set.add('City water + main extension') }
+  if (septicSourceOf(h) === 'Sewer') set.add('Sewer')
+  else { set.add('Septic'); if (septicSystemOf(h) === 'INRB') set.add('Septic — INRB only') }
+  return set
+}
+
+/** Code fallback: Lodestar's built-in lists, shaped like template rows. */
+function codeTemplate(h: House): TemplateStep[] {
   const { p, ps } = toLodestar(h)
+  const mk = (stage: StageKey, steps: StepDef[]): TemplateStep[] => steps.map((s, i) => ({ ...s, stage, order: i, applies: ['All lots'], tip: '' }))
   return [
-    { key: 'permit', title: STAGE_TITLE.permit, steps: permitSteps() },
-    { key: 'electric', title: STAGE_TITLE.electric, steps: electricSteps() },
-    { key: 'water', title: STAGE_TITLE.water, steps: waterStepsFor(p, ps) },
-    { key: 'septic', title: STAGE_TITLE.septic, steps: septicStepsFor(ps) },
-    { key: 'closing', title: STAGE_TITLE.closing, steps: closingSteps() },
+    ...mk('permit', permitSteps()),
+    ...mk('electric', electricSteps()),
+    ...mk('water', waterStepsFor(p, ps)),
+    ...mk('septic', septicStepsFor(ps)),
+    ...mk('closing', closingSteps()),
   ]
+}
+
+/** Which template steps this house gets, grouped by stage in order. */
+export function stagesFor(h: House, template: TemplateStep[]): Stage[] {
+  const rows = template.length ? template : codeTemplate(h)
+  const prof = profileOf(h)
+  const applies = (t: TemplateStep) => !t.applies.length || t.applies.some((a) => prof.has(a))
+  return STAGE_ORDER.map((key) => ({ key, title: STAGE_TITLE[key], steps: rows.filter((t) => t.stage === key && applies(t)) }))
+}
+
+/** Template steps this house is missing (added to the template after its runbook started). */
+export function missingSteps(stages: Stage[], rows: StepRow[]): { stage: Stage; step: TemplateStep }[] {
+  const have = new Set(rows.map((r) => r.key).filter(Boolean))
+  const out: { stage: Stage; step: TemplateStep }[] = []
+  for (const stage of stages) for (const step of stage.steps) if (!have.has(step.id)) out.push({ stage, step })
+  return out
+}
+
+/** Subitems that aren't in the template any more (or were added by hand) — still shown, still tickable. */
+export function extraRows(stages: Stage[], rows: StepRow[]): StepRow[] {
+  const keys = new Set(stages.flatMap((s) => s.steps.map((t) => t.id)))
+  return rows.filter((r) => !r.key || !keys.has(r.key))
 }
 
 export interface NextStep {
   stage: Stage
-  step: StepDef
+  step: TemplateStep
   row: StepRow | undefined
 }
 
@@ -419,19 +490,21 @@ export function routineFor(h: House): Routine[] {
 
 /* ---------------- Writes ---------------- */
 
-/** Create the checklist subitems for a house that has none yet. */
-export async function startRunbook(h: House, stages: Stage[]): Promise<void> {
-  let order = 0
-  for (const stage of stages) {
-    for (const step of stage.steps) {
-      order++
-      const vals = { [SUB.stage]: { label: STAGE_LABEL[stage.key] }, [SUB.key]: step.id, [SUB.order]: String(order) }
-      await api(
-        `mutation ($p: ID!, $n: String!, $v: JSON!) { create_subitem(parent_item_id: $p, item_name: $n, column_values: $v) { id } }`,
-        { p: String(h.id), n: step.label, v: JSON.stringify(vals) },
-      )
-    }
+/** Create subitems for the given template steps (Start runbook = all; Sync = the missing ones). */
+export async function addSteps(h: House, steps: { stage: Stage; step: TemplateStep }[]): Promise<void> {
+  for (const { stage, step } of steps) {
+    const vals = { [SUB.stage]: { label: STAGE_LABEL[stage.key] }, [SUB.key]: step.id, [SUB.order]: String(step.order) }
+    await api(`mutation ($p: ID!, $n: String!, $v: JSON!) { create_subitem(parent_item_id: $p, item_name: $n, column_values: $v) { id } }`, {
+      p: String(h.id),
+      n: step.label,
+      v: JSON.stringify(vals),
+    })
   }
+}
+
+/** Start runbook = add every applicable template step. */
+export async function startRunbook(h: House, stages: Stage[]): Promise<void> {
+  await addSteps(h, stages.flatMap((stage) => stage.steps.map((step) => ({ stage, step }))))
 }
 
 /** Tick / untick one step (Done + Done On). */

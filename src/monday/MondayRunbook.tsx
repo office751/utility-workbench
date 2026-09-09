@@ -9,17 +9,23 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   actionsFor,
+  addSteps,
+  extraRows,
   loadHouse,
+  loadTemplate,
   markPermitIssued,
+  missingSteps,
   nextStep,
   routineFor,
   setStepDone,
   stagesFor,
   startRunbook,
+  TEMPLATE_BOARD_URL,
   type Action,
   type House,
   type Stage,
   type StepRow,
+  type TemplateStep,
 } from './runbook'
 import { getItemId, inIframe } from './mondayClient'
 
@@ -53,15 +59,17 @@ export default function MondayRunbook() {
   const [itemId, setItemId] = useState<number | null>(null)
   const [house, setHouse] = useState<House | null>(null)
   const [rows, setRows] = useState<StepRow[]>([])
+  const [template, setTemplate] = useState<TemplateStep[]>([])
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState('')
   const [showAll, setShowAll] = useState(false)
 
   const reload = useCallback(async (id: number) => {
     try {
-      const r = await loadHouse(id)
+      const [r, t] = await Promise.all([loadHouse(id), loadTemplate()])
       setHouse(r.house)
       setRows(r.steps)
+      setTemplate(t)
       setErr('')
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e))
@@ -79,7 +87,9 @@ export default function MondayRunbook() {
     })
   }, [reload])
 
-  const stages: Stage[] = useMemo(() => (house ? stagesFor(house) : []), [house])
+  const stages: Stage[] = useMemo(() => (house ? stagesFor(house, template) : []), [house, template])
+  const missing = useMemo(() => missingSteps(stages, rows), [stages, rows])
+  const extras = useMemo(() => extraRows(stages, rows), [stages, rows])
   const next = useMemo(() => (house ? nextStep(house, stages, rows) : null), [house, stages, rows])
   const routine = useMemo(() => (house ? routineFor(house) : []), [house])
   const started = rows.length > 0
@@ -132,6 +142,7 @@ export default function MondayRunbook() {
             <div className="card next">
               <div className="eyebrow">Next step · {next.stage.title}</div>
               <div className="big">{next.step.label}</div>
+              {next.step.tip && <div className="note" style={{ marginTop: 0, marginBottom: 10 }}>{next.step.tip}</div>}
               <ActionButtons actions={actionsFor(house, next.stage.key, next.step.id)} onAction={onAction} busy={busy} />
               {next.row && (
                 <div style={{ marginTop: 12 }}>
@@ -167,11 +178,21 @@ export default function MondayRunbook() {
 
           {started && (
             <div className="card">
-              <div className="eyebrow" style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div className="eyebrow" style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                 <span>Checklist</span>
-                <button className="mini" onClick={() => setShowAll((v) => !v)}>
-                  {showAll ? 'hide finished' : 'show finished'}
-                </button>
+                <span>
+                  {missing.length > 0 && (
+                    <button className="mini" disabled={!!busy} onClick={() => void run('sync', () => addSteps(house, missing))}>
+                      {busy === 'sync' ? 'adding…' : `add ${missing.length} new template step${missing.length === 1 ? '' : 's'}`}
+                    </button>
+                  )}
+                  <a className="mini" href={TEMPLATE_BOARD_URL} target="_blank" rel="noreferrer">
+                    edit template
+                  </a>
+                  <button className="mini" onClick={() => setShowAll((v) => !v)}>
+                    {showAll ? 'hide finished' : 'show finished'}
+                  </button>
+                </span>
               </div>
               {stages.map((stage) => {
                 const total = stage.steps.length
@@ -201,6 +222,7 @@ export default function MondayRunbook() {
                           />
                           <div className="lbl">
                             {s.label}
+                            {s.tip && !row?.done && <span className="when" title={s.tip}> · {s.tip}</span>}
                             {row?.done && row.doneOn && <span className="when"> · {row.doneOn}</span>}
                             {!row?.done && acts.length > 0 && !isNext && (
                               <span>
@@ -224,6 +246,28 @@ export default function MondayRunbook() {
                   </div>
                 )
               })}
+              {extras.filter((r) => showAll || !r.done).length > 0 && (
+                <div className="stage">
+                  <h3>
+                    <span>Other steps for this house</span>
+                    <span className="muted">{extras.filter((r) => r.done).length}/{extras.length}</span>
+                  </h3>
+                  {extras
+                    .filter((r) => showAll || !r.done)
+                    .map((r) => (
+                      <div className={`step${r.done ? ' done' : ''}`} key={r.subitemId}>
+                        <input type="checkbox" checked={r.done} disabled={!!busy} onChange={(e) => void run('tick', () => setStepDone(r, e.target.checked))} />
+                        <div className="lbl">
+                          {r.name}
+                          {r.done && r.doneOn && <span className="when"> · {r.doneOn}</span>}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+              <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>
+                Add a one-off step for this house by adding a subitem to it in Monday. Change the steps every house gets on the Runbook Template board.
+              </div>
             </div>
           )}
         </>
