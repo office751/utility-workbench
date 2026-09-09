@@ -11,7 +11,9 @@ const S = process.argv[2]
 const created = JSON.parse(readFileSync(`${S}/monday-created.json`, 'utf8'))
 const src = readFileSync(new URL('../src/data/lifecycles.ts', import.meta.url), 'utf8')
 const arr = (name) => {
-  const m = src.match(new RegExp(`export const ${name}[^=]*=\\s*\\[([\\s\\S]*?)\\n\\]`))
+  // Match up to the FIRST closing bracket that ends a line — the one-line WELL list
+  // must not swallow the multi-line CITY list that follows it (a real bug on first seed).
+  const m = src.match(new RegExp(`export const ${name}[^=]*=\\s*\\[([\\s\\S]*?)\\](?=\\s*(?:\\n|$))`))
   const out = []
   for (const x of (m?.[1] || '').matchAll(/\{\s*id:\s*'([^']+)',\s*label:\s*'((?:[^'\\]|\\.)*)'(?:,\s*wmOnly:\s*true)?\s*\}/g)) out.push({ id: x[1], label: x[2].replace(/\\'/g, "'"), wm: x[0].includes('wmOnly') })
   return out
