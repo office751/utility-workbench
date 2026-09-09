@@ -16,10 +16,14 @@ import mondaySdk from 'monday-sdk-js'
 /** The handful of SDK calls we use; the package's own typings lag its API. */
 interface MondaySdkLike {
   setToken(token: string): void
+  setApiVersion(version: string): void
   get(kind: string, params?: Record<string, unknown>): Promise<unknown>
   api(query: string, options?: { variables?: Record<string, unknown> }): Promise<unknown>
 }
 export const monday = mondaySdk() as unknown as MondaySdkLike
+// Pin the API version: the embedded SDK defaults to an older schema where our
+// queries (ID-typed item ids, BoardRelationValue.linked_item_ids) don't validate.
+monday.setApiVersion('2025-01')
 
 /** Are we embedded inside Monday (iframe) or opened directly in a tab? */
 export function inIframe(): boolean {
@@ -48,7 +52,8 @@ export async function getItemId(): Promise<number | null> {
 
 /** Run one GraphQL query/mutation; throws on GraphQL errors so callers can't miss them. */
 export async function api<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
-  const r = (await monday.api(query, { variables })) as { data?: T; errors?: { message: string }[] }
-  if (r.errors?.length) throw new Error(r.errors.map((e) => e.message).join('; '))
+  const r = (await monday.api(query, { variables })) as { data?: T; errors?: { message: string; extensions?: unknown }[]; error_message?: string }
+  if (r.error_message) throw new Error(r.error_message)
+  if (r.errors?.length) throw new Error(r.errors.map((e) => e.message + (e.extensions ? ' ' + JSON.stringify(e.extensions) : '')).join('; '))
   return r.data as T
 }
