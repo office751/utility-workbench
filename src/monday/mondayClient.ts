@@ -8,9 +8,10 @@
  * item id from the URL: #/monday-runbook?item=12345.
  */
 // The package's shipped .ts typings don't compile under our strict tsconfig
-// (verbatimModuleSyntax / erasableSyntaxOnly), so import the built bundle and
-// type the few calls we use ourselves (see monday-sdk.d.ts).
-import mondaySdk from 'monday-sdk-js/dist/main.js'
+// (verbatimModuleSyntax / erasableSyntaxOnly), so tsconfig.app.json maps
+// 'monday-sdk-js' to our own tiny typing (monday-sdk.d.ts) for type-checking;
+// Vite still bundles the real package.
+import mondaySdk from 'monday-sdk-js'
 
 /** The handful of SDK calls we use; the package's own typings lag its API. */
 interface MondaySdkLike {

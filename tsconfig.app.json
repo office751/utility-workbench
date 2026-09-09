@@ -9,6 +9,8 @@
 
     /* Bundler mode */
     "moduleResolution": "bundler",
+    /* monday-sdk-js ships .ts typings that break verbatimModuleSyntax; type it ourselves */
+    "paths": { "monday-sdk-js": ["./src/monday/monday-sdk.d.ts"] },
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
