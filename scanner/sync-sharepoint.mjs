@@ -151,6 +151,17 @@ async function main() {
     const soilDone = !!ps.steps?.septic?.seval?.done // septic "Site / soil evaluation" step
     const orders = ps.orders || []
     const ordered = (cat) => orders.some((o) => o.category === cat && o.status && o.status !== 'toOrder')
+    // The "Electric Type?" cell now carries the field-verified service side
+    // next to OH/UG — "OH : LH" (see scanner/service-side.mjs). Split it so we
+    // compare only the OH/UG half and never clobber the side Pam recorded.
+    const parseTypeSide = (cell) => {
+      const v = String(cell ?? '').trim()
+      if (!v) return { type: '', side: '' }
+      const m = v.match(/^(OH|UG)\s*:\s*(.+)$/i)
+      if (m) return { type: m[1].toUpperCase(), side: m[2].trim() }
+      if (/^(OH|UG)$/i.test(v)) return { type: v.toUpperCase(), side: '' }
+      return { type: '', side: v } // a bare side, type not known yet
+    }
     const permitIssued =
       p.listStatus === 'CO' ? 'C.O.' : p.listStatus === 'Hold' ? 'On Hold' : ps.steps?.permit?.issued?.done ? 'Issued' : ''
     const rec = {
@@ -175,7 +186,19 @@ async function main() {
         'Truss & Framing Pack Ordered?': { value: ordered('Trusses') || ordered('Framing package') ? 'Yes' : '', ph: (v) => !v },
         'Electric Co.': { value: utility, ph: (v) => !v },
         Engineer: { value: engineer, ph: (v) => !v },
-        'Electric Type?': { value: serviceType, ph: (v) => !v },
+        // fill a blank cell, and also a cell holding only a side ("LH") — then
+        // the write keeps the side and just adds the type: "LH" -> "UG : LH".
+        // A cell whose type already matches is left alone; a real OH-vs-UG
+        // disagreement still reports as a conflict.
+        'Electric Type?': {
+          value: serviceType,
+          ph: (v) => !parseTypeSide(v).type,
+          norm: (s) => parseTypeSide(s).type.toLowerCase(),
+          merge: (listVal, appVal) => {
+            const side = parseTypeSide(listVal).side
+            return side ? `${appVal} : ${side}` : appVal
+          },
+        },
         // only flip a "Not Applied"/blank cell to "Applied <real date>"
         'Electric - Current Stage': {
           value: applied && appliedDate ? `Applied ${appliedDate}` : '',
@@ -219,7 +242,10 @@ async function main() {
       const listVal = f[iname]
       const eq = spec.norm ? spec.norm(listVal) === spec.norm(spec.value) : same(listVal, spec.value)
       if (eq) continue // already matches
-      if (spec.ph(listVal)) fills.push({ itemId: it.id, label, col, iname, from: listVal ?? '', to: spec.value })
+      if (spec.ph(listVal)) {
+        const to = spec.merge ? spec.merge(listVal, spec.value) : spec.value
+        fills.push({ itemId: it.id, label, col, iname, from: listVal ?? '', to })
+      }
       else conflicts.push({ label, col, listVal, appVal: spec.value })
     }
   }
