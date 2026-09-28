@@ -127,6 +127,16 @@ files (`npx vitest run`, ~350 ms).
   on* → done. Clay lots short-circuit (`clay` — phone-only utility). NOTE: the
   default brain deliberately does NOT consult `fieldsched`/`fielddone` — field
   work is bundled into "awaiting meter set".
+- **Duke walk** (Sep 2026, `DUKE_ELECTRIC_STEPS`, list key `electric:DUKE` —
+  separate from the generic `electric` override): Duke's 3-phase Customer
+  Obligation Checklist. verify → apply → *await engineer* → confirm meter-can
+  side → easement/damage-liability paperwork → CIAC paid → *await rough
+  plumbing* (`duke-rough`, a WAIT) → **meter can up → tell engineer**
+  (`canup`, sent at can install, NOT after green tag) → *await line work* →
+  call inspection in to the Builder Hotline (`meternotify`) → *await meter*
+  → *await power*. Ours: `meterside`, `dukepaper`, `deposit`, `canup`,
+  `meternotify`. Migration: any house with `fieldsched` or later done gets
+  `meterside`/`dukepaper`/`canup` inferred done (no false to-dos).
 - Ambiguous-territory subdivisions (`VERIFY_RE`: Silver Springs, Marion Oaks,
   Ocala Waterway, Coral Ridge, Hidden Lake, Woods & Lakes) — or any lot with
   no utility set — demand `verify` first. Confirming = setting `ps.electricCo`

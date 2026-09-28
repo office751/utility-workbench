@@ -11,8 +11,8 @@
  */
 import type { Project, ProjectState, SepticSource, SepticSystem, WaterSource } from '../types'
 import type { StepDef } from '../data/lifecycles'
-import { closingSteps, electricSteps, permitSteps, septicStepsFor, waterStepsFor } from '../data/lifecycles'
-import { applicationDraft, meterNotifyDraft } from '../lib/loadForm'
+import { DUKE_BUILDER_HOTLINE, closingSteps, electricSteps, permitSteps, septicStepsFor, waterStepsFor } from '../data/lifecycles'
+import { applicationDraft, canUpDraft, meterNotifyDraft } from '../lib/loadForm'
 import { dukeWebPayloadText, DUKE_PORTAL_URL } from '../lib/dukeWebApply'
 import { ELECTRIC_DISCONNECT, MCU_WATER_DISCONNECT, waterDisconnectDraft } from '../data/disconnect'
 import { GEORGES, MARION_PERMITTING, MCU, OFFICE_CC, SECO_EMAIL, SOIL_TECH, UTILITY_PHONES } from '../data/contacts'
@@ -314,7 +314,7 @@ function codeTemplate(h: House): TemplateStep[] {
   const mk = (stage: StageKey, steps: StepDef[]): TemplateStep[] => steps.map((s, i) => ({ ...s, stage, order: i, applies: ['All lots'], tip: '' }))
   return [
     ...mk('permit', permitSteps()),
-    ...mk('electric', electricSteps()),
+    ...mk('electric', electricSteps(p, ps)),
     ...mk('water', waterStepsFor(p, ps)),
     ...mk('septic', septicStepsFor(ps)),
     ...mk('closing', closingSteps()),
@@ -401,9 +401,18 @@ export function actionsFor(h: House, stage: StageKey | '', stepId: string): Acti
         out.push({ label: 'Open Duke builder portal', href: DUKE_PORTAL_URL, copy: dukeWebPayloadText(p, ps), note: 'Form answers copied to your clipboard when you click.' })
       }
     }
+    if (stepId === 'canup') {
+      // Duke only: the early "meter can is up" notice (see lib/loadForm canUpDraft).
+      const d = canUpDraft(p, ps)
+      if (d) out.push({ label: 'Draft "meter can is up" email', href: d.mailto, note: 'Fill in which side the can is on; attach can + path photos.' })
+    }
     if (stepId === 'meternotify') {
-      const d = meterNotifyDraft(p, ps)
-      if (d) out.push({ label: `Draft "ready for meter" email`, href: d.mailto, note: 'Attach the photos: green tag, downpipe, sweep, straps, clear path.' })
+      if (u === 'DUKE') {
+        out.push({ label: `Call Duke Builder Hotline ${DUKE_BUILDER_HOTLINE}`, href: `tel:+1${DUKE_BUILDER_HOTLINE.replace(/\D/g, '').slice(1)}`, note: 'Call the passed inspection in — the county does not always.' })
+      } else {
+        const d = meterNotifyDraft(p, ps)
+        if (d) out.push({ label: `Draft "ready for meter" email`, href: d.mailto, note: 'Attach the photos: green tag, downpipe, sweep, straps, clear path.' })
+      }
     }
     if (['deposit', 'engineer', 'rough', 'fieldsched', 'fielddone', 'meter', 'power'].includes(stepId)) {
       if (u === 'SECO') out.push({ label: 'Email SECO new construction', href: mailto(SECO_EMAIL, `${site(h)} — ${h.permit ? 'Permit ' + h.permit : 'new service'}`, '') })

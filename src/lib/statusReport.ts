@@ -80,7 +80,7 @@ export function projectStatusVars(
     utility: utilityOf(p, ps) || '—',
     water_source: waterSourceOf(p, ps) || '—',
     septic_type: src === 'Sewer' ? 'Sewer' : sys ? `Septic (${sys})` : 'Septic',
-    electric: line(isElectricDone(ps), nextElectricAction(p, ps).label),
+    electric: line(isElectricDone(ps, p), nextElectricAction(p, ps).label),
     water: line(isWaterDone(p, ps), nextWaterAction(p, ps).label),
     septic: line(isSepticDone(ps), nextSepticAction(ps).label),
     permit_status: line(isPermitDone(ps), nextPermitAction(ps).label),

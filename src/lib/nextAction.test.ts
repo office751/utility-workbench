@@ -93,6 +93,55 @@ describe('nextElectricAction — the electric walk', () => {
   })
 })
 
+describe('nextElectricAction — the Duke walk (Customer Obligation Checklist)', () => {
+  const duke = makeProject({ electricCo: 'DUKE' })
+  const walk = (ids: string[]) => {
+    const ps = emptyProjectState()
+    for (const id of ids) ps.steps.electric[id] = { done: true }
+    return nextElectricAction(duke, ps)
+  }
+  const pre = ['verify', 'submit', 'engineer']
+
+  it('after the engineer, the Phase-2 gates are OUR moves, in order', () => {
+    expect(walk(pre).key).toBe('meterside')
+    expect(walk([...pre, 'meterside']).key).toBe('dukepaper')
+    expect(walk([...pre, 'meterside', 'dukepaper']).key).toBe('deposit')
+    for (const k of ['meterside', 'dukepaper', 'deposit']) expect(OUR_KEYS(k)).toBe(true)
+  })
+
+  it('rough plumbing is a WAIT on Duke houses; "can is up" is ours', () => {
+    const phase2 = [...pre, 'meterside', 'dukepaper', 'deposit']
+    expect(walk(phase2).key).toBe('duke-rough')
+    expect(OUR_KEYS('duke-rough')).toBe(false)
+    expect(walk([...phase2, 'rough']).key).toBe('canup')
+    expect(OUR_KEYS('canup')).toBe(true)
+  })
+
+  it('after line work: call the inspection in to the Builder Hotline', () => {
+    const all = [...pre, 'meterside', 'dukepaper', 'deposit', 'rough', 'canup', 'fieldsched', 'fielddone']
+    const n = walk(all)
+    expect(n.key).toBe('meternotify')
+    expect(n.label).toMatch(/1-866-372-4663/)
+    expect(walk([...all, 'meternotify', 'meter', 'power']).key).toBe('done')
+  })
+
+  it('SECO houses keep the generic walk (no Duke gates)', () => {
+    const ps = emptyProjectState()
+    for (const id of pre) ps.steps.electric[id] = { done: true }
+    ps.steps.electric['deposit'] = { done: true }
+    expect(nextElectricAction(makeProject(), ps).key).toBe('rough')
+  })
+
+  it('a customized GENERIC electric list does not hijack Duke houses', () => {
+    applyStepOverrides({ electric: [{ id: 'verify', label: 'v' }, { id: 'power', label: 'p' }] })
+    expect(walk(pre).key).toBe('meterside')
+  })
+
+  function OUR_KEYS(key: string) {
+    return isOurCourtKey('electric', key, duke, emptyProjectState())
+  }
+})
+
 describe('needsWaterVerify — the Water tab county-GIS check gate', () => {
   it('CITY-WATER lots only: wells and unset sources never show the check', () => {
     // Adam's rule (July 2026): a well lot has no water company to verify, and

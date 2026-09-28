@@ -12,12 +12,14 @@ import type { Project, ProjectState, TemplateOverride } from '../types'
 import { specFor } from '../data/models'
 import { legalFor, LEGAL_PLACEHOLDER } from '../data/legal'
 import { COMPANY, DUKE_EMAIL_INVERNESS, DUKE_EMAIL_OCALA, OFFICE_CC, SECO_EMAIL, SECO_ENGINEERING } from '../data/contacts'
-import { septicSourceOf, serviceTypeOf, utilityOf } from './nextAction'
+import { engineerOf, septicSourceOf, serviceTypeOf, utilityOf } from './nextAction'
 import {
   DEFAULT_APPLY_DUKE_BODY,
   DEFAULT_APPLY_DUKE_SUBJECT,
   DEFAULT_APPLY_SECO_BODY,
   DEFAULT_APPLY_SECO_SUBJECT,
+  DEFAULT_CANUP_BODY,
+  DEFAULT_CANUP_SUBJECT,
   DEFAULT_METERNOTIFY_BODY,
   DEFAULT_METERNOTIFY_SUBJECT,
   effectiveTemplate,
@@ -166,6 +168,21 @@ export function applicationDraft(
   }
 }
 
+/**
+ * The Duke engineer's email from the Engineer field. The field usually holds a
+ * NAME ("Charles Pitts"); every Duke engineer who has emailed us writes from
+ * First.Last@duke-energy.com (Pitts, Lanier, Martin, Chason — checked in Mail,
+ * Sep 2026), so a two-word name becomes that address. An email typed into the
+ * field wins. Anything else → undefined (caller falls back to the EDA office).
+ */
+export function dukeEngineerEmail(engineer: string): string | undefined {
+  const typed = engineer.match(/[\w.+-]+@[\w-]+\.[\w.-]+/)?.[0]
+  if (typed) return typed
+  const parts = engineer.trim().split(/\s+/)
+  if (parts.length === 2 && parts.every((w) => /^[A-Za-z'-]+$/.test(w))) return `${parts[0]}.${parts[1]}@duke-energy.com`.replace(/'/g, '')
+  return undefined
+}
+
 /** Everything the "ready for meter" notification email needs. */
 export interface MeterNotifyDraft {
   utility: 'SECO' | 'DUKE'
@@ -211,5 +228,49 @@ export function meterNotifyDraft(
     body,
     warnings: [],
     mailto: `mailto:${to}?cc=${encodeURIComponent(OFFICE_CC)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
+  }
+}
+
+/**
+ * Draft Duke's "METER CAN IS UP" notice for one house — the early Phase-2
+ * email from Duke's customer checklist (send it the day the can is hung, not
+ * after the green tag; that's what gets the house on Duke's line-work
+ * schedule). Goes to the assigned engineer (from the ⚙️ Settings Engineer
+ * field — see dukeEngineerEmail), CC the EDA office; else the EDA office. Wording
+ * = the editable 'electric:canup' template. Returns null for non-Duke houses
+ * so the button can hide itself. mailto only — photos get attached by hand.
+ */
+export function canUpDraft(
+  p: Project,
+  ps: ProjectState,
+  overrides?: Record<string, TemplateOverride>,
+): MeterNotifyDraft | null {
+  if (utilityOf(p, ps) !== 'DUKE') return null
+  const eng = dukeEngineerEmail(engineerOf(p, ps) ?? '')
+  const office = dukeOfficeEmail(ps)
+  const to = eng ?? office
+  const t = effectiveTemplate(overrides, 'electric:canup', {
+    subject: DEFAULT_CANUP_SUBJECT,
+    body: DEFAULT_CANUP_BODY,
+  })
+  const vars: Record<string, string> = {
+    site: `${p.address}, ${p.city}, FL ${p.zip}`,
+    workOrder: p.workOrder || '[paste WO# from Duke]',
+    side: '[LEFT / RIGHT side of house]',
+  }
+  const warnings: string[] = []
+  if (!p.workOrder) warnings.push('no Duke WO# saved yet — add it in ⚙️ Settings so Duke can match the email')
+  if (!eng) warnings.push(`no engineer name saved — sending to the EDA office (${to})`)
+  const subject = renderTemplate(t.subject, vars)
+  const body = renderTemplate(t.body, vars)
+  return {
+    utility: 'DUKE',
+    to,
+    subject,
+    body,
+    warnings,
+    // CC the EDA office too when writing the engineer directly, so the notice
+    // still lands with Duke if the guessed address is off.
+    mailto: `mailto:${to}?cc=${encodeURIComponent(eng ? `${office},${OFFICE_CC}` : OFFICE_CC)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
   }
 }

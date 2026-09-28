@@ -33,6 +33,38 @@ export const ELECTRIC_STEPS: StepDef[] = [
   { id: 'power', label: 'Power ON' },
 ]
 
+/* ---------------------- ELECTRIC — DUKE ---------------------- */
+// Duke gets its OWN list (Sep 2026), built from Duke's "Customer Obligation
+// Checklist and Workflow" (rev 4/15/2026). Duke works in three gated phases —
+// design → schedule → meter set — and won't start a phase until every
+// customer item in the one before it is done. The key difference from SECO:
+// Duke wants to hear the METER CAN IS UP as soon as it's hung (that's what
+// gets you on their line-work schedule), not after the green tag.
+// Step ids are REUSED wherever the meaning matches the generic list, so houses
+// already in progress keep their checkmarks.
+export const DUKE_ELECTRIC_STEPS: StepDef[] = [
+  // Phase 1 — design starts once Duke has the load form + site plan.
+  { id: 'verify', label: 'Utility verified (territory confirmed)' },
+  { id: 'submit', label: 'Applied on Builder Portal + replied to WO# email with load form & site plan (show septic)' },
+  { id: 'engineer', label: 'Engineer assigned / site visit' },
+  // Phase 2 — Duke won't schedule line work until these are done.
+  { id: 'meterside', label: 'Meter-can side confirmed with engineer' },
+  { id: 'dukepaper', label: 'Easement / damage-liability paperwork signed by owner & returned (if Duke sent any)' },
+  { id: 'deposit', label: 'CIAC invoice paid (if any)' },
+  { id: 'rough', label: 'Rough plumbing approved' },
+  { id: 'canup', label: 'Meter can up (911 address RIVETED, no stickers) + path cleared + private lines marked — engineer notified' },
+  { id: 'fieldsched', label: 'Duke line work scheduled' },
+  { id: 'fielddone', label: 'Duke line work complete' },
+  // Phase 3 — meter set.
+  { id: 'meternotify', label: 'Inspection called in to Duke Builder Hotline (1-866-372-4663)' },
+  { id: 'meter', label: 'Meter set' },
+  { id: 'power', label: 'Power ON' },
+]
+
+/** Duke's Builder Hotline — inspections must be called in here (by the county
+ *  OR us; the county doesn't always, so we do it ourselves). */
+export const DUKE_BUILDER_HOTLINE = '1-866-372-4663'
+
 /* -------------------------- WATER --------------------------- */
 // Well lots: the only thing Adam tracks here is whether the well is in the
 // ground. (Permit/pump steps were dropped per his request — `isWaterDone` and
@@ -131,13 +163,21 @@ export function stepListKey(stream: Stream, p: Project, ps: ProjectState): strin
     if (ps.septicSource === 'Sewer') return 'septic:Sewer'
     return ps.septicSystem === 'INRB' ? 'septic:Septic-INRB' : 'septic:Septic'
   }
-  return stream // 'electric' | 'permit'
+  if (stream === 'electric') return isDuke(p, ps) ? 'electric:DUKE' : 'electric'
+  return 'permit'
+}
+
+/** Duke houses run their own electric checklist (DUKE_ELECTRIC_STEPS). Reads
+ *  the same override→roster order as nextAction's utilityOf (inlined — that
+ *  module imports this one). */
+function isDuke(p: Project | undefined, ps: ProjectState | undefined): boolean {
+  return (ps?.electricCo ?? p?.electricCo) === 'DUKE'
 }
 
 /** The built-in default list for a stream/variant (ignores overrides). Used to
  *  seed the editor and to power "Reset to default". */
 export function defaultStepsFor(stream: Stream, p: Project, ps: ProjectState): StepDef[] {
-  if (stream === 'electric') return ELECTRIC_STEPS
+  if (stream === 'electric') return isDuke(p, ps) ? DUKE_ELECTRIC_STEPS : ELECTRIC_STEPS
   if (stream === 'permit') return PERMIT_STEPS
   if (stream === 'water') {
     const source = ps.waterSource ?? p.waterSource
@@ -166,10 +206,13 @@ export function septicStepsFor(ps: ProjectState): StepDef[] {
   // septic doesn't use Project fields; pass a stub for the shared resolver.
   return stepsFor('septic', { } as Project, ps)
 }
-/** Electric/permit have no project-dependent variant. */
-export function electricSteps(): StepDef[] {
+/** Electric: Duke houses get the Duke list (key 'electric:DUKE'); everyone
+ *  else the generic one. Called without a project → the generic list. */
+export function electricSteps(p?: Project, ps?: ProjectState): StepDef[] {
+  if (isDuke(p, ps)) return OVERRIDES['electric:DUKE'] ?? DUKE_ELECTRIC_STEPS
   return OVERRIDES['electric'] ?? ELECTRIC_STEPS
 }
+/** Permit has no project-dependent variant. */
 export function permitSteps(): StepDef[] {
   return OVERRIDES['permit'] ?? PERMIT_STEPS
 }

@@ -38,7 +38,7 @@ export interface StaleInfo {
 
 /** Which steps apply to this project for a given stream (mirrors the detail view). */
 function streamSteps(stream: Stream, p: Project, ps: ProjectState): StepDef[] {
-  if (stream === 'electric') return electricSteps()
+  if (stream === 'electric') return electricSteps(p, ps)
   if (stream === 'water') return waterStepsFor(p, ps)
   if (stream === 'septic') return septicStepsFor(ps)
   // "corrections" is an optional aside, never the thing you're waiting on.

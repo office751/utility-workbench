@@ -13,6 +13,8 @@ import {
   DEFAULT_APPLY_DUKE_SUBJECT,
   DEFAULT_APPLY_SECO_BODY,
   DEFAULT_APPLY_SECO_SUBJECT,
+  DEFAULT_CANUP_BODY,
+  DEFAULT_CANUP_SUBJECT,
   DEFAULT_DISCONNECT_WATER_BODY,
   DEFAULT_DISCONNECT_WATER_SUBJECT,
   DEFAULT_DRAW_REQUEST_BODY,
@@ -69,6 +71,12 @@ const APPLY_VARS: TemplateVar[] = [
 const METERNOTIFY_VARS: TemplateVar[] = [
   { token: '{{site}}', desc: 'full site line — address, city, FL zip' },
   { token: '{{utility}}', desc: 'the utility — SECO or Duke' },
+]
+
+const CANUP_VARS: TemplateVar[] = [
+  { token: '{{site}}', desc: 'full site line — address, city, FL zip' },
+  { token: '{{workOrder}}', desc: "Duke's Work Order # (loud placeholder until set in ⚙️ Settings)" },
+  { token: '{{side}}', desc: 'which side of the house the meter can is on (fill in before sending)' },
 ]
 
 const DISCONNECT_VARS: TemplateVar[] = [
@@ -175,6 +183,17 @@ export function templateSpecs(): TemplateSpec[] {
       vars: METERNOTIFY_VARS,
       subject: DEFAULT_METERNOTIFY_SUBJECT,
       body: DEFAULT_METERNOTIFY_BODY,
+    },
+    {
+      id: 'electric:canup',
+      group: 'Electric application emails',
+      icon: '⚡',
+      name: 'Duke — meter can is up (early notice)',
+      description:
+        'Drafted by "✉️ Tell Duke — meter can is up" on a Duke house\'s Electric tab. Duke puts a house on its line-work schedule once you tell the engineer the meter can is up and the path is clear — so send this the day the can is hung, not after the green tag. Goes to the Duke engineer named in ⚙️ Settings (First.Last@duke-energy.com, EDA office CC’d), else the EDA office (Ocala/Inverness). Keep WO# in the subject.',
+      vars: CANUP_VARS,
+      subject: DEFAULT_CANUP_SUBJECT,
+      body: DEFAULT_CANUP_BODY,
     },
     {
       id: 'draw:request',

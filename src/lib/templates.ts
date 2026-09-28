@@ -95,6 +95,27 @@ export const DEFAULT_METERNOTIFY_BODY = [
 // ^ No sign-off — the mail client appends Adam's real signature.
 
 /**
+ * Duke "METER CAN IS UP" notice (Sep 2026). Duke's customer checklist says to
+ * tell the engineer as soon as the meter can is hung and the path is cleared —
+ * that's what puts the house on Duke's line-work schedule. Sending it at can
+ * install (instead of waiting for the green tag, the SECO habit) is the main
+ * time saver. Keeps "WO#…" at the front of the subject, as Duke asks.
+ * Drafted by "✉️ Tell Duke — meter can is up" on a Duke house's Electric tab.
+ */
+export const DEFAULT_CANUP_SUBJECT = 'WO#{{workOrder}} — Meter can is up — {{site}}'
+export const DEFAULT_CANUP_BODY = [
+  'Hello,',
+  '',
+  'The meter can is up at {{site}} and ready for your line work:',
+  '',
+  '- Meter can installed ({{side}}), 911 address riveted to the can',
+  '- Path to the meter can is cleared',
+  '- Private lines are marked (septic tank / drainfield, water line)',
+  '',
+  'Photos attached. Please let us know if you need anything else to get this on the schedule.',
+].join('\n')
+
+/**
  * Water/sewer DISCONNECT (closeout) email. Drafted by "✉️ Draft MCU disconnect"
  * on a project's 💧 Water tab once the home has sold. Marion County Utilities
  * wants a completed disconnection request form + proof of sale (a notarized

@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react'
 import type { OrderItem, OrderStatus, Project, ProjectState, SelectionChoice, SelectionsCatalog, ShareSubmissionChoices, Stream, Task, Utility } from '../types'
 import {
   type StepDef,
+  DUKE_BUILDER_HOTLINE,
   electricSteps,
   isStepListCustomized,
   permitSteps,
@@ -52,7 +53,7 @@ import {
 import { permitExpiryFor } from '../lib/permitExpiry'
 import { confirmSend } from '../lib/confirmSend'
 import { DUKE_PORTAL_URL, dukeWebPayloadText, dukeWebPayloadTextWithDirections } from '../lib/dukeWebApply'
-import { meterNotifyDraft } from '../lib/loadForm'
+import { canUpDraft, meterNotifyDraft } from '../lib/loadForm'
 import { grantedProjectIds, shareFileToInvestor } from '../lib/investor'
 import { isMaterialsDone, ordersOf, ordersSummary } from '../lib/orders'
 import { GEORGES } from '../data/contacts'
@@ -252,7 +253,7 @@ const STREAM_TABS: { key: Stream; icon: string; name: string }[] = [
 
 /** One project's status in a single stream: its next action + whether it's done. */
 function streamStatus(key: Stream, p: Project, ps: ProjectState): { label: string; done: boolean } {
-  if (key === 'electric') return { label: nextElectricAction(p, ps).label, done: isElectricDone(ps) }
+  if (key === 'electric') return { label: nextElectricAction(p, ps).label, done: isElectricDone(ps, p) }
   if (key === 'water') return { label: nextWaterAction(p, ps).label, done: isWaterDone(p, ps) }
   if (key === 'septic') return { label: nextSepticAction(ps).label, done: isSepticDone(ps) }
   if (key === 'permit') return { label: nextPermitAction(ps).label, done: isPermitDone(ps) }
@@ -790,6 +791,28 @@ function ElectricBody({
     }, 1500)
   }
 
+  /** Duke only: draft the early "meter can is up" email to the engineer (or
+   *  EDA office). Same draft-and-open pattern as notifyReadyForMeter. */
+  function notifyCanUp() {
+    const draft = canUpDraft(p, ps, templates)
+    if (!draft) return
+    if (
+      !confirmSend(`Tell ${draft.to} the meter can is up at ${p.address}?`, [
+        'Fill in which SIDE of the house the can is on before sending.',
+        'Attach photos of the can (with the riveted 911 address) and the cleared path.',
+        ...draft.warnings,
+      ])
+    )
+      return
+    setNotifying(true)
+    setNotifyNote(`Drafting to ${draft.to}…`)
+    window.location.href = draft.mailto
+    setTimeout(() => {
+      setNotifying(false)
+      setNotifyNote(null)
+    }, 1500)
+  }
+
   // SECO: fetch the bundled blank PDF, pre-fill it from THIS project, and
   // download it so Adam can tick the few radio buttons, sign, and attach it.
   // Same logic as BatchApply's downloadSecoForm — just scoped to the single
@@ -927,9 +950,9 @@ function ElectricBody({
         </div>
       )}
 
-      {/* 📸 Once the home green-tags: tell the utility it's ready for the meter
-          set and send the photos they require (SECO Engineering / Duke EDA). */}
-      {(u === 'SECO' || u === 'DUKE') && (
+      {/* 📸 SECO: once the home green-tags, tell SECO Engineering it's ready
+          for the meter set and send the photos they require. */}
+      {u === 'SECO' && (
         <div className="contact-row">
           <button className="contact" onClick={notifyReadyForMeter} disabled={notifying}>
             <Icon name={notifying ? 'hourglass_top' : 'photo_camera'} size={15} />
@@ -937,8 +960,25 @@ function ElectricBody({
           </button>
         </div>
       )}
+      {/* ⚡ Duke works differently (their Customer Obligation Checklist):
+          tell the engineer the day the meter can is HUNG — that's what gets
+          the house on Duke's line-work schedule — and later call the
+          inspection in to the Builder Hotline yourself (the county doesn't
+          always). */}
+      {u === 'DUKE' && (
+        <div className="contact-row">
+          <button className="contact" onClick={notifyCanUp} disabled={notifying}>
+            <Icon name={notifying ? 'hourglass_top' : 'mail'} size={15} />
+            {notifying ? ' Drafting…' : ' Tell Duke — meter can is up'}
+          </button>
+          <a className="contact" href={`tel:+1${DUKE_BUILDER_HOTLINE.replace(/\D/g, '').slice(1)}`}>
+            <Icon name="call" size={15} /> Duke Builder Hotline
+          </a>
+        </div>
+      )}
       {notifyNote && <p className={'shutoff' + (notifyNote.startsWith('⚠️') ? ' warn' : '')}>{notifyNote}</p>}
-      {(u === 'SECO' || u === 'DUKE') && <GuideCallout id="meter-ready" />}
+      {u === 'SECO' && <GuideCallout id="meter-ready" />}
+      {u === 'DUKE' && <GuideCallout id="duke-can-up" />}
 
       <p className="next-line">
         Next: <b>{next.label}</b>
@@ -947,7 +987,7 @@ function ElectricBody({
       <Checklist
         projectId={p.id}
         stream="electric"
-        steps={electricSteps()}
+        steps={electricSteps(p, ps)}
         ps={ps}
         toggleStep={toggleStep}
         setStepNote={setStepNote}

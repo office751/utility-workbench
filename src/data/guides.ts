@@ -94,6 +94,19 @@ export const GUIDES: Guide[] = [
     tip: 'If a "To order" row has no ✉️ Order button, no supplier is assigned to that material yet — call it in from 🚚 Vendors, or have the dev team add the vendor.',
   },
   {
+    id: 'duke-can-up',
+    icon: '⚡',
+    title: 'Duke: get on the line-work schedule sooner',
+    when: 'A Duke house — the day the meter can is hung, and again when the electrical inspection passes.',
+    steps: [
+      { who: 'you', text: 'When the can goes up: rivet the 911 address to the can (Duke rejects stickers), clear the path, and mark private lines (septic tank/drainfield, water line). Take photos.' },
+      { who: 'you', text: 'Click "Tell Duke — meter can is up". Fill in which side of the house the can is on, attach the photos, send.' },
+      { who: 'app', text: 'The email goes to the Duke engineer named in ⚙️ Settings (First.Last@duke-energy.com, with the EDA office CC’d), otherwise the EDA office — with WO# at the front of the subject.' },
+      { who: 'you', text: 'When the electrical inspection passes, call it in to the Duke Builder Hotline (1-866-372-4663). The county is supposed to, but don\'t count on it.' },
+    ],
+    tip: "Duke doesn't schedule line work until it hears the can is up. Don't wait for the green tag like with SECO — that's the step that costs weeks.",
+  },
+  {
     id: 'meter-ready',
     icon: '📸',
     title: 'Tell the utility a home is ready for the meter',

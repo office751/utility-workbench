@@ -23,6 +23,7 @@ import type {
 } from '../types'
 import {
   type StepDef,
+  DUKE_ELECTRIC_STEPS,
   closingSteps,
   electricSteps,
   isStepListCustomized,
@@ -130,7 +131,10 @@ export interface NextAction {
  * so the two screens can never disagree about whose move it is.
  */
 export const OUR_COURT: Record<Stream, Set<string>> = {
-  electric: new Set(['verify', 'apply', 'addr', 'deposit', 'rough', 'meternotify']),
+  // Duke adds its Phase-2 gates (meter side, easement paperwork, "can is up"
+  // notice) and the Builder Hotline call — all ours. Duke's 'rough' is a WAIT
+  // (plumbing approval), so the Duke brain reports it as 'duke-rough'.
+  electric: new Set(['verify', 'apply', 'addr', 'deposit', 'rough', 'meternotify', 'meterside', 'dukepaper', 'canup']),
   // water: set the source, confirm availability, apply, and the main-extension
   // agreement are ours; the tap/connect/well-drill are the utility/driller.
   water: new Set(['wsrc', 'cavail', 'capply', 'cwmagree']),
@@ -157,9 +161,10 @@ export function isOurCourtKey(stream: Stream, key: string, p: Project, ps: Proje
  */
 export function nextElectricAction(p: Project, ps: ProjectState): NextAction {
   const done = ps.steps.electric
-  // Owner edited the electric checklist → follow their list, not the default brain.
-  if (isStepListCustomized('electric')) return firstPending(electricSteps(), done, 'Complete')
   const u = utilityOf(p, ps)
+  if (u === 'DUKE') return nextDukeAction(p, ps)
+  // Owner edited the electric checklist → follow their list, not the default brain.
+  if (isStepListCustomized('electric')) return firstPending(electricSteps(p, ps), done, 'Complete')
 
   if (u === 'CLAY') return { key: 'clay', label: 'Clay Electric — outside SECO/Duke' }
   if (needsVerify(p, ps)) return { key: 'verify', label: 'Verify utility (territory)' }
@@ -178,12 +183,47 @@ export function nextElectricAction(p: Project, ps: ProjectState): NextAction {
   return { key: 'done', label: 'Complete' }
 }
 
+/**
+ * The Duke brain — follows DUKE_ELECTRIC_STEPS (Duke's three-phase customer
+ * checklist). Same apply/house-# gate as the generic brain, then the first
+ * unchecked step, with labels phrased as the action to take.
+ */
+function nextDukeAction(p: Project, ps: ProjectState): NextAction {
+  const done = ps.steps.electric
+  if (isStepListCustomized('electric:DUKE')) return firstPending(electricSteps(p, ps), done, 'Complete')
+  if (needsVerify(p, ps)) return { key: 'verify', label: 'Verify utility (territory)' }
+  if (!done['submit']?.done) {
+    return isTBD(p)
+      ? { key: 'addr', label: 'Needs a house # before applying' }
+      : { key: 'apply', label: 'Ready to apply (portal → load form + site plan w/ septic)' }
+  }
+  const LABELS: Record<string, [key: string, label: string]> = {
+    engineer: ['eng', 'Awaiting Duke engineer / site visit'],
+    meterside: ['meterside', 'Confirm meter-can side with Duke engineer'],
+    dukepaper: ['dukepaper', 'Get easement / damage-liability paperwork signed by owner (if Duke sent any)'],
+    deposit: ['deposit', 'Pay Duke CIAC invoice (if any)'],
+    rough: ['duke-rough', 'Waiting on rough plumbing approval'],
+    canup: ['canup', 'Meter can up? Rivet 911 address, clear path, mark private lines → tell Duke engineer'],
+    fieldsched: ['field', 'Awaiting Duke line-work schedule'],
+    fielddone: ['field', 'Awaiting Duke line work'],
+    meternotify: ['meternotify', 'Call inspection in to Duke Builder Hotline 1-866-372-4663'],
+    meter: ['field', 'Awaiting meter set'],
+    power: ['power', 'Awaiting power on'],
+  }
+  for (const step of DUKE_ELECTRIC_STEPS) {
+    if (done[step.id]?.done) continue
+    const [key, label] = LABELS[step.id] ?? [step.id, step.label]
+    return { key, label }
+  }
+  return { key: 'done', label: 'Complete' }
+}
+
 /** Fully done = the final electric step (power on) is checked. The account
  *  transfer used to be required here too, but it belongs to the SALE, not the
  *  build — since July 2026 it lives on the closing checklist, so a powered-up
  *  house finally reads Complete. */
-export function isElectricDone(ps: ProjectState): boolean {
-  return lastStepDone(electricSteps(), ps.steps.electric)
+export function isElectricDone(ps: ProjectState, p?: Project): boolean {
+  return lastStepDone(electricSteps(p, ps), ps.steps.electric)
 }
 
 /**

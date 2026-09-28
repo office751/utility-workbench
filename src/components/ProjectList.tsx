@@ -63,7 +63,7 @@ function streamCells(p: Project, ps: ProjectState): Cell[] {
     state: done ? 'done' : fire ? 'fire' : 'go',
   })
   return [
-    mk('electric', isElectricDone(ps), electricNeedsAction(p, ps)),
+    mk('electric', isElectricDone(ps, p), electricNeedsAction(p, ps)),
     mk('water', isWaterDone(p, ps), waterNeedsAction(p, ps)),
     mk('septic', isSepticDone(ps), septicNeedsAction(ps)),
     mk('permit', isPermitDone(ps), permitNeedsAction(ps)),

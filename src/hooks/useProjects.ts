@@ -104,6 +104,18 @@ function normalize(ps: ProjectState): ProjectState {
   if ((elec['meter']?.done || elec['power']?.done) && !elec['meternotify']?.done) {
     steps.electric = { ...elec, meternotify: { done: true, date: '(inferred)' } }
   }
+  // Same idea for the Duke checklist's Phase-2 steps (Sep 2026): meter side,
+  // easement paperwork and "meter can is up" all happen BEFORE Duke schedules
+  // line work. A house whose line work is already scheduled (or further) got
+  // past them before the steps existed — mark them done so they don't reopen
+  // as false to-dos. Harmless on SECO houses (their list doesn't show these).
+  const e2 = steps.electric
+  const pastCanUp = ['fieldsched', 'fielddone', 'meternotify', 'meter', 'power'].some((id) => e2[id]?.done)
+  if (pastCanUp) {
+    const fill: Record<string, { done: boolean; date: string }> = {}
+    for (const id of ['meterside', 'dukepaper', 'canup']) if (!e2[id]?.done) fill[id] = { done: true, date: '(inferred)' }
+    if (Object.keys(fill).length) steps.electric = { ...e2, ...fill }
+  }
   // Older saves predate material orders — ensure it's an array.
   const orders = Array.isArray(ps.orders) ? ps.orders : []
   // Files: a project-level list now. Older saves kept names under `permitDocs`
