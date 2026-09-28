@@ -48,6 +48,8 @@ describe('nextElectricAction — the electric walk', () => {
     done('deposit')
     expect(nextElectricAction(p, ps).key).toBe('eng') // awaiting engineer
     done('engineer')
+    expect(nextElectricAction(p, ps).key).toBe('meterside') // ask engineer which side
+    ps.meterSide = { side: 'LH', setAt: '2026-09-28' }
     expect(nextElectricAction(p, ps).key).toBe('rough') // notify on rough pass
     done('rough')
     expect(nextElectricAction(p, ps).key).toBe('meternotify') // send photos
@@ -95,22 +97,24 @@ describe('nextElectricAction — the electric walk', () => {
 
 describe('nextElectricAction — the Duke walk (Customer Obligation Checklist)', () => {
   const duke = makeProject({ electricCo: 'DUKE' })
-  const walk = (ids: string[]) => {
+  // Meter side is recorded with the LH/RH picker (ps.meterSide), not a step.
+  const walk = (ids: string[], side: 'LH' | 'RH' | null = 'RH') => {
     const ps = emptyProjectState()
     for (const id of ids) ps.steps.electric[id] = { done: true }
+    if (side) ps.meterSide = { side, setAt: '2026-09-28' }
     return nextElectricAction(duke, ps)
   }
   const pre = ['verify', 'submit', 'engineer']
 
   it('after the engineer, the Phase-2 gates are OUR moves, in order', () => {
-    expect(walk(pre).key).toBe('meterside')
-    expect(walk([...pre, 'meterside']).key).toBe('dukepaper')
-    expect(walk([...pre, 'meterside', 'dukepaper']).key).toBe('deposit')
+    expect(walk(pre, null).key).toBe('meterside') // side unknown → ask first
+    expect(walk(pre).key).toBe('dukepaper')
+    expect(walk([...pre, 'dukepaper']).key).toBe('deposit')
     for (const k of ['meterside', 'dukepaper', 'deposit']) expect(OUR_KEYS(k)).toBe(true)
   })
 
   it('rough plumbing is a WAIT on Duke houses; "can is up" is ours', () => {
-    const phase2 = [...pre, 'meterside', 'dukepaper', 'deposit']
+    const phase2 = [...pre, 'dukepaper', 'deposit']
     expect(walk(phase2).key).toBe('duke-rough')
     expect(OUR_KEYS('duke-rough')).toBe(false)
     expect(walk([...phase2, 'rough']).key).toBe('canup')
@@ -118,7 +122,7 @@ describe('nextElectricAction — the Duke walk (Customer Obligation Checklist)',
   })
 
   it('after line work: call the inspection in to the Builder Hotline', () => {
-    const all = [...pre, 'meterside', 'dukepaper', 'deposit', 'rough', 'canup', 'fieldsched', 'fielddone']
+    const all = [...pre, 'dukepaper', 'deposit', 'rough', 'canup', 'fieldsched', 'fielddone']
     const n = walk(all)
     expect(n.key).toBe('meternotify')
     expect(n.label).toMatch(/1-866-372-4663/)
@@ -129,17 +133,59 @@ describe('nextElectricAction — the Duke walk (Customer Obligation Checklist)',
     const ps = emptyProjectState()
     for (const id of pre) ps.steps.electric[id] = { done: true }
     ps.steps.electric['deposit'] = { done: true }
+    ps.meterSide = { side: 'LH', setAt: '2026-09-28' }
     expect(nextElectricAction(makeProject(), ps).key).toBe('rough')
   })
 
   it('a customized GENERIC electric list does not hijack Duke houses', () => {
     applyStepOverrides({ electric: [{ id: 'verify', label: 'v' }, { id: 'power', label: 'p' }] })
-    expect(walk(pre).key).toBe('meterside')
+    expect(walk(pre).key).toBe('dukepaper')
   })
 
   function OUR_KEYS(key: string) {
     return isOurCourtKey('electric', key, duke, emptyProjectState())
   }
+})
+
+describe('meter side — the utility decides, Pam waits on it', () => {
+  const seco = makeProject({ parcel: '1801-015-034' }) // a lot Pam drove: RH
+  const at = (ids: string[]) => {
+    const ps = emptyProjectState()
+    for (const id of ids) ps.steps.electric[id] = { done: true }
+    return ps
+  }
+
+  it('SECO too: once the engineer is assigned, the side is the top ask (with Pam’s hint)', () => {
+    const n = nextElectricAction(seco, at(['verify', 'submit', 'deposit', 'engineer']))
+    expect(n.key).toBe('meterside')
+    expect(n.label).toMatch(/SECO engineer.*Pam's waiting.*drive-by: RH/)
+    expect(isOurCourtKey('electric', 'meterside', seco, emptyProjectState())).toBe(true)
+  })
+
+  it('not before an engineer exists — nobody can answer yet', () => {
+    expect(nextElectricAction(seco, at(['verify', 'submit', 'deposit'])).key).toBe('eng')
+  })
+
+  it('Pam’s drive-by alone never clears it; the utility’s answer does', () => {
+    const ps = at(['verify', 'submit', 'deposit', 'engineer'])
+    expect(nextElectricAction(seco, ps).key).toBe('meterside')
+    ps.meterSide = { side: 'RH', setAt: '2026-09-28' }
+    expect(nextElectricAction(seco, ps).key).toBe('rough')
+  })
+
+  it('houses whose can is already up never reopen it', () => {
+    for (const later of ['fieldsched', 'fielddone', 'meternotify', 'meter', 'power'])
+      expect(nextElectricAction(seco, at(['verify', 'submit', 'deposit', 'engineer', later])).key).not.toBe('meterside')
+  })
+
+  it('works on an owner-customized list too', () => {
+    applyStepOverrides({ electric: [{ id: 'verify', label: 'v' }, { id: 'engineer', label: 'e' }, { id: 'power', label: 'p' }] })
+    expect(nextElectricAction(seco, at(['verify', 'submit', 'engineer'])).key).toBe('meterside')
+  })
+
+  it('Clay / unknown utility: no engineer flow, no ask', () => {
+    expect(nextElectricAction(makeProject({ electricCo: 'CLAY' }), at(['verify', 'submit', 'engineer'])).key).toBe('clay')
+  })
 })
 
 describe('needsWaterVerify — the Water tab county-GIS check gate', () => {

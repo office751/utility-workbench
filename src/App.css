@@ -5063,3 +5063,16 @@ a.map-btn {
 .ps-outer .sel-additional,
 .ps-send .ps-name input { font-size: var(--fs-input); min-height: var(--tap-min); }
 .ps-btnrow .btn { min-height: var(--tap-min); }
+
+/* 📍 Meter-side picker on the Electric tab (Detail.tsx) — label + LH/RH .seg
+   toggle + Pam's drive-by hint, all on the .contact-row line. */
+.meter-side-label {
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 600;
+  align-self: center;
+}
+.meter-side-hint {
+  font-size: calc(12px * var(--font-scale));
+  color: var(--muted);
+  align-self: center;
+}

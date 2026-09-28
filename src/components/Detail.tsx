@@ -53,7 +53,8 @@ import {
 import { permitExpiryFor } from '../lib/permitExpiry'
 import { confirmSend } from '../lib/confirmSend'
 import { DUKE_PORTAL_URL, dukeWebPayloadText, dukeWebPayloadTextWithDirections } from '../lib/dukeWebApply'
-import { canUpDraft, meterNotifyDraft } from '../lib/loadForm'
+import { askSideDraft, canUpDraft, meterNotifyDraft } from '../lib/loadForm'
+import { fieldSideFor, meterSideOf, pamNote } from '../lib/meterSide'
 import { grantedProjectIds, shareFileToInvestor } from '../lib/investor'
 import { isMaterialsDone, ordersOf, ordersSummary } from '../lib/orders'
 import { GEORGES } from '../data/contacts'
@@ -718,10 +719,15 @@ function ElectricBody({
   templates,
   utilities,
   applyVerifiedUtility,
+  setField,
 }: Props) {
   const next = nextElectricAction(p, ps)
   const u = utilityOf(p, ps)
   const eng = engineerOf(p, ps)
+  // Meter side: the utility's answer (ps.meterSide) + Pam's drive-by hint.
+  const side = meterSideOf(ps)
+  const fieldSide = fieldSideFor(p)
+  const [pamCopied, setPamCopied] = useState(false)
   // ⚡ Duke web application:
   //   building → computing directions from the map services
   //   opened   → portal launched + fill-data copied; now waiting on Claude
@@ -789,6 +795,27 @@ function ElectricBody({
       setNotifying(false)
       setNotifyNote(null)
     }, 1500)
+  }
+
+  /** Draft "which side do you want the meter can on?" to the engineer. */
+  function askWhichSide() {
+    const draft = askSideDraft(p, ps, templates)
+    if (!draft) return
+    if (!confirmSend(`Ask ${draft.to} which side the meter can goes on at ${p.address}?`, draft.warnings)) return
+    window.location.href = draft.mailto
+  }
+
+  /** Copy the ready-to-paste note for Pam (parcel first — she routes by it). */
+  async function copyPamNote() {
+    const note = pamNote(p, ps)
+    if (!note) return
+    try {
+      await navigator.clipboard.writeText(note)
+      setPamCopied(true)
+      setTimeout(() => setPamCopied(false), 2500)
+    } catch {
+      window.prompt('Copy this for Pam:', note) // clipboard blocked → show it
+    }
   }
 
   /** Duke only: draft the early "meter can is up" email to the engineer (or
@@ -875,6 +902,43 @@ function ElectricBody({
         <Icon name="bolt" size={15} color="var(--rust)" /> {u || 'utility?'} ·{' '}
         {SERVICE_LABEL[serviceTypeOf(p, ps)]} · Engineer: {eng || '—'}
       </p>
+
+      {/* 📍 Meter-can side. The UTILITY engineer decides it (SECO and Duke);
+          Pam waits on it to tell the electrician where to set the can. Pick
+          LH/RH once the engineer answers, then copy the note to Pam. Pam's
+          own drive-by reading shows alongside as a hint — it never counts as
+          the answer. */}
+      {(u === 'SECO' || u === 'DUKE') && (
+        <div className="contact-row">
+          <span className="meter-side-label">Meter side (per {u === 'DUKE' ? 'Duke' : 'SECO'}):</span>
+          <div className="seg" role="group" aria-label="Meter can side">
+            {(['LH', 'RH'] as const).map((s) => (
+              <button
+                key={s}
+                className={side === s ? 'on' : ''}
+                aria-pressed={side === s}
+                title={s === 'LH' ? 'Left side, facing the lot from the road' : 'Right side, facing the lot from the road'}
+                // Click the active side again to clear it (a mis-click).
+                onClick={() => setField(p.id, 'meterSide', side === s ? undefined : { side: s, setAt: new Date().toISOString() })}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+          {!side && (
+            <button className="contact" onClick={askWhichSide}>
+              <Icon name="mail" size={15} /> Ask engineer which side
+            </button>
+          )}
+          {side && (
+            <button className="contact" onClick={copyPamNote}>
+              <Icon name={pamCopied ? 'check' : 'content_copy'} size={15} />
+              {pamCopied ? ' Copied — paste to Pam' : ' Copy note for Pam'}
+            </button>
+          )}
+          {fieldSide && <span className="meter-side-hint">Pam’s drive-by: {fieldSide}</span>}
+        </div>
+      )}
 
       {/* Duke applies through a multi-page WEB form, not email — this opens
           the portal and stages the fill data. The actual form-filling is

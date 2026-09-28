@@ -13,6 +13,8 @@ import {
   DEFAULT_APPLY_DUKE_SUBJECT,
   DEFAULT_APPLY_SECO_BODY,
   DEFAULT_APPLY_SECO_SUBJECT,
+  DEFAULT_ASKSIDE_BODY,
+  DEFAULT_ASKSIDE_SUBJECT,
   DEFAULT_CANUP_BODY,
   DEFAULT_CANUP_SUBJECT,
   DEFAULT_DISCONNECT_WATER_BODY,
@@ -77,6 +79,12 @@ const CANUP_VARS: TemplateVar[] = [
   { token: '{{site}}', desc: 'full site line — address, city, FL zip' },
   { token: '{{workOrder}}', desc: "Duke's Work Order # (loud placeholder until set in ⚙️ Settings)" },
   { token: '{{side}}', desc: 'which side of the house the meter can is on (fill in before sending)' },
+]
+
+const ASKSIDE_VARS: TemplateVar[] = [
+  { token: '{{site}}', desc: 'full site line — address, city, FL zip' },
+  { token: '{{ref}}', desc: 'Duke: "WO#… — " (keeps WO# first in the subject); SECO: blank' },
+  { token: '{{hint}}', desc: "Pam's drive-by reading as a sentence, when we have one (else blank)" },
 ]
 
 const DISCONNECT_VARS: TemplateVar[] = [
@@ -183,6 +191,17 @@ export function templateSpecs(): TemplateSpec[] {
       vars: METERNOTIFY_VARS,
       subject: DEFAULT_METERNOTIFY_SUBJECT,
       body: DEFAULT_METERNOTIFY_BODY,
+    },
+    {
+      id: 'electric:askside',
+      group: 'Electric application emails',
+      icon: '⚡',
+      name: 'Which side for the meter can? — ask engineer',
+      description:
+        'Drafted by "✉️ Ask engineer which side" on a project\'s Electric tab (SECO or Duke). The utility engineer decides which side the meter can goes on; Pam can\'t send the electrician until we know. SECO → SECO Engineering; Duke → the engineer named in ⚙️ Settings (EDA office CC’d).',
+      vars: ASKSIDE_VARS,
+      subject: DEFAULT_ASKSIDE_SUBJECT,
+      body: DEFAULT_ASKSIDE_BODY,
     },
     {
       id: 'electric:canup',

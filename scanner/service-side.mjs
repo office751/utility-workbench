@@ -22,35 +22,10 @@ const M_TYPE_COL = 'color_mm6tmnp0'   // Monday "Electric Type" (status: OH / UG
 const SP_TYPE_COL = 'field_18'        // SharePoint "Electric Type?" (choice, free text)
 
 /** Pam's marks, read off the returned sheet. LH = left, RH = right, facing the
- *  lot from the road. The two parcels pending a split answer per future lot. */
-const SIDES = {
-  '1801-006-013': 'LH',
-  '1801-010-030': 'LH',
-  '1801-010-022': 'LH',
-  '1801-015-034': 'RH',
-  '1801-024-010': 'LH',
-  '1802-003-037': 'LH',
-  '1802-004-030': 'RH',
-  '1802-002-004': 'LH',
-  '1802-005-016': 'RH',
-  '1802-002-035': 'RH',
-  '1804-002-053': 'RH',
-  '1804-005-025': 'RH',
-  '1804-003-055': 'RH',
-  '1804-003-025': 'RH',
-  '1804-003-039': 'LH',
-  '1805-003-011': 'Lot 11 LH; Lot 12 RH; Lots 13-14 LH',
-  '1805-003-018': 'LH',
-  '1805-003-035': 'RH',
-  '1807-016-044': 'LH',
-  '1813-006-016': 'LH',
-  '1813-005-028': 'RH',
-  '1813-005-030': 'Lot 30 RH; Lot 31 LH',
-  '1813-001-016': 'RH',
-  '1813-007-029': 'RH',
-  '1805-016-020': 'LH',
-  '1807-009-016': 'RH',
-}
+ *  lot from the road. The two parcels pending a split answer per future lot.
+ *  Single source (Sep 28 2026): the app's src/data/fieldServiceSides.json —
+ *  Lodestar shows the same hint on any house on one of these parcels. */
+const SIDES = JSON.parse(readFileSync(new URL('../src/data/fieldServiceSides.json', import.meta.url), 'utf8')).sides
 
 /** Split a cell back into its OH/UG type and whatever side is already there,
  *  so re-running never stacks up "OH : LH : LH". */

@@ -327,6 +327,12 @@ export interface ProjectState {
   /** Duke only: which EDA office emailed the Work Order (Ocala vs Inverness),
    *  so the load-form reply goes back to the right place. Defaults to Ocala. */
   dukeOffice?: 'Ocala' | 'Inverness'
+  /** Which side of the house the METER CAN goes on — as the UTILITY engineer
+   *  decided it (SECO and Duke both designate it). LH = left, RH = right,
+   *  facing the lot from the road. Pam (PM) waits on this to tell the
+   *  electrician where to set the can. Pam's own drive-by reading is only a
+   *  hint and lives in data/fieldServiceSides.json, not here. */
+  meterSide?: { side: 'LH' | 'RH'; setAt: string }
   engineer?: string
   waterSource?: WaterSource
   /** Overrides the default water contact (Marion County Utilities) with a

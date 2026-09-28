@@ -48,7 +48,8 @@ export const DUKE_ELECTRIC_STEPS: StepDef[] = [
   { id: 'submit', label: 'Applied on Builder Portal + replied to WO# email with load form & site plan (show septic)' },
   { id: 'engineer', label: 'Engineer assigned / site visit' },
   // Phase 2 — Duke won't schedule line work until these are done.
-  { id: 'meterside', label: 'Meter-can side confirmed with engineer' },
+  // (Meter-can side isn't a checkbox: the UTILITY decides it and it's
+  //  recorded with the LH/RH picker on the Electric tab — see lib/meterSide.ts.)
   { id: 'dukepaper', label: 'Easement / damage-liability paperwork signed by owner & returned (if Duke sent any)' },
   { id: 'deposit', label: 'CIAC invoice paid (if any)' },
   { id: 'rough', label: 'Rough plumbing approved' },

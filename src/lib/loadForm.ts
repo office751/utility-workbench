@@ -13,11 +13,14 @@ import { specFor } from '../data/models'
 import { legalFor, LEGAL_PLACEHOLDER } from '../data/legal'
 import { COMPANY, DUKE_EMAIL_INVERNESS, DUKE_EMAIL_OCALA, OFFICE_CC, SECO_EMAIL, SECO_ENGINEERING } from '../data/contacts'
 import { engineerOf, septicSourceOf, serviceTypeOf, utilityOf } from './nextAction'
+import { fieldSideFor, meterSideOf, sideWords } from './meterSide'
 import {
   DEFAULT_APPLY_DUKE_BODY,
   DEFAULT_APPLY_DUKE_SUBJECT,
   DEFAULT_APPLY_SECO_BODY,
   DEFAULT_APPLY_SECO_SUBJECT,
+  DEFAULT_ASKSIDE_BODY,
+  DEFAULT_ASKSIDE_SUBJECT,
   DEFAULT_CANUP_BODY,
   DEFAULT_CANUP_SUBJECT,
   DEFAULT_METERNOTIFY_BODY,
@@ -256,7 +259,8 @@ export function canUpDraft(
   const vars: Record<string, string> = {
     site: `${p.address}, ${p.city}, FL ${p.zip}`,
     workOrder: p.workOrder || '[paste WO# from Duke]',
-    side: '[LEFT / RIGHT side of house]',
+    // The utility-confirmed side when recorded; otherwise a loud blank.
+    side: (() => { const s = meterSideOf(ps); return s ? sideWords(s) : '[LEFT / RIGHT side of house]' })(),
   }
   const warnings: string[] = []
   if (!p.workOrder) warnings.push('no Duke WO# saved yet — add it in ⚙️ Settings so Duke can match the email')
@@ -271,6 +275,52 @@ export function canUpDraft(
     warnings,
     // CC the EDA office too when writing the engineer directly, so the notice
     // still lands with Duke if the guessed address is off.
+    mailto: `mailto:${to}?cc=${encodeURIComponent(eng ? `${office},${OFFICE_CC}` : OFFICE_CC)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
+  }
+}
+
+/**
+ * Draft "which side do you want the meter can on?" to the utility engineer —
+ * the utility decides the side (SECO and Duke both), and Pam can't send the
+ * electrician until we know. SECO → SECO Engineering; Duke → the named
+ * engineer (First.Last@duke-energy.com) with the EDA office CC'd, else the
+ * EDA office. Mentions Pam's drive-by reading when we have one. Wording = the
+ * editable 'electric:askside' template. null for non-SECO/Duke.
+ */
+export function askSideDraft(
+  p: Project,
+  ps: ProjectState,
+  overrides?: Record<string, TemplateOverride>,
+): MeterNotifyDraft | null {
+  const u = utilityOf(p, ps)
+  if (u !== 'SECO' && u !== 'DUKE') return null
+  const eng = u === 'DUKE' ? dukeEngineerEmail(engineerOf(p, ps) ?? '') : undefined
+  const office = u === 'DUKE' ? dukeOfficeEmail(ps) : SECO_ENGINEERING.email
+  const to = eng ?? office
+  const hint = fieldSideFor(p)
+  const t = effectiveTemplate(overrides, 'electric:askside', {
+    subject: DEFAULT_ASKSIDE_SUBJECT,
+    body: DEFAULT_ASKSIDE_BODY,
+  })
+  const vars: Record<string, string> = {
+    site: `${p.address}, ${p.city}, FL ${p.zip}`,
+    ref: u === 'DUKE' ? `WO#${p.workOrder || '[paste WO# from Duke]'} — ` : '',
+    // Only a clean LH/RH reads well in a sentence; split-parcel text is skipped.
+    hint:
+      hint === 'LH' || hint === 'RH'
+        ? `\nFrom our site visit, your lines look like they run on the ${sideWords(hint)} of the lot, facing it from the road.\n`
+        : '',
+  }
+  const warnings: string[] = []
+  if (u === 'DUKE' && !p.workOrder) warnings.push('no Duke WO# saved yet — add it in ⚙️ Settings so Duke can match the email')
+  const subject = renderTemplate(t.subject, vars)
+  const body = renderTemplate(t.body, vars)
+  return {
+    utility: u,
+    to,
+    subject,
+    body,
+    warnings,
     mailto: `mailto:${to}?cc=${encodeURIComponent(eng ? `${office},${OFFICE_CC}` : OFFICE_CC)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
   }
 }

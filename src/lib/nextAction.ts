@@ -32,6 +32,7 @@ import {
   stepListKey,
   waterStepsFor,
 } from '../data/lifecycles'
+import { meterSideLabel, needsMeterSide } from './meterSide'
 
 /** Edit-safe "done": the LAST step of a (possibly owner-edited) list is checked.
  *  For every built-in list the last step IS the old hard-coded done-step
@@ -162,6 +163,11 @@ export function isOurCourtKey(stream: Stream, key: string, p: Project, ps: Proje
 export function nextElectricAction(p: Project, ps: ProjectState): NextAction {
   const done = ps.steps.electric
   const u = utilityOf(p, ps)
+  // Meter side (SECO + Duke, Sep 2026): once an engineer is assigned, the
+  // utility's answer on which side the can goes is the top ask — Pam can't
+  // tell the electrician until we have it. Checked BEFORE either list so it
+  // works on the default, Duke and owner-customized checklists alike.
+  if (needsMeterSide(p, ps)) return { key: 'meterside', label: meterSideLabel(p, ps) }
   if (u === 'DUKE') return nextDukeAction(p, ps)
   // Owner edited the electric checklist → follow their list, not the default brain.
   if (isStepListCustomized('electric')) return firstPending(electricSteps(p, ps), done, 'Complete')
@@ -199,7 +205,6 @@ function nextDukeAction(p: Project, ps: ProjectState): NextAction {
   }
   const LABELS: Record<string, [key: string, label: string]> = {
     engineer: ['eng', 'Awaiting Duke engineer / site visit'],
-    meterside: ['meterside', 'Confirm meter-can side with Duke engineer'],
     dukepaper: ['dukepaper', 'Get easement / damage-liability paperwork signed by owner (if Duke sent any)'],
     deposit: ['deposit', 'Pay Duke CIAC invoice (if any)'],
     rough: ['duke-rough', 'Waiting on rough plumbing approval'],

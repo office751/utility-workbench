@@ -116,6 +116,22 @@ export const DEFAULT_CANUP_BODY = [
 ].join('\n')
 
 /**
+ * "WHICH SIDE FOR THE METER CAN?" (Sep 2026). The utility engineer decides the
+ * side (SECO and Duke both); Pam can't tell the electrician until we know.
+ * Drafted by "✉️ Ask engineer which side" on the Electric tab. {{ref}} = "WO#… — "
+ * for Duke (they want it first in the subject), blank for SECO. {{hint}} =
+ * Pam's drive-by reading when we have one, else nothing.
+ */
+export const DEFAULT_ASKSIDE_SUBJECT = '{{ref}}Meter can side? — {{site}}'
+export const DEFAULT_ASKSIDE_BODY = [
+  'Hello,',
+  '',
+  'Which side of the house do you want the meter can on at {{site}}? Our electrician is waiting on it to set the can.',
+  '{{hint}}',
+  'Let me know if you need anything else from us.',
+].join('\n')
+
+/**
  * Water/sewer DISCONNECT (closeout) email. Drafted by "✉️ Draft MCU disconnect"
  * on a project's 💧 Water tab once the home has sold. Marion County Utilities
  * wants a completed disconnection request form + proof of sale (a notarized
