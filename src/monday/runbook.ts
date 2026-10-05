@@ -15,7 +15,7 @@ import { DUKE_BUILDER_HOTLINE, closingSteps, electricSteps, permitSteps, septicS
 import { applicationDraft, canUpDraft, meterNotifyDraft } from '../lib/loadForm'
 import { dukeWebPayloadText, DUKE_PORTAL_URL } from '../lib/dukeWebApply'
 import { ELECTRIC_DISCONNECT, MCU_WATER_DISCONNECT, waterDisconnectDraft } from '../data/disconnect'
-import { GEORGES, MARION_PERMITTING, MCU, OFFICE_CC, SECO_EMAIL, SOIL_TECH, UTILITY_PHONES } from '../data/contacts'
+import { GEORGES, MARION_PERMITTING, MCU, OFFICE_CC, PERMIT_SUBS, SECO_EMAIL, SOIL_TECH, UTILITY_PHONES } from '../data/contacts'
 import { dukeOfficeEmail } from '../lib/loadForm'
 import { addBusinessDays } from '../lib/shutoff'
 import { api } from './mondayClient'
@@ -299,6 +299,9 @@ export async function loadTemplate(): Promise<TemplateStep[]> {
 /** The 'Applies to' labels a house matches (plus 'All lots'). */
 export function profileOf(h: House): Set<string> {
   const set = new Set<string>(['All lots'])
+  // Duke houses also get the template rows tagged "Duke" (Duke's own checklist
+  // steps: easement paperwork, meter-can-is-up notice).
+  if (utilityOf(h) === 'DUKE') set.add('Duke')
   const w = waterSourceOf(h)
   if (w === 'Well') set.add('Well')
   if (w === 'City') set.add('City water')
@@ -384,7 +387,13 @@ export function actionsFor(h: House, stage: StageKey | '', stepId: string): Acti
   const phone = UTILITY_PHONES[u]
   const out: Action[] = []
   if (stage === 'permit') {
+    if (stepId === 'subs') {
+      // One click puts every sub's EnerGov Contact ID on the clipboard, ready to paste.
+      const list = PERMIT_SUBS.map((s) => `${s.trade}: ${s.company} — Contact ID ${s.contactId}`).join('\n')
+      out.push({ label: 'Copy sub Contact IDs', copy: list, href: ENERGOV_HOME, note: 'Copied to your clipboard when you click.' })
+    }
     if (stepId === 'submitted') out.push({ label: 'Open county portal (EnerGov)', href: h.permitUrl || ENERGOV_HOME })
+    if (stepId === 'noc') out.push({ label: 'Fill & print the NOC in Lodestar', href: LODESTAR_URL, note: 'Permit tab → NOC. Owner signs + notary, record with the Clerk, post a copy at the job.' })
     if (stepId === 'review' || stepId === 'approved' || stepId === 'corrections') {
       out.push({ label: 'Check permit on portal', href: h.permitUrl || ENERGOV_HOME })
       out.push({ label: `Call Building Safety ${MARION_PERMITTING.phone}`, href: `tel:${MARION_PERMITTING.phone}` })
