@@ -59,7 +59,9 @@ async function graph(method, path, body, extraHeaders = {}) {
 // Plain text → simple HTML paragraphs (keeps bullets/line breaks readable in Outlook)
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 const bodyText = args['body-file'] ? readFileSync(args['body-file'], 'utf8') : String(args.body ?? '')
-const bodyHtml = bodyText.trim().split(/\n\s*\n/).map((p) => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('\n')
+// Outlook shows <p> with zero margin, so paragraphs ran together with no gap (Oct 15 2026).
+// Put an empty paragraph between them so the draft keeps the blank lines Adam types.
+const bodyHtml = bodyText.trim().split(/\n\s*\n/).map((p) => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('\n<p>&nbsp;</p>\n')
 // Signature block + its inline logo (cid:ironshield-sig-logo)
 const useSig = !args['no-signature']
 const sigHtml = useSig ? readFileSync(new URL('signature-office.html', here), 'utf8') : ''
