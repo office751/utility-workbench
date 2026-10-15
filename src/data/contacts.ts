@@ -87,7 +87,8 @@ export const SOIL_TECH = {
  * contractor above, not the permitted plumbing sub.)
  */
 export const PERMIT_SUBS = [
-  { trade: 'Electrical', company: 'Iron Shield Electric Co.', contact: 'Dale Nadboralski', contactId: '21298', email: 'Mindywisenbaker@ironshieldelectric.com' },
+  // Office address is from their invoice letterhead (#5960 Mar 2025, #6961 Oct 2025).
+  { trade: 'Electrical', company: 'Iron Shield Electric Co.', contact: 'Dale Nadboralski', contactId: '21298', email: 'Mindywisenbaker@ironshieldelectric.com', address: '7660 SE 59th Ct, #105, Ocala, FL 34472' },
   { trade: 'Mechanical (HVAC)', company: 'Iron Shield Heating & Air LLC', contact: 'Victor Oquendo', contactId: '22089', email: 'victor@ironshieldheatingandair.com' },
   { trade: 'Plumbing', company: 'Iron Shield Plumbing LLC', contact: 'Loren Nelson', contactId: '23046', email: 'wfstiles@gmail.com' },
   { trade: 'Roofing', company: 'Southern Pro Roofing LLC', contact: 'Bryan Hudson', contactId: '21603', email: 'southernproroofingllc@gmail.com' },
