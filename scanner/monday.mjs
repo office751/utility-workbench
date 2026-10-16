@@ -59,6 +59,7 @@ export const CJL = {
   subdivision: 'text_mm6t5yrb',
   electricStage: 'text_mm6tr20j',
   notes: 'text_mm6tv3k1',
+  permitExpires: 'date_mm86t29v', // Oct 16 2026: filled nightly by scan.mjs from the county portal
   groups: { prePermitting: 'group_mm70nwy1', permitting: 'topics', active: 'group_mm70ah30', completed: 'group_mm70nbzb', dead: 'group_mm7043rk' },
 }
 

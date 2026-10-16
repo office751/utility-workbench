@@ -28,7 +28,7 @@ import fs from 'node:fs'
 import { expiryChange, isoFromUs, parseSummary, readBakedDates } from './portal-dates.mjs'
 import {
   loadHouses, loadBoardItems, loadUpdates, createItem, setColumns, deleteItem, createUpdate, normPermit,
-  INSPECTIONS, INSPECTIONS_BOARD_ID,
+  INSPECTIONS, INSPECTIONS_BOARD_ID, CJL, CJL_BOARD_ID,
 } from './monday.mjs'
 
 const BASE = 'https://selfservice.marionfl.org/energov_prod/selfservice'
@@ -533,6 +533,15 @@ async function syncToMonday(results) {
     }
     dRecorded++
   }
+  // --- "Permit Expires" on the house row: the county's date, written whenever
+  //     it differs (the portal is the authority here — this column exists so
+  //     Monday's "30 days before Permit Expires → notify" reminder can fire). ---
+  const expiryFills = []
+  for (const r of results) {
+    if (!r.summaryOk || !r.summary.expires) continue
+    const h = houseByPermit.get(normPermit(r.permit))
+    if (h && (h.cv[CJL.permitExpires] || '') !== r.summary.expires) expiryFills.push({ houseId: h.id, address: h.address, from: h.cv[CJL.permitExpires] || '', to: r.summary.expires })
+  }
   const existingUpdates = comments.length ? await loadUpdates([...new Set(comments.map((c) => c.houseId))]) : {}
   const toComment = []
   const seenC = new Set()
@@ -545,7 +554,8 @@ async function syncToMonday(results) {
   console.log('\nMonday sync:')
   console.log(`   inspections/holds: +${toAdd.length} new, ${toUpdate.length} updated, ${toClear.length} resolved${toClear.length && !doPrune ? ' (kept — add --prune to clear)' : ''}`)
   console.log(`   comments:          +${toComment.length} new (FYIs + expiry changes)`)
-  console.log(`   portal dates:      ${dRecorded} recorded → scanner/.portal-dates.json`)
+  console.log(`   portal dates:      ${dRecorded} recorded → scanner/.portal-dates.json; ${expiryFills.length} "Permit Expires" cell(s) to set`)
+  for (const f of expiryFills) console.log(`   📅 ${f.address}: Permit Expires ${f.from || '(blank)'} → ${f.to}`)
   if (noHouse.length) console.log(`   ⚠ ${noHouse.length} permit(s) not on the Construction Job List, skipped: ${noHouse.join(', ')}`)
   for (const d of toAdd) console.log(`   + ${d.result.padEnd(7)} ${d.name}`)
   for (const d of toUpdate) console.log(`   ~ ${d.result.padEnd(7)} ${d.name}`)
@@ -567,6 +577,7 @@ async function syncToMonday(results) {
   }
   if (doPrune) for (const x of toClear) await deleteItem(x.id)
   for (const c of toComment) await createUpdate(c.houseId, `${c.body}\n\n[${c.sourceKey}]`)
+  for (const f of expiryFills) await setColumns(CJL_BOARD_ID, f.houseId, { [CJL.permitExpires]: { date: f.to } })
   fs.writeFileSync(PORTAL_DATES_FILE, JSON.stringify(portalDates, null, 2))
   console.log('\n✓ Written to Monday.\n')
 }
