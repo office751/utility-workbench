@@ -8,6 +8,8 @@
 //   node scanner/outlook-draft.mjs --to orlando@fgtcabinetry.com --subject "..." --body-file body.txt [--attach file.docx ...]
 // Reply in an existing thread (finds the newest message whose subject contains the text):
 //   node scanner/outlook-draft.mjs --reply-to-subject "8 Separate Orders" [--from-sender fgtcabinetry.com] --body-file body.txt [--attach ...]
+// Forward an existing message (newest match) to someone, our text above the quoted original:
+//   node scanner/outlook-draft.mjs --forward-subject "Transaction Receipt" [--from-sender paytrace.com] --to data@ironshieldconstruction.com --body-file body.txt [--attach ...] [--subject "FW: ..."]
 // Options: --mailbox (default office@ironshieldconstruction.com), --cc a@b.com
 // Body text is plain text. Paragraphs are separated by blank lines.
 // Adam's Outlook signature (scanner/signature-office.html + signature-logo.png) is
@@ -89,8 +91,30 @@ if (args['reply-to-subject']) {
   const patch = { body: { contentType: 'HTML', content: merged } }
   if (args.cc) patch.ccRecipients = rcpt(args.cc)
   await graph('PATCH', `/messages/${draft.id}`, patch)
+} else if (args['forward-subject']) {
+  // Forward the newest matching message (any folder) to --to; createForward keeps the original
+  // body (and its attachments) quoted below our text. Same --from-sender filter as reply.
+  if (!args.to) throw new Error('--forward-subject needs --to')
+  const q = encodeURIComponent(`"subject:${args['forward-subject']}"`)
+  const found = await graph('GET', `/messages?$search=${q}&$top=25&$select=id,subject,from,receivedDateTime,isDraft`, null, { ConsistencyLevel: 'eventual' })
+  const hits = found.value
+    .filter((m) => !m.isDraft)
+    .filter((m) => !args['from-sender'] || (m.from?.emailAddress?.address ?? '').toLowerCase().includes(String(args['from-sender']).toLowerCase()))
+    .sort((a, b) => b.receivedDateTime.localeCompare(a.receivedDateTime))
+  if (!hits.length) throw new Error(`no message found with subject containing "${args['forward-subject']}"`)
+  const orig = hits[0]
+  console.log(`forwarding: "${orig.subject}" from ${orig.from?.emailAddress?.address} (${orig.receivedDateTime})`)
+  draft = await graph('POST', `/messages/${orig.id}/createForward`, { comment: '', toRecipients: rcpt(args.to) })
+  const full = await graph('GET', `/messages/${draft.id}?$select=body`)
+  const quoted = full.body?.content ?? ''
+  const mine = withSig(bodyHtml) + '<br>'
+  const merged = quoted.includes('<body') ? quoted.replace(/<body([^>]*)>/i, `<body$1>${mine}`) : mine + quoted
+  const patch = { body: { contentType: 'HTML', content: merged } }
+  if (args.subject) patch.subject = args.subject
+  if (args.cc) patch.ccRecipients = rcpt(args.cc)
+  await graph('PATCH', `/messages/${draft.id}`, patch)
 } else {
-  if (!args.to || !args.subject) throw new Error('need --to and --subject (or --reply-to-subject)')
+  if (!args.to || !args.subject) throw new Error('need --to and --subject (or --reply-to-subject / --forward-subject)')
   draft = await graph('POST', '/messages', {
     subject: args.subject,
     body: { contentType: 'HTML', content: withSig(bodyHtml) },
