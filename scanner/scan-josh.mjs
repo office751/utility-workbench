@@ -1,26 +1,34 @@
 /**
  * scan-josh.mjs — the one-click "Scan Josh" : turn Josh's NEW texts into
- * material orders + tasks, written STRAIGHT into the Workbench (no pasting).
+ * material orders + asks, written STRAIGHT into Monday (no pasting).
  *
- * How it differs from the old scripts/read-josh-orders.mjs:
- *   • Josh ONLY (Mickey + everyone else dropped).
- *   • INCREMENTAL — it remembers the last scan in `.josh-state.json` and only
- *     reads messages since then. Scan Friday, scan again today → only the
- *     messages since Friday. The cursor advances ONLY after a successful write.
- *   • WRITES into the app — proposed orders land on the matched house's
- *     🛒 Materials tab, proposed tasks land on the ✓ Tasks tab. ADD-ONLY and
- *     delete-safe, mirroring scan.mjs's safe write: it reads the blob, refuses
- *     to write anything that doesn't look like a real Workbench, backs the blob
- *     up first, and never removes or overwrites your existing data.
+ * Since Oct 2026 Monday is the system of record, so this writes to Monday:
+ *   • a clear "order this" for one house → a new row on the ORDERS board
+ *     (Status = To order, linked to the house + the vendor that covers it,
+ *     Josh's text in the Note).
+ *   • anything else Josh needs from you → a comment ("update") on the house's
+ *     row on the Construction Job List, so it shows on that house and in your
+ *     Monday inbox. Asks that don't name a house are only PRINTED — read them
+ *     here and handle by hand (there's nowhere sensible to file them).
  *
- * The house roster is read from the LIVE blob (`blob.roster`), NOT from
- * src/data/projects.ts — same single source of truth scan.mjs uses, so added /
- * renamed / deleted houses are always matched correctly.
+ * It is INCREMENTAL — it remembers the last scan in `.josh-state.json` and only
+ * reads messages since then. Scan Friday, scan again today → only the messages
+ * since Friday. The cursor advances ONLY after a successful write.
+ *
+ * ADD-ONLY and delete-safe: it never edits or removes anything on Monday. A
+ * house that already has an open order for the category is skipped (same
+ * duplicate guard the app's Quick-Add had), and every comment carries a
+ * "[josh:<message id>]" tag so a re-scan that overlaps never posts twice.
+ *
+ * The house roster is read LIVE from the Construction Job List board (item
+ * name = address, plus Subdivision + Parcel ID), so renamed / added / dead
+ * houses are always matched correctly. Dead Lots are left out of matching.
  *
  * Usage (the Desktop "Scan Josh" button runs the first form):
- *   node scan-josh.mjs --write              # scan since last time + write into the app
+ *   node scan-josh.mjs --write              # scan since last time + write into Monday
  *   node scan-josh.mjs                       # PREVIEW — show what it WOULD add, write nothing
  *   node scan-josh.mjs --since 2026-06-01 [--write]   # override the start date
+ *   node scan-josh.mjs --lodestar [--write]  # the OLD path: write into the Lodestar blob instead
  *
  * Mac-only: reads the Messages database (needs Full Disk Access). Lives in
  * scanner/ alongside the permit scanner and NEVER ships to the browser.
@@ -31,8 +39,11 @@ import { homedir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import crypto from 'node:crypto'
-import { createClient } from '@supabase/supabase-js'
 import 'dotenv/config'
+import {
+  loadHouses, loadBoardItems, loadUpdates, createItem, createUpdate,
+  ORDERS, ORDERS_BOARD_ID, VENDORS, VENDORS_BOARD_ID, CJL_BOARD_ID,
+} from './monday.mjs'
 
 const __dir = dirname(fileURLToPath(import.meta.url))
 const DB = join(homedir(), 'Library/Messages/chat.db')
@@ -40,8 +51,7 @@ const STATE_FILE = join(__dir, '.josh-state.json')
 
 const args = process.argv.slice(2)
 const doWrite = args.includes('--write')
-const SUPABASE_URL = process.env.SUPABASE_URL
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY
+const useLodestar = args.includes('--lodestar') // legacy: write the Lodestar blob instead of Monday
 
 // Josh only. (Add a number here if you ever want another trusted reporter.)
 const SENDERS = { '+13523616750': 'Josh' }
@@ -70,7 +80,8 @@ const STOP = new Set(
     'southwest northwest northeast southeast dunnellon ocala belleview summerfield ocklawaha').split(' '),
 )
 
-// Project lookup — populated from blob.roster (see buildLookup), not a file.
+// Project lookup — populated from the roster (Monday houses, or blob.roster
+// in --lodestar mode). Same matching either way: id + address + subdivision.
 let projects = []
 let tokenIndex = {}
 function buildLookup(roster) {
@@ -90,16 +101,14 @@ function buildLookup(roster) {
 
 // --- item keywords (incl. Josh's real-world spellings) -----------------------
 const CATEGORIES = [
-  // Trusses & framing are ONE combined category in the app now (one order
-  // row, one Tibbetts email for the whole package). matchCategories de-dupes,
-  // so "truss and framing" in one text still adds a single row.
+  // Trusses & framing are ONE combined category (one order row, one Tibbetts
+  // email for the whole package). matchCategories de-dupes, so "truss and
+  // framing" in one text still adds a single row.
   [/truss/, 'Trusses & Framing'],
   [/framing|frame pack/, 'Trusses & Framing'],
   [/slab|slap package/, 'Slab package'],
-  // Block & lintels are ONE combined category in the app now (one order row,
-  // two vendor emails: block → DZ Block, lintels → Marion Masonry). Several
-  // patterns map to it; matchCategories de-dupes, so "block and lintels" in
-  // one text still adds a single row.
+  // Block & lintels are ONE combined category (one order row, two vendor
+  // emails: block → DZ Block, lintels → Marion Masonry).
   [/\bblock/, 'Block & Lintels'],
   [/lintel|lentil/, 'Block & Lintels'],
   [/floor/, 'Flooring'],
@@ -109,9 +118,20 @@ const CATEGORIES = [
   [/garage door/, 'Garage door'],
   [/dumpster/, 'Dumpster'],
   [/porta|port o|ports potty|porta-potty/, 'Porta-potty'],
-  [/\bsand\b/, 'Block & Lintels'], // sand ships bundled with the lintel package — same as the app's Quick-Add
-
+  [/\bsand\b/, 'Block & Lintels'], // sand ships bundled with the lintel package
 ]
+
+// Lead times come from the app's one table (src/data/orders.ts) so Monday's
+// "Lead Time (days)" matches what Lodestar would have said.
+function loadLeadTimes() {
+  const out = {}
+  try {
+    const src = readFileSync(join(__dir, '../src/data/orders.ts'), 'utf8')
+    const block = src.split('LEAD_TIME_DAYS')[1] || ''
+    for (const m of block.matchAll(/'?([A-Za-z &-]+)'?:\s*(\d+)/g)) out[m[1].trim()] = Number(m[2])
+  } catch { /* table missing → every category falls back to 7 below */ }
+  return out
+}
 
 function decodeAttributedBody(hex) {
   if (!hex) return ''
@@ -154,24 +174,38 @@ const REACTION = /^(Loved|Liked|Emphasized|Laughed at|Questioned|Disliked)\s[“
 const TASK_SIGNAL = /\?|can you|could you|\bplease\b|need (you|to)|call me|\bemail\b|send me|let me know|any update|update on|confirm|did (we|you)|where('?s| is| are)?|when (will|is)/i
 const URGENT_SIGNAL = /asap|right away|immediately|urgent|\btoday\b|by eod|end of day/i
 
-// --- main: read blob → roster lookup → scan Messages → merge → write ---------
-if (!SUPABASE_URL || !SERVICE_KEY) {
-  console.error('\n✗ Missing SUPABASE_URL / SUPABASE_SERVICE_KEY in scanner/.env — cannot reach the app.\n')
-  process.exit(1)
+// --- roster: Monday houses (default) or the Lodestar blob (--lodestar) -------
+let sb = null, blob = null, originalJson = ''
+if (useLodestar) {
+  const { createClient } = await import('@supabase/supabase-js')
+  const SUPABASE_URL = process.env.SUPABASE_URL
+  const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY
+  if (!SUPABASE_URL || !SERVICE_KEY) {
+    console.error('\n✗ Missing SUPABASE_URL / SUPABASE_SERVICE_KEY in scanner/.env — cannot reach the app.\n')
+    process.exit(1)
+  }
+  sb = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } })
+  const { data, error } = await sb.from('workbench').select('data').eq('id', 'main').maybeSingle()
+  if (error) { console.error('\n✗ Could not read the Workbench:', error.message, '\n'); process.exit(1) }
+  blob = data && data.data
+  // SAFETY: never write (and don't even match) unless the blob looks like a
+  // real, populated Workbench — protects against clobbering on a bad read.
+  if (!blob || !Array.isArray(blob.roster) || blob.roster.length === 0 || !blob.projects || !Array.isArray(blob.tasks)) {
+    console.error('\n✗ Workbench data looks invalid — aborting (nothing read or written).\n')
+    process.exit(1)
+  }
+  originalJson = JSON.stringify(data.data) // captured BEFORE we mutate, for the backup
+  buildLookup(blob.roster)
 }
-const sb = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } })
-const { data, error } = await sb.from('workbench').select('data').eq('id', 'main').maybeSingle()
-if (error) { console.error('\n✗ Could not read the Workbench:', error.message, '\n'); process.exit(1) }
-const blob = data && data.data
-// SAFETY: never write (and don't even match) unless the blob looks like a real,
-// populated Workbench. Same guard the permit scanner uses — protects against
-// clobbering on a transient/empty read.
-if (!blob || !Array.isArray(blob.roster) || blob.roster.length === 0 || !blob.projects || !Array.isArray(blob.tasks)) {
-  console.error('\n✗ Workbench data looks invalid — aborting (nothing read or written).\n')
-  process.exit(1)
+let houses = []
+if (!useLodestar) {
+  houses = (await loadHouses()).filter((h) => h.group !== 'Dead Lots')
+  if (houses.length < 20) { // the board has ~100 rows; a tiny read means the API hiccupped
+    console.error(`\n✗ Only ${houses.length} houses came back from Monday — aborting (nothing written).\n`)
+    process.exit(1)
+  }
+  buildLookup(houses)
 }
-const originalJson = JSON.stringify(data.data) // captured BEFORE we mutate, for the backup
-buildLookup(blob.roster) // single source of truth = the live roster
 
 // --- query Messages ----------------------------------------------------------
 const numberList = Object.keys(SENDERS).map((n) => `'${n}'`).join(',')
@@ -207,7 +241,7 @@ for (const r of rows) {
 
   if (cats.length && matches.length === 1 && isOrder) {
     const p = matches[0].p
-    for (const c of cats) clearMap.set(`${p.id}|${c}`, { pid: p.id, address: p.address, category: c, when, who, quote })
+    for (const c of cats) clearMap.set(`${p.id}|${c}`, { pid: p.id, address: p.address, category: c, when, who, quote, guid: r.guid })
     continue
   }
   if (cats.length || TASK_SIGNAL.test(lc)) {
@@ -232,12 +266,98 @@ if (orders.length) {
   for (const o of orders) console.log(`   • ${o.address} → ${o.category}   ⤷ "${o.quote}" (${o.when})`)
 }
 if (tasks.length) {
-  console.log('\n🗂️  TASKS (someone needs something from you)')
-  for (const t of tasks) console.log(`   • "${t.quote}"  — ⏳ ${t.who}${t.due ? ' · due today' : ''}${t.hint ? ' · ' + t.hint : ''}`)
+  console.log('\n🗂️  ASKS (someone needs something from you)')
+  for (const t of tasks) console.log(`   • "${t.quote}"  — ⏳ ${t.who}${t.due ? ' · due today' : ''}${t.hint ? ' · ' + t.hint : ' · (no house matched)'}`)
 }
 if (!orders.length && !tasks.length) console.log('Nothing new from Josh in that window.')
 
-// --- merge into the blob (add-only) ------------------------------------------
+function finish(stamp) {
+  writeFileSync(STATE_FILE, JSON.stringify({ lastScan: runStart.toISOString() }, null, 2))
+  console.log(`\n✓ Done. Next scan starts from now.${stamp ? `\n   Backup: scanner/backups/${stamp}` : ''}\n`)
+}
+
+// =============================================================================
+// MONDAY (default): orders → Orders board rows, asks → comments on the house
+// =============================================================================
+if (!useLodestar) {
+  const houseById = Object.fromEntries(houses.map((h) => [h.id, h]))
+
+  // Existing open orders, so a category already on the house is skipped.
+  const existing = await loadBoardItems(ORDERS_BOARD_ID, [ORDERS.status, ORDERS.lodestarId, ORDERS.property])
+  const openByHouse = {} // houseId -> Set(lowercased category prefix of the item name)
+  const knownIds = new Set()
+  for (const o of existing) {
+    if (o.cv[ORDERS.lodestarId]) knownIds.add(o.cv[ORDERS.lodestarId])
+    if (o.cv[ORDERS.status] === 'Installed') continue
+    const cat = o.name.split(' — ')[0].trim().toLowerCase()
+    for (const hid of o.cv[ORDERS.property + ':ids'] || []) (openByHouse[hid] ??= new Set()).add(cat)
+  }
+  // Vendor per category, from the Vendors board's "Order Categories" column.
+  const vendors = await loadBoardItems(VENDORS_BOARD_ID, [VENDORS.orderCategories])
+  const vendorFor = (cat) => {
+    const c = cat.toLowerCase()
+    const v = vendors.find((x) => x.cv[VENDORS.orderCategories].split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
+      .some((s) => c.includes(s) || s.includes(c) || c.split(' & ').some((part) => s.includes(part))))
+    return v ? v.id : null
+  }
+  const LEAD = loadLeadTimes()
+
+  const orderPlan = [], orderDup = []
+  for (const o of orders) {
+    if (knownIds.has(`josh:${o.guid}`) || openByHouse[o.pid]?.has(o.category.toLowerCase())) { orderDup.push(o); continue }
+    orderPlan.push(o)
+  }
+
+  // Asks → comment on the house, de-duped by the [josh:<guid>] tag in the body.
+  const matchedTasks = tasks.filter((t) => t.projectId)
+  const unmatchedTasks = tasks.filter((t) => !t.projectId)
+  const existingUpdates = matchedTasks.length ? await loadUpdates(matchedTasks.map((t) => t.projectId)) : {}
+  const taskPlan = [], taskDup = []
+  for (const t of matchedTasks) {
+    const tag = `[josh:${t.guid}]`
+    if ((existingUpdates[t.projectId] || []).some((b) => b.includes(tag))) { taskDup.push(t); continue }
+    taskPlan.push(t)
+  }
+
+  console.log('\nMonday sync:')
+  console.log(`   orders:   +${orderPlan.length} new row(s) on the Orders board (${orderDup.length} already open on the house)`)
+  console.log(`   asks:     +${taskPlan.length} new comment(s) on house rows (${taskDup.length} already posted)`)
+  if (unmatchedTasks.length) console.log(`   ⚠ ${unmatchedTasks.length} ask(s) name no house — not filed anywhere, handle from the list above`)
+
+  if (!doWrite) {
+    console.log('\n(PREVIEW — nothing written. Double-click "Scan Josh", or run with  --write , to apply.)\n')
+    process.exit(0)
+  }
+
+  // Write sequentially (Monday rate-limits bursts). Any failure stops here
+  // WITHOUT advancing the cursor, so the next run re-proposes the rest — and
+  // the de-dupe above means what already landed is not written twice.
+  for (const o of orderPlan) {
+    const h = houseById[o.pid]
+    const vals = {
+      [ORDERS.status]: { label: 'To order' },
+      [ORDERS.property]: { item_ids: [Number(o.pid)] },
+      [ORDERS.leadTime]: String(LEAD[o.category] ?? 7),
+      [ORDERS.note]: `Josh ${o.when}: "${o.quote}"`,
+      [ORDERS.lodestarId]: `josh:${o.guid}`,
+    }
+    const vid = vendorFor(o.category)
+    if (vid) vals[ORDERS.vendor] = { item_ids: [Number(vid)] }
+    await createItem(ORDERS_BOARD_ID, ORDERS.group, `${o.category} — ${h.address}`, vals)
+    console.log(`   + order: ${o.category} — ${h.address}`)
+  }
+  for (const t of taskPlan) {
+    const body = `📱 Josh asked (${t.when})${t.due ? ' — URGENT' : ''}: ${t.full.slice(0, 500)}\n\n[josh:${t.guid}]`
+    await createUpdate(t.projectId, body)
+    console.log(`   + comment on ${houseById[t.projectId].address}: "${t.quote}"`)
+  }
+  finish()
+  process.exit(0)
+}
+
+// =============================================================================
+// LODESTAR (--lodestar): the pre-Oct-2026 path, kept for rollback
+// =============================================================================
 // ORDERS → the matched house's Materials list. Skip a category the house
 // already has (mirrors the app's Quick-Add duplicate guard).
 let oAdded = 0, oDup = 0
@@ -272,21 +392,20 @@ for (const t of tasks) {
   tAdded++
 }
 
-console.log('\nWorkbench sync:')
+console.log('\nWorkbench sync (--lodestar):')
 console.log(`   orders: +${oAdded} new (${oDup} already on the house)`)
 console.log(`   tasks:  +${tAdded} new (${tDup} already captured)`)
 
 if (!doWrite) {
-  console.log('\n(PREVIEW — nothing written. Double-click "Scan Josh", or run with  --write , to apply.)\n')
+  console.log('\n(PREVIEW — nothing written. Run with  --write  to apply.)\n')
   process.exit(0)
 }
 
 // Back the blob up, write, then advance the cursor — in that order, so a failed
 // write never loses messages (the cursor only moves on a successful write).
 mkdirSync(join(__dir, 'backups'), { recursive: true })
-const stamp = runStart.toISOString().replace(/[:.]/g, '-')
-writeFileSync(join(__dir, `backups/workbench-josh-${stamp}.json`), originalJson)
+const stamp = `workbench-josh-${runStart.toISOString().replace(/[:.]/g, '-')}.json`
+writeFileSync(join(__dir, 'backups', stamp), originalJson)
 const { error: werr } = await sb.from('workbench').upsert({ id: 'main', data: blob, updated_at: new Date().toISOString() })
 if (werr) { console.error('\n✗ Write failed (cursor NOT advanced):', werr.message, '\n'); process.exit(1) }
-writeFileSync(STATE_FILE, JSON.stringify({ lastScan: runStart.toISOString() }, null, 2))
-console.log(`\n✓ Added to your Workbench. Next scan starts from now.\n   Backup: scanner/backups/workbench-josh-${stamp}.json\n`)
+finish(stamp)
