@@ -177,7 +177,7 @@ export const GUIDES: Guide[] = [
       { who: 'you', text: 'If a line couldn\'t be matched, the summary says so — open that house\'s Materials tab and add it by hand.' },
       { who: 'you', text: 'Then send each new order with its ✉️ Order button (see "Order materials / reach a vendor").' },
     ],
-    tip: 'The Quick add bar works on ANY device you\'re signed in on — phone, Windows laptop, anywhere. (Separately, Adam\'s office Mac runs an automatic "Scan Josh" button that reads Messages directly and files orders without typing — but that is Mac-only, so the Quick add bar is the way everyone else captures orders.)',
+    tip: 'The Quick add bar works on ANY device you\'re signed in on — phone, Windows laptop, anywhere.',
   },
   {
     id: 'client-selections-link',

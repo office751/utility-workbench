@@ -2,7 +2,7 @@
 // Reads MONDAY_API_TOKEN from scanner/.env (key match is case-insensitive,
 // because the line was hand-typed) and exposes mondayQuery() plus the small
 // set of board/column ids + helpers the Mac-side jobs share (Oct 2026: Monday
-// is the system of record, so Scan Josh and the permit scanner write here).
+// is the system of record, so the permit scanner writes here).
 // Never logs the token.
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -70,7 +70,7 @@ export const ORDERS = {
   neededBy: 'date_mm70n9f6',
   leadTime: 'numeric_mm70gahn',
   note: 'text_mm7040ca',
-  lodestarId: 'text_mm70fkeq', // any stable id — Scan Josh uses "josh:<message guid>"
+  lodestarId: 'text_mm70fkeq', // the Lodestar order id the Sep 2026 seed carried over
   property: 'board_relation_mm70370j',
   vendor: 'board_relation_mm70hdtx',
 }

@@ -1,74 +1,60 @@
 # Monday is the system of record (Oct 2026)
 
-Since Oct 16 2026 the Mac-side jobs in this folder write to **Monday**
+Since Oct 16 2026 the Mac-side job in this folder writes to **Monday**
 (account `the-network-empire`, workspace *Properties*), not to the Lodestar
 blob and not to SharePoint. Lodestar stays up for what hasn't moved yet
-(⚡ electric applications, cabinet layouts, selections); its 🏠 Today /
-✓ Tasks / 🔍 Inspections tabs are no longer fed by these jobs.
+(⚡ electric applications, cabinet layouts, selections).
 
-## What writes where
+## The one job: Permit Scan (on demand)
 
-| Job | Trigger | Writes |
-|---|---|---|
-| `scan.mjs --write` (permit scanner) | launchd `com.ironshield.permitscanner`, 5:30 AM | **Inspections board**: one row per county inspection result (Result = Failed / Partial / Passed / Other) and per active hold (Result = **Hold**), linked to the house. **Comments on the house's Construction Job List row** for "Information…" FYIs and for a permit **expiration-date change**. Permit status/issued/expire dates → `scanner/.portal-dates.json` (local memory). |
-| `scan-josh.mjs --write` (Scan Josh) | Desktop → Claude Commands → *Scan Josh.command* | **Orders board**: a row per clear "order this" text (To order, linked to the house and the vendor that covers the category, Josh's words in Note). **Comment on the house row** for every other ask. Asks that name no house are only printed. |
-| `electric-scout.mjs` | by hand / Monday webhook | Electric Co. on the Construction Job List (see `docs/electric-scout.md`). |
+`scan.mjs --write` reads every permit on the county portal and sets each
+house's **Permit Expires** date on the Construction Job List (matched by the
+house's **Permit #**). A Monday automation then notifies Adam **30 days
+before** a permit expires. That is the only thing written anywhere.
 
-Houses are matched by the Construction Job List's **Permit #** (scanner) or
-by address + subdivision tokens (Scan Josh). A permit that isn't on the board
-is skipped and listed in the run's output — add the house to Monday and the
-next run picks it up.
+Run it when you want it — there is **no nightly job** any more:
+- Desktop → Claude Commands → **Permit Scan.command** (double-click), or
+- ask Claude, or `cd scanner && node scan.mjs --write`.
 
-## Safety rules (same as before, now on Monday)
+Holds and inspection results still print in the run's output for whoever
+ran it, and nothing is done with them. Each permit's portal dates are kept
+in `scanner/.portal-dates.json` (local, gitignored) so a run can say which
+expiry dates moved since last time. A permit that isn't on the board is
+listed and skipped — add the house to Monday and re-run.
 
-- Every job **previews by default**; `--write` is required to change anything.
-- **Add-only.** Resolved inspections/holds are only removed with `--prune`,
-  and only for a permit whose portal tab actually rendered that night.
-- **Never double-posts.** Inspections rows carry the scanner's `Source Key`;
-  comments carry a `[portal:…]` / `[josh:…]` tag; Scan Josh skips a category
-  the house already has an open order for.
-- Writes go one at a time. Monday's **daily API budget** is a few thousand
-  calls (hit it once, Sep 2026) — a normal night uses well under 200.
-- `--lodestar` on either script writes the old way (the Lodestar blob) if you
-  ever need to roll back. Same safety pattern: fresh read → backup → write.
+Safety: previews by default (`--write` to change anything); only the Permit
+Expires cell is touched; `--lodestar` is the old path (holds/inspections into
+the Lodestar blob) if you ever need it.
 
-## What was retired (Oct 16 2026)
+## What was retired
 
-- `sync-sharepoint.mjs` + `com.ironshield.sharepointsync.plist` — the nightly
-  Lodestar → SharePoint fill. Its last weeks of logs show **0 fills, 47
-  conflicts**: Monday is hand-maintained and already ahead of Lodestar on
-  every column it synced, so there is nothing to replace it with.
-- `monday-to-sp.mjs` — Monday → SharePoint backfill of new lots.
-- `sp-list.mjs` — Claude's cell editor for the SharePoint list.
+- **Oct 16 2026 — Scan Josh** (`scan-josh.mjs` + the Desktop command): Adam
+  would rather point Claude at specific texts than have a scanner guess.
+  Josh's orders/asks are no longer filed anywhere automatically.
+- **Oct 16 2026 — the nightly 5:30 AM permit scan** and its Monday writes of
+  holds / inspection rows / comments: only the expiry date is wanted.
+- **Oct 16 2026 — the SharePoint sync** (`sync-sharepoint.mjs`,
+  `monday-to-sp.mjs`, `sp-list.mjs`): Monday is hand-maintained and was
+  already ahead of Lodestar. The SharePoint lists were left intact; the
+  "Project Docs" links on the Monday boards still point into SharePoint.
 
-The SharePoint lists themselves were **left intact** (nothing deleted). If
-the O365 tenant is ever wound down, the "Project Docs" links on the Monday
-boards still point into SharePoint folders — that's the one dependency left.
+### Adam's one-time step: stop the old scheduled jobs
 
-### Adam's one step: stop the old nightly job
-
-The scheduler still has the SharePoint job loaded (it now fails every night
-because the script is gone — harmless, but noisy). Remove it once:
+The scheduler still has the nightly permit scan and the SharePoint sync
+loaded. Remove both once (the Permit Scan command above replaces them):
 
 ```bash
-launchctl bootout gui/$(id -u)/com.ironshield.sharepointsync && rm ~/Library/LaunchAgents/com.ironshield.sharepointsync.plist
+launchctl bootout gui/$(id -u)/com.ironshield.permitscanner; launchctl bootout gui/$(id -u)/com.ironshield.sharepointsync; rm -f ~/Library/LaunchAgents/com.ironshield.permitscanner.plist ~/Library/LaunchAgents/com.ironshield.sharepointsync.plist
 ```
 
-Check it's gone: `launchctl list | grep ironshield` should show only
-`permitscanner`, `scanwatcher`, `digest`, `improver`.
+Check: `launchctl list | grep ironshield` should show only `scanwatcher`,
+`digest`, `improver`. (`scanwatcher` is Lodestar's 🔄 "Scan now" button —
+it now runs this same expiry-only scan when pressed.)
 
 ## Still on Lodestar (next phases)
 
-- The app's 🔄 "Scan now" button (`watch-scan-request.mjs`) still reads its
-  request from the blob and runs `scan.mjs --write` — which now writes to
-  Monday. The app's "scan ✓" stamp will stop updating; that banner retires
-  with the Today screen.
 - `new-house.mjs`, `add-roster-projects.mjs`, `add-closing-dates.mjs` still
-  write the blob (roster + closing dates). New lots are created on Monday
-  by hand / Import today — these scripts are for Lodestar's own roster only.
-- Permit expiry → the scanner also sets **Permit Expires** on the house row
-  (re-added Oct 16 2026; the Sep 8 column had gone missing) from the
-  county's Expire Date, and a Monday automation notifies Adam 30 days
-  before it. The old, broken copy of that automation (pointing at the
-  deleted column) is still listed inactive in the board's Automations —
-  safe to delete.
+  write the blob (Lodestar's own roster). New lots are created on Monday by
+  hand / Import.
+- The Orders and Inspections boards keep the rows seeded in Sep 2026 and
+  whatever people add by hand; nothing feeds them automatically now.

@@ -14,7 +14,7 @@
  *          plus a 1-mile seam check so a nearby Duke/SECO boundary gets a
  *          caution instead of silent confidence.
  *   2. Appends the project to the LIVE app roster (Supabase blob) —
- *        same safety pattern as scan-josh.mjs / add-roster-projects.mjs:
+ *        same safety pattern as add-roster-projects.mjs:
  *        fresh read → backup to scanner/backups/ → append-only → verify.
  *        Skips (never edits) an address or parcel already on the roster.
  *   3. Creates the Construction Archive folder "Address (Parcel)" in BOTH

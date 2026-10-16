@@ -86,11 +86,11 @@ vendors.ts), user overrides in `WorkbenchState.templates`, edited in
    old blobs, seed new fields). One-time data merges get a flag
    (e.g. `extrasSeeded`).
 4. **`scanner/` is isolated** — a Node/Playwright permit-portal scraper that
-   must NEVER be imported by the Vite app. It runs nightly at 5:30 AM via
-   launchd on Adam's Mac only (logged-in Tyler-SSO Chrome profile in
+   must NEVER be imported by the Vite app. It runs ON DEMAND only (Adam asks,
+   or the Desktop "Permit Scan" command) on Adam's Mac (logged-in Tyler-SSO Chrome profile in
    `scanner/profile/`, Supabase service key in `scanner/.env` — none of that
-   is in git; don't try to run it on other machines). **Since Oct 2026 it
-   writes to MONDAY** (Inspections board + comments on the house), not the
+   is in git; don't try to run it on other machines). **Since Oct 2026 the only
+   thing it writes is each house's Permit Expires date on MONDAY**, not the
    blob — see `scanner/MONDAY.md`; `--lodestar` is the rollback path. Its
    sync is ADD-ONLY by default; clearing requires `--prune`. Never weaken the
    "never clear a category whose tab didn't render" rule in scan.mjs.
@@ -102,8 +102,9 @@ vendors.ts), user overrides in `WorkbenchState.templates`, edited in
    SheetJS must stay a lazy `await import('xlsx')` (bundle size).
 6. **Vite dev server**: Adam usually has his own `npm run dev` on port 5173.
    Don't fight it; verify via build + scripts, not a second server.
-7. Texting/email scans ("any new tasks?") read the **Mac's** Messages DB —
-   macOS only; see the memory notes on Adam's machines.
+7. Reading Josh's/Pam's texts happens only when Adam asks, via the Messages
+   DB on the **Mac** (macOS only). The automatic "Scan Josh" job was removed
+   Oct 2026 — don't rebuild it.
 
 ## Verifying changes (the pattern that works here)
 

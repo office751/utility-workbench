@@ -4,32 +4,27 @@
  *   • Inspection / eReview REJECTIONS (Disapproved / Fail / Correction…),
  *     ignoring ones a later pass already cleared.
  *
- * Findings are written to MONDAY (the system of record since Oct 2026):
- *   • holds + inspection rejections → rows on the Inspections board, linked to
- *     the house (Result = Hold / Failed / Partial / Passed / Other). Matched by
- *     the house's "Permit #" on the Construction Job List.
- *   • "Information…" FYIs and permit EXPIRY-DATE changes → a comment on the
- *     house's row (shows on the house + in your inbox).
- *   • each permit's status / issued / expire dates → scanner/.portal-dates.json
- *     (local memory, so an expiry change is noticed the night it happens).
- * `--lodestar` writes the OLD way, into the Lodestar blob, instead.
+ * ON DEMAND since Oct 16 2026 (no nightly job): Adam asks, or double-clicks
+ * Desktop → Claude Commands → "Permit Scan.command". The only thing WRITTEN
+ * is each house's **Permit Expires** date on the Monday Construction Job
+ * List (matched by the house's "Permit #"); holds / inspection results are
+ * printed for whoever ran the scan and nothing more. Each permit's portal
+ * dates are kept in scanner/.portal-dates.json so a moved date is called out.
+ * `--lodestar` writes the OLD way (holds/inspections into the Lodestar blob).
  * Reuses the logged-in session saved by `npm run login`.
  *
  * Usage:
  *   npm run scan                      # all permits, dry run, headless
  *   npm run scan -- --permit 2025020809   # just one permit
  *   npm run scan -- --headed          # watch it work in a visible window
- *   npm run scan -- --write           # actually write (add/update; --prune also clears resolved)
+ *   npm run scan -- --write           # actually set Permit Expires on Monday
  */
 import { chromium } from 'playwright'
 import { createClient } from '@supabase/supabase-js'
 import 'dotenv/config'
 import fs from 'node:fs'
-import { expiryChange, isoFromUs, parseSummary, readBakedDates } from './portal-dates.mjs'
-import {
-  loadHouses, loadBoardItems, loadUpdates, createItem, setColumns, deleteItem, createUpdate, normPermit,
-  INSPECTIONS, INSPECTIONS_BOARD_ID, CJL, CJL_BOARD_ID,
-} from './monday.mjs'
+import { expiryChange, parseSummary, readBakedDates } from './portal-dates.mjs'
+import { loadHouses, setColumns, normPermit, CJL, CJL_BOARD_ID } from './monday.mjs'
 
 const BASE = 'https://selfservice.marionfl.org/energov_prod/selfservice'
 const PROFILE_DIR = process.env.PROFILE_DIR || './profile'
@@ -427,16 +422,11 @@ async function syncToWorkbench(results) {
   console.log(`\n✓ Written to your Workbench. Backup: scanner/backups/workbench-${stamp}.json\n`)
 }
 
-/* -------- write findings into MONDAY (default since Oct 2026) -------- */
+/* -------- write to MONDAY (default since Oct 2026): Permit Expires only -------- */
+// Adam's call (Oct 16 2026): the only thing he wants from the county scan now
+// is WHEN EACH PERMIT EXPIRES. Holds / inspection results / FYIs are still
+// printed above for the person running the scan, but nothing else is written.
 const PORTAL_DATES_FILE = new URL('./.portal-dates.json', import.meta.url)
-// Monday's Result label for a county status string (same rule the Sep 2026 seed used).
-const resultLabel = (s) => {
-  const t = (s || '').toLowerCase()
-  if (/disapprov|fail|reject|denied/.test(t)) return 'Failed'
-  if (/partial|correction|incomplete/.test(t)) return 'Partial'
-  if (/pass|approv/.test(t)) return 'Passed'
-  return 'Other'
-}
 
 async function syncToMonday(results) {
   // House per permit, from the Construction Job List's "Permit #" column.
@@ -445,140 +435,38 @@ async function syncToMonday(results) {
   const houseByPermit = new Map()
   for (const h of houses) if (h.permit) houseByPermit.set(normPermit(h.permit), h)
 
-  // What we WANT on the Inspections board + as comments, per permit that rendered.
-  const desired = [] // Inspections board rows
-  const fyis = [] // comments on the house
-  const noHouse = []
-  const holdsOkPermits = new Set(), inspOkPermits = new Set()
-  for (const r of results) {
-    const h = houseByPermit.get(normPermit(r.permit))
-    if (!h) { if (r.holdsOk || r.inspOk) noHouse.push(r.permit); continue }
-    if (r.inspOk) {
-      inspOkPermits.add(r.permit)
-      for (const rej of r.rejections)
-        desired.push({
-          houseId: h.id, address: h.address,
-          sourceKey: `portal:${r.permit}:rej:${rej.desc}`,
-          name: `${trimDesc(rej.desc)}${rej.status ? ' — ' + rej.status : ''} — ${h.address}`,
-          result: resultLabel(rej.status), date: isoFromUs(rej.date),
-        })
-    }
-    if (r.holdsOk) {
-      holdsOkPermits.add(r.permit)
-      for (const hd of r.holds)
-        desired.push({
-          houseId: h.id, address: h.address,
-          sourceKey: `portal:${r.permit}:hold:${hd.name}:${hd.date}:${slug(hd.comment)}`,
-          name: `🚧 Hold: ${hd.name} — ${(hd.comment || '').slice(0, 120)} — ${h.address}`,
-          result: 'Hold', date: isoFromUs(hd.date),
-        })
-      for (const f of r.fyi)
-        fyis.push({
-          houseId: h.id, address: h.address,
-          sourceKey: `portal:${r.permit}:fyi:${f.name}:${f.date}:${slug(f.comment)}`,
-          body: `🔔 County FYI (${f.date || 'no date'}): ${f.name} — ${(f.comment || '').slice(0, 400)}`,
-        })
-    }
-  }
-
-  // --- Inspections board: add new, refresh changed, clear resolved (--prune only) ---
-  const existing = await loadBoardItems(INSPECTIONS_BOARD_ID, [INSPECTIONS.result, INSPECTIONS.sourceKey, INSPECTIONS.date, INSPECTIONS.property])
-  const existingByKey = new Map(existing.filter((x) => x.cv[INSPECTIONS.sourceKey]).map((x) => [x.cv[INSPECTIONS.sourceKey], x]))
-  const desiredKeys = new Set(desired.map((d) => d.sourceKey))
-  const toAdd = [], toUpdate = [], toClear = []
-  const seen = new Set()
-  for (const d of desired) {
-    if (seen.has(d.sourceKey)) continue // never add the same key twice in one run
-    seen.add(d.sourceKey)
-    const ex = existingByKey.get(d.sourceKey)
-    if (!ex) { toAdd.push(d); continue }
-    // Re-inspections keep the same key — refresh the result/date/name when the
-    // county's row changed, otherwise leave it alone (keeps "Dismissed" intact).
-    if (ex.cv[INSPECTIONS.result] !== d.result || (ex.cv[INSPECTIONS.date] || '') !== d.date || ex.name !== d.name.slice(0, 255)) toUpdate.push({ ...d, id: ex.id })
-  }
-  for (const ex of existing) {
-    const parts = (ex.cv[INSPECTIONS.sourceKey] || '').split(':')
-    if (parts[0] !== 'portal') continue
-    // only clear a category whose tab actually rendered for that permit
-    const okSet = parts[2] === 'hold' ? holdsOkPermits : parts[2] === 'rej' ? inspOkPermits : null
-    if (okSet && okSet.has(parts[1]) && !desiredKeys.has(ex.cv[INSPECTIONS.sourceKey])) toClear.push(ex)
-  }
-
-  // --- comments on the house: FYIs + expiry changes, de-duped by a [key] tag ---
+  // Local memory of each permit's portal dates (non-empty wins, so one bad
+  // read never erases a date we knew). Lets the run say "this one MOVED".
   const prevDates = (() => { try { return JSON.parse(fs.readFileSync(PORTAL_DATES_FILE, 'utf8')) } catch { return {} } })()
-  const baked = readBakedDates(new URL('../src/data/permitDates.ts', import.meta.url))
   const portalDates = { ...prevDates }
-  const comments = [...fyis]
-  let dRecorded = 0
+  const fills = [], noHouse = []
+  let moved = 0
   for (const r of results) {
-    if (!r.summaryOk) continue // summary never rendered → leave this permit's record alone
+    if (!r.summaryOk) continue // summary never rendered → leave this permit alone
     const prev = portalDates[r.permit] || {}
-    const prevExpires = prev.expires || baked[r.permit]?.expires || ''
-    const change = expiryChange(prevExpires, r.summary.expires)
-    if (change) {
-      console.log(`   📅 EXPIRY CHANGE ${r.permit}: ${change.from} → ${change.to}`)
-      const h = houseByPermit.get(normPermit(r.permit))
-      if (h) comments.push({
-        houseId: h.id, address: h.address,
-        sourceKey: `portal-evt:${r.permit}:expires:${change.from}->${change.to}`,
-        body: `📅 Permit ${r.permit} expiration date CHANGED at the county: ${change.from} → ${change.to} (extension approved? re-issue?)`,
-      })
-    }
-    // non-empty wins, so one bad read never erases a date we knew
+    const change = expiryChange(prev.expires || '', r.summary.expires)
+    if (change) { moved++; console.log(`   📅 EXPIRY CHANGE ${r.permit}: ${change.from} → ${change.to}`) }
     portalDates[r.permit] = {
       status: r.summary.status || prev.status || '',
       issued: r.summary.issued || prev.issued || '',
       expires: r.summary.expires || prev.expires || '',
       checkedAt: new Date().toISOString(),
     }
-    dRecorded++
-  }
-  // --- "Permit Expires" on the house row: the county's date, written whenever
-  //     it differs (the portal is the authority here — this column exists so
-  //     Monday's "30 days before Permit Expires → notify" reminder can fire). ---
-  const expiryFills = []
-  for (const r of results) {
-    if (!r.summaryOk || !r.summary.expires) continue
+    if (!r.summary.expires) continue
     const h = houseByPermit.get(normPermit(r.permit))
-    if (h && (h.cv[CJL.permitExpires] || '') !== r.summary.expires) expiryFills.push({ houseId: h.id, address: h.address, from: h.cv[CJL.permitExpires] || '', to: r.summary.expires })
-  }
-  const existingUpdates = comments.length ? await loadUpdates([...new Set(comments.map((c) => c.houseId))]) : {}
-  const toComment = []
-  const seenC = new Set()
-  for (const c of comments) {
-    if (seenC.has(c.sourceKey)) continue
-    seenC.add(c.sourceKey)
-    if (!(existingUpdates[c.houseId] || []).some((b) => b.includes(`[${c.sourceKey}]`))) toComment.push(c)
+    if (!h) { noHouse.push(r.permit); continue }
+    // The county is the authority for this date — write it whenever it differs.
+    if ((h.cv[CJL.permitExpires] || '') !== r.summary.expires) fills.push({ houseId: h.id, address: h.address, from: h.cv[CJL.permitExpires] || '', to: r.summary.expires })
   }
 
   console.log('\nMonday sync:')
-  console.log(`   inspections/holds: +${toAdd.length} new, ${toUpdate.length} updated, ${toClear.length} resolved${toClear.length && !doPrune ? ' (kept — add --prune to clear)' : ''}`)
-  console.log(`   comments:          +${toComment.length} new (FYIs + expiry changes)`)
-  console.log(`   portal dates:      ${dRecorded} recorded → scanner/.portal-dates.json; ${expiryFills.length} "Permit Expires" cell(s) to set`)
-  for (const f of expiryFills) console.log(`   📅 ${f.address}: Permit Expires ${f.from || '(blank)'} → ${f.to}`)
+  console.log(`   Permit Expires: ${fills.length} cell(s) to set, ${moved} expiry date(s) moved since last scan`)
+  for (const f of fills) console.log(`   📅 ${f.address}: ${f.from || '(blank)'} → ${f.to}`)
   if (noHouse.length) console.log(`   ⚠ ${noHouse.length} permit(s) not on the Construction Job List, skipped: ${noHouse.join(', ')}`)
-  for (const d of toAdd) console.log(`   + ${d.result.padEnd(7)} ${d.name}`)
-  for (const d of toUpdate) console.log(`   ~ ${d.result.padEnd(7)} ${d.name}`)
-  for (const x of toClear) console.log(`   ${doPrune ? '−' : '·'} resolved: ${x.name}`)
-  for (const c of toComment) console.log(`   + comment on ${c.address}: ${c.body.slice(0, 90)}`)
   if (!doWrite) return console.log('\n(PREVIEW — nothing written. Re-run with  --write  to apply.)\n')
 
-  // Sequential writes (Monday rate-limits bursts). The dates file is saved
-  // LAST, so a failed run re-detects the same expiry change next time.
-  for (const d of toAdd) {
-    const vals = { [INSPECTIONS.result]: { label: d.result }, [INSPECTIONS.sourceKey]: d.sourceKey, [INSPECTIONS.property]: { item_ids: [Number(d.houseId)] } }
-    if (d.date) vals[INSPECTIONS.date] = { date: d.date }
-    await createItem(INSPECTIONS_BOARD_ID, INSPECTIONS.group, d.name, vals)
-  }
-  for (const d of toUpdate) {
-    const vals = { name: d.name.slice(0, 255), [INSPECTIONS.result]: { label: d.result } }
-    if (d.date) vals[INSPECTIONS.date] = { date: d.date }
-    await setColumns(INSPECTIONS_BOARD_ID, d.id, vals)
-  }
-  if (doPrune) for (const x of toClear) await deleteItem(x.id)
-  for (const c of toComment) await createUpdate(c.houseId, `${c.body}\n\n[${c.sourceKey}]`)
-  for (const f of expiryFills) await setColumns(CJL_BOARD_ID, f.houseId, { [CJL.permitExpires]: { date: f.to } })
-  fs.writeFileSync(PORTAL_DATES_FILE, JSON.stringify(portalDates, null, 2))
+  for (const f of fills) await setColumns(CJL_BOARD_ID, f.houseId, { [CJL.permitExpires]: { date: f.to } })
+  fs.writeFileSync(PORTAL_DATES_FILE, JSON.stringify(portalDates, null, 2)) // saved LAST, so a failed run re-detects
   console.log('\n✓ Written to Monday.\n')
 }
 

@@ -120,9 +120,7 @@ Capturing what the field needs and getting it ordered.
 - **Capture from Josh's texts**: type or paste his lines into the **Quick add**
   bar at the top of the Projects tab — it matches each line to the right house
   + material, files it as "To order," and won't let you double-order. Works
-  from any device you're signed in on. (Adam's office Mac has an automatic
-  "Scan Josh" button that reads his texts directly — that's Adam's convenience
-  only; Quick add is how everyone else captures orders.) → Guide:
+  from any device you're signed in on. → Guide:
   **"Capture orders from Josh's texts."**
 - **Place the order**: on a "To order" row, click **✉️ Order from [vendor]** —
   the email is fully written and addressed; read it and send. Or 📞 to call.
