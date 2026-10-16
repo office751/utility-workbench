@@ -1,15 +1,19 @@
 # Permit Scanner
 
+> **Oct 2026: everything in this folder writes to Monday now.** Read
+> `MONDAY.md` first — it says what lands where and how to roll back. The
+> paragraphs below describe the scraping, which hasn't changed; where they
+> say "Workbench"/"blob", the Monday equivalent is in MONDAY.md.
+
 Reads each Marion County permit's portal record for **active holds** and
-**inspection / review rejections**, and (Stage 2) turns them into permit-linked
-items in the Workbench. Runs on your Mac; nothing here ships to the web app.
-Holds/warnings become TASKS (actionable); inspection results go to each
-project's `inspections` list (the app's 🔍 Inspections tab — reference info,
-deliberately NOT tasks); "Information…" rows become dismissible FYI
-notifications on the Permit tab.
+**inspection / review rejections**, and turns them into permit-linked rows on
+the Monday Inspections board. Runs on your Mac; nothing here ships to the web
+app. Holds and inspection results become rows linked to the house (Result =
+Hold / Failed / Partial / Passed / Other); "Information…" rows become a
+comment on the house's row.
 
 It also records each permit's **summary dates** (status / issue date / expire
-date) into the app (`portalDates` in the blob), and raises a 🔔 notification
+date) in `scanner/.portal-dates.json`, and posts a comment on the house
 whenever the county's EXPIRATION date changes — an extension approved, a
 re-issue, anything (helpers + rules in `portal-dates.mjs`; the app-side spec
 is in docs/BRAINS.md under "permitDates.ts").

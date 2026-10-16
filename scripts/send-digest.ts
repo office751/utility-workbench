@@ -59,7 +59,7 @@ for (const [k, v] of Object.entries({ SUPABASE_URL, SUPABASE_KEY, TENANT, CLIENT
   }
 }
 
-// ---- Graph token (client credentials, same flow as sync-sharepoint.mjs) ---
+// ---- Graph token (client credentials, same flow the retired sync-sharepoint.mjs used) ---
 async function graphToken(): Promise<string> {
   const res = await fetch(`https://login.microsoftonline.com/${TENANT}/oauth2/v2.0/token`, {
     method: 'POST',

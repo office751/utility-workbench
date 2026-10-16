@@ -12,7 +12,7 @@
  *                       is already recorded — don't nag about finished work).
  *                       Dated '(caught up)', same convention as lib/catchup.ts.
  *
- * FILL-ONLY, like sync-sharepoint.mjs: a value Adam already set in the app is
+ * FILL-ONLY (like the retired sync-sharepoint.mjs was): a value Adam already set in the app is
  * NEVER touched (differences are printed as conflicts instead).
  *
  * SAFE BY DEFAULT: dry run that prints every proposed change. --write applies,

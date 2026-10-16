@@ -89,8 +89,10 @@ vendors.ts), user overrides in `WorkbenchState.templates`, edited in
    must NEVER be imported by the Vite app. It runs nightly at 5:30 AM via
    launchd on Adam's Mac only (logged-in Tyler-SSO Chrome profile in
    `scanner/profile/`, Supabase service key in `scanner/.env` — none of that
-   is in git; don't try to run it on other machines). Its sync is ADD-ONLY
-   by default; clearing requires `--prune`. Never weaken the
+   is in git; don't try to run it on other machines). **Since Oct 2026 it
+   writes to MONDAY** (Inspections board + comments on the house), not the
+   blob — see `scanner/MONDAY.md`; `--lodestar` is the rollback path. Its
+   sync is ADD-ONLY by default; clearing requires `--prune`. Never weaken the
    "never clear a category whose tab didn't render" rule in scan.mjs.
    **`mailclip/` is isolated the same way** — a launchd clipboard daemon
    (installed June 2026, Adam's Mac only) that makes Workbench file links
