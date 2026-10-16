@@ -66,7 +66,9 @@ Check it's gone: `launchctl list | grep ironshield` should show only
 - `new-house.mjs`, `add-roster-projects.mjs`, `add-closing-dates.mjs` still
   write the blob (roster + closing dates). New lots are created on Monday
   by hand / Import today — these scripts are for Lodestar's own roster only.
-- Permit expiry → there is no date column on the Construction Job List for it
-  any more (the Permit Issued / Permit Expires columns from Sep 8 are gone).
-  The scanner raises a comment instead. Re-add a "Permit Expires" date column
-  if you want the −30-day Monday reminder back.
+- Permit expiry → the scanner also sets **Permit Expires** on the house row
+  (re-added Oct 16 2026; the Sep 8 column had gone missing) from the
+  county's Expire Date, and a Monday automation notifies Adam 30 days
+  before it. The old, broken copy of that automation (pointing at the
+  deleted column) is still listed inactive in the board's Automations —
+  safe to delete.
