@@ -84,10 +84,11 @@ if (args['reply-to-subject']) {
   console.log(`replying to: "${orig.subject}" from ${orig.from?.emailAddress?.address} (${orig.receivedDateTime})`)
   draft = await graph('POST', `/messages/${orig.id}/createReply`, { comment: '' })
   // createReply pre-fills the quoted original; put our text above it.
+  // ⚠ replacer must be a FUNCTION: a string replacement treats "$1" in our text (e.g. "$15,247.00") as a capture ref and eats it (Oct 16 2026).
   const full = await graph('GET', `/messages/${draft.id}?$select=body`)
   const quoted = full.body?.content ?? ''
   const mine = withSig(bodyHtml) + '<br>'
-  const merged = quoted.includes('<body') ? quoted.replace(/<body([^>]*)>/i, `<body$1>${mine}`) : mine + quoted
+  const merged = quoted.includes('<body') ? quoted.replace(/<body([^>]*)>/i, (_m, attrs) => `<body${attrs}>${mine}`) : mine + quoted
   const patch = { body: { contentType: 'HTML', content: merged } }
   if (args.cc) patch.ccRecipients = rcpt(args.cc)
   await graph('PATCH', `/messages/${draft.id}`, patch)
@@ -108,7 +109,7 @@ if (args['reply-to-subject']) {
   const full = await graph('GET', `/messages/${draft.id}?$select=body`)
   const quoted = full.body?.content ?? ''
   const mine = withSig(bodyHtml) + '<br>'
-  const merged = quoted.includes('<body') ? quoted.replace(/<body([^>]*)>/i, `<body$1>${mine}`) : mine + quoted
+  const merged = quoted.includes('<body') ? quoted.replace(/<body([^>]*)>/i, (_m, attrs) => `<body${attrs}>${mine}`) : mine + quoted
   const patch = { body: { contentType: 'HTML', content: merged } }
   if (args.subject) patch.subject = args.subject
   if (args.cc) patch.ccRecipients = rcpt(args.cc)
