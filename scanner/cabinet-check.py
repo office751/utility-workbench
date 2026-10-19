@@ -12,6 +12,10 @@ ESTIMATE  = FGT estimate PDF (needs pypdf) OR a .txt dump of its text
             (the Outlook connector's read_resource on the attachment returns
             exactly that text — paste it into a .txt file).
 TAKEOFF   = takeoff .docx OR a .txt with lines like "2) B24 - DBL" / "6 – B24".
+            Since Oct 19 2026 the takeoffs are Word TABLES (Qty | Cabinet | Hinge,
+            hinge = LH / RH / Double / Reversible / —); a table row comes out of
+            docx_text() as "1 | W2136 | LH". Both formats parse, because older
+            estimates must be checked against the takeoff version sent with them.
             Pass "-" to only parse + price-check the estimate.
 
 What it checks
@@ -120,10 +124,11 @@ def docx_text(path):
         if tag == 'p':
             out.append(''.join(n.text or '' for n in el.iter(W + 't')))
         elif tag == 'tbl':
+            # one line per table ROW, cells joined by " | " (e.g. "1 | W2136 | LH")
             for tr in el.iter(W + 'tr'):
-                for tc in tr.findall('w:tc', ns):
-                    for p in tc.findall('w:p', ns):
-                        out.append(''.join(n.text or '' for n in p.iter(W + 't')))
+                cells = [' '.join(''.join(n.text or '' for n in p.iter(W + 't')) for p in tc.findall('w:p', ns)).strip()
+                         for tc in tr.findall('w:tc', ns)]
+                out.append(' | '.join(cells))
     return '\n'.join(out)
 
 
@@ -189,6 +194,8 @@ def parse_estimate(text):
 
 # ----------------------------------------------------------------- takeoff
 TO_LINE = re.compile(r'^\s*(\d+)\s*[\)\-–]\s*(.+?)\s*$')
+TO_ROW = re.compile(r'^\s*(\d+)\s*\|\s*(.+?)\s*\|\s*(.*?)\s*$')   # table row "1 | W2136 | LH"
+HINGE_WORD = {'LH': 'LH', 'RH': 'RH', 'DOUBLE': 'DBL', 'DBL': 'DBL', 'REVERSIBLE': 'REV', 'REV': 'REV'}
 
 
 def parse_takeoff(text):
@@ -197,6 +204,15 @@ def parse_takeoff(text):
         line = line.strip().replace(' ', ' ')
         if not line:
             continue
+        r = TO_ROW.match(line)
+        if r:                                    # new table format
+            word = r.group(3).strip().upper()
+            hinge = (HINGE_WORD[word],) if word in HINGE_WORD else ()   # "—" = no door
+            items.append({'sku': norm_sku(r.group(2)), 'raw': r.group(2), 'qty': int(r.group(1)),
+                          'hinge': hinge, 'section': section})
+            continue
+        if line.upper().startswith('QTY |') or 'please put it on the estimate' in line:
+            continue                             # table header row / the note to FGT
         m = TO_LINE.match(line)
         if not m:
             if 'HINGE DESIGNATION' in line.upper() or '=' in line:
