@@ -10,7 +10,7 @@
 //   node scanner/outlook-draft.mjs --reply-to-subject "8 Separate Orders" [--from-sender fgtcabinetry.com] --body-file body.txt [--attach ...]
 // Forward an existing message (newest match) to someone, our text above the quoted original:
 //   node scanner/outlook-draft.mjs --forward-subject "Transaction Receipt" [--from-sender paytrace.com] --to data@ironshieldconstruction.com --body-file body.txt [--attach ...] [--subject "FW: ..."]
-// Options: --mailbox (default office@ironshieldconstruction.com), --cc a@b.com
+// Options: --mailbox (default office@ironshieldconstruction.com), --cc a@b.com, --to a@b.com (on a reply: overrides the recipient — use it when following up on our own sent email)
 // Body text is plain text. Paragraphs are separated by blank lines.
 // Adam's Outlook signature (scanner/signature-office.html + signature-logo.png) is
 // added automatically, right under the message and above any quoted reply,
@@ -61,9 +61,12 @@ async function graph(method, path, body, extraHeaders = {}) {
 // Plain text → simple HTML paragraphs (keeps bullets/line breaks readable in Outlook)
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 const bodyText = args['body-file'] ? readFileSync(args['body-file'], 'utf8') : String(args.body ?? '')
-// Outlook shows <p> with zero margin, so paragraphs ran together with no gap (Oct 15 2026).
-// Put an empty paragraph between them so the draft keeps the blank lines Adam types.
-const bodyHtml = bodyText.trim().split(/\n\s*\n/).map((p) => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('\n<p>&nbsp;</p>\n')
+// Paragraph spacing (Adam, Oct 19 2026): ONE blank line between paragraphs, never more.
+// The Oct 15 fix added an empty <p>&nbsp;</p> spacer between paragraphs; in Adam's Outlook
+// that doubled the gap ("really spaced out") and he deleted every spacer before sending.
+// An explicit bottom margin on each <p> gives exactly one blank line whether or not
+// Outlook zeroes the default <p> margin, so no spacer paragraphs are needed.
+const bodyHtml = bodyText.trim().split(/\n\s*\n/).map((p) => `<p style="margin:0 0 1em 0">${esc(p).replace(/\n/g, '<br>')}</p>`).join('\n')
 // Signature block + its inline logo (cid:ironshield-sig-logo)
 const useSig = !args['no-signature']
 const sigHtml = useSig ? readFileSync(new URL('signature-office.html', here), 'utf8') : ''
@@ -90,6 +93,9 @@ if (args['reply-to-subject']) {
   const mine = withSig(bodyHtml) + '<br>'
   const merged = quoted.includes('<body') ? quoted.replace(/<body([^>]*)>/i, (_m, attrs) => `<body${attrs}>${mine}`) : mine + quoted
   const patch = { body: { contentType: 'HTML', content: merged } }
+  // --to overrides who the reply goes to. Needed when following up on our OWN sent email:
+  // createReply then addresses the draft back to office@ instead of the vendor.
+  if (args.to) patch.toRecipients = rcpt(args.to)
   if (args.cc) patch.ccRecipients = rcpt(args.cc)
   await graph('PATCH', `/messages/${draft.id}`, patch)
 } else if (args['forward-subject']) {
