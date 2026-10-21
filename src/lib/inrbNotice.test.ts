@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { DEFAULT_OWNER, inrbDefaults, lotBlockFromParcel } from './inrbNotice'
+import { inrbDefaults, lotBlockFromParcel } from './inrbNotice'
 import { emptyProjectState } from '../data/seed'
 import type { Project } from '../types'
 
@@ -9,7 +9,7 @@ import type { Project } from '../types'
 //      anything odd → blank (the user types them), never a bad guess.
 //   2. Leading zeros are stripped ("015" → block "15") — matching how the
 //      county-accepted example was filled.
-//   3. Owner: blank ownerName means our own spec build → Iron Shield.
+//   3. The owner's name is NEVER pre-filled — they print + sign it by hand.
 describe('lotBlockFromParcel', () => {
   it('reads SECTION-BLOCK-LOT (the county-accepted example)', () => {
     // 1801-015-006 was recorded as block 15, lot 6.
@@ -34,7 +34,7 @@ describe('inrbDefaults', () => {
     subdivision: 'Rainbow Lakes Estates, Sec A',
   } as Project
 
-  it('assembles the six fields from roster + state', () => {
+  it('assembles the five fields from roster + state', () => {
     const ps = emptyProjectState()
     ps.septicPermit = '42-S1-5167182'
     expect(inrbDefaults(project, ps)).toEqual({
@@ -43,14 +43,15 @@ describe('inrbDefaults', () => {
       lot: '6',
       block: '15',
       subdivision: 'Rainbow Lakes Estates, Sec A',
-      owner: DEFAULT_OWNER,
     })
   })
 
-  it('a named owner (investor house) replaces the Iron Shield default', () => {
+  it('never fills the owner, even on a house with a named owner', () => {
+    // The "Property Owner:" line is where the owner prints AND signs (Adam,
+    // Oct 21 2026) — an investor's ownerName must not leak onto it.
     const ps = emptyProjectState()
     ps.ownerName = 'Sample Investor LLC'
-    expect(inrbDefaults(project, ps).owner).toBe('Sample Investor LLC')
+    expect(inrbDefaults(project, ps)).not.toHaveProperty('owner')
   })
 
   it('missing permit / unparseable parcel → blank fields, no guesses', () => {

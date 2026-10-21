@@ -1156,9 +1156,9 @@ function WaterBody({
  *
  * The DOH requires a written notice, signed by the property owner + two
  * witnesses and notarized, RECORDED at the courthouse before final approval.
- * This fills the six data fields on the OFFICIAL blank form (the same layout
- * the county already accepted) and opens it as a PDF to print — the
- * owner/witness/notary lines stay blank for wet-ink signing.
+ * This fills the five property/permit fields on the OFFICIAL blank form (the
+ * same layout the county already accepted) and opens it as a PDF to print —
+ * the owner (prints + signs), witness and notary lines stay blank for wet ink.
  */
 function InrbNoticeCard({ p, ps, setField }: { p: Project; ps: ProjectState; setField: Props['setField'] }) {
   const [open, setOpen] = useState(false)
@@ -1230,10 +1230,6 @@ function InrbNoticeCard({ p, ps, setField }: { p: Project; ps: ProjectState; set
         <label className="span2">
           Subdivision
           <input value={v.subdivision} onChange={set('subdivision')} />
-        </label>
-        <label className="span2">
-          Property owner (printed name — they sign by hand)
-          <input value={v.owner} onChange={set('owner')} />
         </label>
       </div>
       {derived && (

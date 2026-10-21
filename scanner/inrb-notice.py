@@ -9,11 +9,11 @@ notarized, and RECORDED at the courthouse before DOH grants final approval).
 It types onto the OFFICIAL blank form (scanner/templates/INRB_NOTICE_BLANK.pdf)
 at the exact spots of the hand-filled example that already went through the
 county (INRB_NOTICE_42-S1-5167182.pdf), so the output looks identical to what
-worked before. Only the six data fields are filled — the owner / witness /
-notary lines stay blank for wet-ink signing.
+worked before. Only the five property/permit fields are filled — the owner
+(prints + signs by hand), witness and notary lines stay blank for wet ink.
 
 Where the data comes from:
-  - parcel, subdivision, owner  -> the LIVE app roster (Supabase blob, READ-ONLY)
+  - parcel, subdivision         -> the LIVE app roster (Supabase blob, READ-ONLY)
   - septic (DOH) permit number  -> you, via --permit (the app doesn't store it)
   - lot / block                 -> derived from the parcel number when it looks
                                    like SECTION-BLOCK-LOT (e.g. 1801-015-006 ->
@@ -29,8 +29,6 @@ Usage (run from anywhere):
   python3 scanner/inrb-notice.py <address fragment> --permit 42-S1-XXXXXXX
       e.g.  python3 scanner/inrb-notice.py "121st" --permit 42-S1-5167182
       Optional: --lot 6 --block 15   (override the parcel-derived guess)
-                --owner "Somebody Else LLC"   (default: the app's ownerName,
-                                               else Iron Shield Construction LLC)
                 --yes                (skip the confirm prompt)
 
   python3 scanner/inrb-notice.py --demo
@@ -51,7 +49,6 @@ import urllib.request
 HERE = os.path.dirname(os.path.abspath(__file__))
 ENV_PATH = os.path.join(HERE, ".env")
 TEMPLATE = os.path.join(HERE, "templates", "INRB_NOTICE_BLANK.pdf")
-DEFAULT_OWNER = "Iron Shield Construction LLC"
 
 # Where each value gets typed on the page (PDF points, origin = bottom-left).
 # Extracted from the flattened text of the county-accepted example, so the
@@ -63,7 +60,8 @@ FIELD_POS = {
     "block":       (400.8, 638.2, 11, 55),   # BLOCK: __
     "subdivision": (140.2, 623.8, 10, 405),  # SUBDIVISION: ____
     "permit":      (160.7, 607.2, 10, 385),  # PERMIT NUMBER: ____
-    "owner":       (155.6, 348.4, 12, 390),  # Property Owner: ____ (printed name)
+    # No "owner" on purpose: the "Property Owner: ____" line stays blank for the
+    # owner to print + sign by hand (Adam, Oct 21 2026).
 }
 
 DEMO = {  # the values from the known-good example
@@ -72,7 +70,6 @@ DEMO = {  # the values from the known-good example
     "block": "15",
     "subdivision": "Rainbow Lakes Estates, Sec A",
     "permit": "42-S1-5167182",
-    "owner": DEFAULT_OWNER,
 }
 
 
@@ -135,7 +132,7 @@ def lot_block_from_parcel(parcel):
 
 # ------------------------------------------------------------------- PDF -----
 def build_pdf(values, out_path):
-    """Overlay the six values onto the official blank and save."""
+    """Overlay the five values onto the official blank and save."""
     import io
 
     from pypdf import PdfReader, PdfWriter
@@ -207,7 +204,7 @@ def main():
         return
 
     fragment = next((a for a in args if not a.startswith("--") and a != flag("--permit")
-                     and a not in (flag("--lot"), flag("--block"), flag("--owner"))), None)
+                     and a not in (flag("--lot"), flag("--block"))), None)
     if not fragment:
         sys.exit("Give me part of the address, e.g.:  inrb-notice.py \"121st\" --permit 42-S1-...")
 
@@ -232,7 +229,6 @@ def main():
         "block": flag("--block") or guess_block or "",
         "subdivision": flag("--subdivision") or (p.get("subdivision") or "").strip(),
         "permit": permit.strip(),
-        "owner": flag("--owner") or (ps.get("ownerName") or "").strip() or DEFAULT_OWNER,
     }
 
     derived = not flag("--lot") and not flag("--block") and guess_lot
@@ -242,7 +238,7 @@ def main():
     print(f"   LOT: {values['lot'] or '(blank)'}    BLOCK: {values['block'] or '(blank)'}"
           + ("   <- derived from the parcel #, DOUBLE-CHECK against the plat/deed" if derived else ""))
     print(f"   SUBDIVISION:   {values['subdivision']}")
-    print(f"   OWNER:         {values['owner']}")
+    print("   OWNER:         (left blank — owner prints + signs by hand)")
     if not values["lot"] or not values["block"]:
         print("   (no lot/block — pass --lot and --block if the property has them)")
 

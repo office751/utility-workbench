@@ -354,9 +354,10 @@ Fills the official Marion County DOH "In-ground Nitrogen-Reducing Biofilter"
 notice (public/templates/INRB_NOTICE_BLANK.pdf) for the Septic tab's
 "INRB notice — fill & print" card (INRB systems only). Rules:
 
-- Fill ONLY the six data fields (permit / property id / lot / block /
-  subdivision / owner's printed name). Signature, witness and notary lines
-  stay blank — the document is wet-ink signed, notarized, then RECORDED.
+- Fill ONLY the five data fields (permit / property id / lot / block /
+  subdivision). The "Property Owner:" line stays BLANK — the owner prints
+  and signs it by hand (Adam, Oct 21 2026). Witness and notary lines stay
+  blank too — the document is wet-ink signed, notarized, then RECORDED.
 - Field coordinates were measured from a county-accepted filled example
   (INRB_NOTICE_42-S1-5167182.pdf in the Construction Archive). Never nudge
   them by eye; re-measure from a real accepted document.
@@ -365,8 +366,6 @@ notice (public/templates/INRB_NOTICE_BLANK.pdf) for the Septic tab's
   block 15, lot 6) pre-fill lot/block, leading zeros stripped. Anything
   else → BLANK, never a guess — a wrong lot/block gets recorded at the
   courthouse. The UI flags derived values for a human check.
-- Owner default: blank `ownerName` = our own spec build → "Iron Shield
-  Construction LLC" (same convention as ownership everywhere else).
 - `ps.septicPermit` holds the DOH permit # (backfilled from the SharePoint
   list's "Septic Permit" column; generating a notice saves any edit back).
 - pdf-lib stays a lazy import (same rule as SheetJS).
