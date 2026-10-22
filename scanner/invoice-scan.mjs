@@ -9,21 +9,22 @@
 //
 //   node scanner/invoice-scan.mjs            # list what's waiting (dry run, changes nothing)
 //   node scanner/invoice-scan.mjs --draft    # same, then create one reply draft per vendor
-//   --days 14                                # look back further (default: since the last run, min 7 days)
+//   --days 3                                 # look back further, e.g. after a weekend (default: TODAY only)
 //   --mailbox office@…  (repeatable)         # default: office@, adam@, cassidy@ (the three Adam OK'd)
 //   --json                                   # machine-readable queue instead of the table
 //   --only 1,3  /  --skip 2                  # after reviewing the numbered list, draft only some rows
 //
 // How it decides (keep this list in sync with the skill ~/.claude/skills/scan-invoices):
-//   1. Inbox only, last N days, not sent by us, not Monday notifications.
+//   1. Inbox only, received TODAY (Eastern) unless --days says otherwise, not sent by us,
+//      not Monday notifications. Adam (Oct 22 2026): this is a forward-looking transition,
+//      never retroactive — don't go digging through old invoices.
 //   2. "Invoice-ish" = invoice / statement / past due / amount due / balance due in the
 //      subject, preview, or an attachment name. Receipts and OUR payment confirmations
 //      (receipt, "Thanks for your order", AutoPay, payment received…) are NOT invoices —
 //      those stay with the forward-receipts skill.
-//   3. Already handled = we replied to the vendor in that conversation, a reply draft is
-//      already sitting in Drafts, or this message id is in the ledger. If we only
-//      FORWARDED it to data@ ourselves, the vendor still gets told, just without the
-//      "please resend" ask (variant B).
+//   3. Already handled = we replied to the vendor in that conversation, we already forwarded
+//      it to data@ ourselves (then there's nothing to resend — skip it), a reply draft is
+//      already sitting in Drafts, or this message id is in the ledger.
 //   4. One draft per vendor contact (replyTo if present, else From), on the newest
 //      invoice, listing every invoice number we found for them.
 //   5. The reply goes to the vendor only. No CC to data@ — the whole point is that the
@@ -31,7 +32,7 @@
 //
 // Ledger: scanner/invoice-redirects.json (gitignored) remembers which message ids got a
 // draft and the date each vendor was first told, so a repeat offender gets the shorter
-// "as mentioned on <date>" wording (variant C) and nothing is drafted twice.
+// "as mentioned on <date>" wording (variant B) and nothing is drafted twice.
 import { readFileSync, writeFileSync, existsSync, mkdtempSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
@@ -60,12 +61,13 @@ const MAILBOXES = args.mailbox.length ? args.mailbox : ['office@ironshieldconstr
 const LEDGER_PATH = new URL('invoice-redirects.json', here)
 const ledger = existsSync(LEDGER_PATH) ? JSON.parse(readFileSync(LEDGER_PATH, 'utf8')) : { lastScanAt: null, drafted: {}, vendors: {} }
 
-// Look-back window: since the last run (minus a day of slack) but never less than 7 days;
-// --days overrides.
+// Look-back window: midnight today in Eastern time; --days N widens it (after a weekend).
+// Already-forwarded invoices are skipped either way, so a wider window is safe.
 const days = args.days ? Number(args.days) : null
-let since = new Date(Date.now() - 7 * 864e5)
-if (days) since = new Date(Date.now() - days * 864e5)
-else if (ledger.lastScanAt) since = new Date(Math.min(since.getTime(), new Date(ledger.lastScanAt).getTime() - 864e5))
+const nowET = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }))
+const offsetMs = Date.now() - nowET.getTime()                       // how far ET is from the Mac's clock
+const midnightET = new Date(new Date(nowET).setHours(0, 0, 0, 0) + offsetMs)
+const since = days ? new Date(Date.now() - days * 864e5) : midnightET
 const sinceIso = since.toISOString()
 
 // ---- Graph (app-only, same creds as outlook-draft.mjs)
@@ -192,8 +194,8 @@ for (const mb of MAILBOXES) {
     const repliedToVendor = ours.some((s) => (s.toRecipients ?? []).some((t) => [contact, from].includes(addr(t))))
     if (repliedToVendor) { skipped.push({ ...entry, why: 'we already replied in this thread' }); continue }
     const forwardedToData = ours.some((s) => (s.toRecipients ?? []).some((t) => addr(t) === DATA))
-    if (forwardedToData) entry.variant = 'B'          // told, but no "resend" ask — it's already at data@
-    if (ledger.vendors[contact]) entry.variant = entry.variant === 'B' ? 'B' : 'C'  // repeat offender
+    if (forwardedToData) { skipped.push({ ...entry, why: 'already forwarded to data@ (not retroactive)' }); continue }
+    if (ledger.vendors[contact]) entry.variant = 'B'   // repeat offender → short "as mentioned on…" wording
     queue.push(entry)
   }
 }
@@ -222,7 +224,7 @@ if (args.json) {
   for (const g of byVendor.values()) {
     for (const e of g.items) {
       n = e.row
-      const v = e.variant === 'A' ? '' : e.variant === 'B' ? '  [already forwarded → no resend ask]' : '  [told before → short version]'
+      const v = e.variant === 'A' ? '' : '  [told before → short version]'
       const mbTag = e.mailbox.startsWith('office@') ? '' : ` [${e.mailbox.split('@')[0]}@]`
       console.log(`  ${n}. ${e.received.slice(0, 10)}${mbTag} · ${e.vendor} <${e.contact}> · ${e.subject}${e.refs.length ? ` · inv ${e.refs.join(', ')}` : ''}${e.house ? ` · ${e.house}` : ''}${v}`)
     }
@@ -249,15 +251,12 @@ if (args.draft && byVendor.size) {
     if (!g.items.length) continue
     const newest = g.items[0]
     const greeting = newest.firstName ? `${timeOfDay}, ${newest.firstName},` : `${timeOfDay},`
-    // All already forwarded → B. Otherwise A/C, and the resend list only names the ones NOT forwarded.
-    const allB = g.items.every((i) => i.variant === 'B')
-    const variant = allB ? 'B' : (g.items.some((i) => i.variant === 'C') ? 'C' : 'A')
-    if (!allB) g.items = g.items.filter((i) => i.variant !== 'B').concat(g.items.filter((i) => i.variant === 'B'))
+    const variant = g.items.some((i) => i.variant === 'B') ? 'B' : 'A'
     // What we're pointing at: "Invoice 3161 (7540 SW 121st Terr)" / "this invoice" / a numbered list.
     const label = (e) => e.refs.length
       ? `Invoice ${e.refs[0]}${e.house ? ` (${e.house})` : ''}`
       : `the invoice sent on ${e.received.slice(5, 10).replace('-', '/').replace(/^0/, '')}${e.house ? ` for ${e.house}` : ''}`
-    const toResend = allB ? g.items : g.items.filter((i) => i.variant !== 'B')
+    const toResend = g.items
     const several = toResend.length > 1
     // A numbered list only earns its place when at least one invoice has a number. Two
     // unnumbered ARP invoices would otherwise read "1. the invoice from 10/08  2. the invoice from 10/08".
@@ -272,15 +271,6 @@ if (args.draft && byVendor.size) {
 
     let paragraphs
     if (variant === 'B') {
-      paragraphs = [
-        greeting,
-        `I need your help with a change to where Iron Shield receives invoices.`,
-        `I have forwarded ${these} over to our bookkeeping team this time, but going forward all invoices need to be sent to ${DATA} only. Invoices sent to this address will no longer be forwarded.`,
-        ...(list ? [list] : []),
-        `Could you please update your records so all future invoices go to ${DATA}?`,
-        `Thank you!`,
-      ]
-    } else if (variant === 'C') {
       const told = ledger.vendors[g.contact]?.firstTold?.slice(0, 10)
       const toldUS = told ? new Intl.DateTimeFormat('en-US', { month: 'numeric', day: 'numeric', timeZone: 'America/New_York' }).format(new Date(told)) : null
       paragraphs = [
