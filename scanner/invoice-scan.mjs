@@ -145,8 +145,10 @@ function signoffName(html) {
   const text = (html ?? '')
     .replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|tr)>/gi, '\n')
     .replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
-  const top = text.split(/\n\s*(?:From:|On .{10,80} wrote:|-{3,} ?Original Message)/i)[0]
-  const m = top.match(/\b(?:thank you|thanks|regards|best regards|kind regards|sincerely|best|cheers)[,!.]*\s*\n+\s*([A-Z][a-z]{1,15})\b(?![\w.]*@)/)
+  // Gmail's quote header ("On Thu, Oct 22, 2026 at 11:49 AM Iron Shield Construction <…> wrote:") runs ~100 chars.
+  const top = text.split(/\n\s*(?:From:|On .{10,200}? wrote:|-{3,} ?Original Message)/i)[0]
+  // Closer words are matched in either case; the NAME must be capitalized (so "thanks,\nplease…" can't match).
+  const m = top.match(/\b(?:[Tt]hank you|[Tt]hanks|[Bb]est regards|[Kk]ind regards|[Rr]egards|[Ss]incerely|[Bb]est|[Cc]heers)[,!.]*\s*\n+\s*([A-Z][a-z]{1,15})\b(?![\w.]*@)/)
   return m ? m[1] : null
 }
 
