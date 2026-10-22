@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 mailclip/logs/
 .improve-worktree/
+
+# invoice-scan.mjs ledger (vendor emails + draft ids, changes every run)
+scanner/invoice-redirects.json

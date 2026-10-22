@@ -10,6 +10,8 @@
 //   node scanner/outlook-draft.mjs --reply-to-subject "8 Separate Orders" [--from-sender fgtcabinetry.com] --body-file body.txt [--attach ...]
 // Forward an existing message (newest match) to someone, our text above the quoted original:
 //   node scanner/outlook-draft.mjs --forward-subject "Transaction Receipt" [--from-sender paytrace.com] --to data@ironshieldconstruction.com --body-file body.txt [--attach ...] [--subject "FW: ..."]
+// Reply to ONE exact message by its Graph id (used by invoice-scan.mjs, where several vendor emails share a subject):
+//   node scanner/outlook-draft.mjs --reply-to-id "<message id>" --body-file body.txt
 // Options: --mailbox (default office@ironshieldconstruction.com), --cc a@b.com, --to a@b.com (on a reply: overrides the recipient — use it when following up on our own sent email)
 // Body text is plain text. Paragraphs are separated by blank lines.
 // Adam's Outlook signature (scanner/signature-office.html + signature-logo.png) is
@@ -74,16 +76,23 @@ const withSig = (html) => (useSig ? html + '<br>' + sigHtml : html)
 const rcpt = (list = []) => list.map((a) => ({ emailAddress: { address: a } }))
 
 let draft
-if (args['reply-to-subject']) {
-  // Find the newest matching message (any folder), then createReply keeps the thread + quote.
-  const q = encodeURIComponent(`"subject:${args['reply-to-subject']}"`)
-  const found = await graph('GET', `/messages?$search=${q}&$top=25&$select=id,subject,from,receivedDateTime,isDraft`, null, { ConsistencyLevel: 'eventual' })
-  const hits = found.value
-    .filter((m) => !m.isDraft)
-    .filter((m) => !args['from-sender'] || (m.from?.emailAddress?.address ?? '').toLowerCase().includes(String(args['from-sender']).toLowerCase()))
-    .sort((a, b) => b.receivedDateTime.localeCompare(a.receivedDateTime))
-  if (!hits.length) throw new Error(`no message found with subject containing "${args['reply-to-subject']}"`)
-  const orig = hits[0]
+if (args['reply-to-subject'] || args['reply-to-id']) {
+  let orig
+  if (args['reply-to-id']) {
+    // Exact message by id — no subject guessing. invoice-scan.mjs uses this because vendors
+    // like ARP send several invoices with the identical subject on the same day.
+    orig = await graph('GET', `/messages/${encodeURIComponent(args['reply-to-id'])}?$select=id,subject,from,receivedDateTime,isDraft`)
+  } else {
+    // Find the newest matching message (any folder), then createReply keeps the thread + quote.
+    const q = encodeURIComponent(`"subject:${args['reply-to-subject']}"`)
+    const found = await graph('GET', `/messages?$search=${q}&$top=25&$select=id,subject,from,receivedDateTime,isDraft`, null, { ConsistencyLevel: 'eventual' })
+    const hits = found.value
+      .filter((m) => !m.isDraft)
+      .filter((m) => !args['from-sender'] || (m.from?.emailAddress?.address ?? '').toLowerCase().includes(String(args['from-sender']).toLowerCase()))
+      .sort((a, b) => b.receivedDateTime.localeCompare(a.receivedDateTime))
+    if (!hits.length) throw new Error(`no message found with subject containing "${args['reply-to-subject']}"`)
+    orig = hits[0]
+  }
   console.log(`replying to: "${orig.subject}" from ${orig.from?.emailAddress?.address} (${orig.receivedDateTime})`)
   draft = await graph('POST', `/messages/${orig.id}/createReply`, { comment: '' })
   // createReply pre-fills the quoted original; put our text above it.
