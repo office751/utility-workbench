@@ -138,6 +138,18 @@ function firstName(display, email) {
   return f[0].toUpperCase() + f.slice(1).toLowerCase()
 }
 
+// The name the sender SIGNS with beats the account's display name: Rapid Septic's mail comes
+// from "Craig Davis" but Sherra signs it, and Adam changed "Good morning, Craig," to "Sherra"
+// before sending (Oct 22 2026). Only the top reply is searched, not the quoted history.
+function signoffName(html) {
+  const text = (html ?? '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|tr)>/gi, '\n')
+    .replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
+  const top = text.split(/\n\s*(?:From:|On .{10,80} wrote:|-{3,} ?Original Message)/i)[0]
+  const m = top.match(/\b(?:thank you|thanks|regards|best regards|kind regards|sincerely|best|cheers)[,!.]*\s*\n+\s*([A-Z][a-z]{1,15})\b(?![\w.]*@)/)
+  return m ? m[1] : null
+}
+
 // ---- Scan every mailbox
 const queue = []      // one entry per invoice email we should reply to
 const skipped = []    // handled / draft waiting / no contact — shown so nothing is silent
@@ -174,6 +186,9 @@ for (const mb of MAILBOXES) {
     // (jobprotech puts the ARP rep's name on From and only an address on Reply-To).
     const rtName = replyTo[0] ? name(m.replyTo[0]) : ''
     const contactName = rtName && !rtName.includes('@') ? rtName : name(m.from)
+    // Sign-off name from the body (one extra GET per candidate; the list is short).
+    const full = await graph(`${base}/messages/${encodeURIComponent(m.id)}?$select=body`)
+    const signed = signoffName(full.body?.content)
     const vendorLabel = vendorName(m, contact)
     const refs = invoiceRefs(m.subject ?? '', atts)
     const house = houseAddress([m.subject, m.bodyPreview, ...atts.map((a) => a.name)].join(' '))
@@ -181,7 +196,9 @@ for (const mb of MAILBOXES) {
       mailbox: mb, id: m.id, conversationId: m.conversationId, received: m.receivedDateTime,
       subject: m.subject, vendor: vendorLabel, contact, firstName: firstName(contactName, contact),
       refs, house, attachments: atts.map((a) => a.name), variant: 'A',
+      signedBy: signed,
     }
+    if (signed) entry.firstName = signed
 
     if (ledger.drafted[m.id]) { skipped.push({ ...entry, why: `drafted ${ledger.drafted[m.id].date.slice(0, 10)}` }); continue }
     if (drafts.some((d) => d.conversationId === m.conversationId)) { skipped.push({ ...entry, why: 'reply draft already in Drafts' }); continue }
@@ -226,7 +243,8 @@ if (args.json) {
       n = e.row
       const v = e.variant === 'A' ? '' : '  [told before → short version]'
       const mbTag = e.mailbox.startsWith('office@') ? '' : ` [${e.mailbox.split('@')[0]}@]`
-      console.log(`  ${n}. ${e.received.slice(0, 10)}${mbTag} · ${e.vendor} <${e.contact}> · ${e.subject}${e.refs.length ? ` · inv ${e.refs.join(', ')}` : ''}${e.house ? ` · ${e.house}` : ''}${v}`)
+      const who = e.firstName ? ` · greet: ${e.firstName}${e.signedBy ? ' (signs)' : ''}` : ' · greet: (no name)'
+      console.log(`  ${n}. ${e.received.slice(0, 10)}${mbTag} · ${e.vendor} <${e.contact}> · ${e.subject}${who}${e.refs.length ? ` · inv ${e.refs.join(', ')}` : ''}${e.house ? ` · ${e.house}` : ''}${v}`)
     }
   }
   if (skipped.length) {
