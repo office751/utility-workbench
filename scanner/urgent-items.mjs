@@ -38,7 +38,8 @@ for (const h of houses) {
   const closing = h.cv[CLOSING_DATE]
   if (closing) {
     const days = daysUntil(closing)
-    if (days >= -CLOSING_BEHIND_DAYS && days <= CLOSING_AHEAD_DAYS) closings.push({ id: h.id, address: h.address, date: closing, days })
+    // permit rides along so the panel's "Check inspections" button can name it
+    if (days >= -CLOSING_BEHIND_DAYS && days <= CLOSING_AHEAD_DAYS) closings.push({ id: h.id, address: h.address, permit: h.permit, date: closing, days })
   }
 }
 
