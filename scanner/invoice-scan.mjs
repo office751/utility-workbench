@@ -275,13 +275,14 @@ if (args.draft && byVendor.size) {
     // What we're pointing at: "Invoice 3161 (7540 SW 121st Terr)" / "this invoice" / a numbered list.
     const label = (e) => e.refs.length
       ? `Invoice ${e.refs[0]}${e.house ? ` (${e.house})` : ''}`
-      : `the invoice sent on ${e.received.slice(5, 10).replace('-', '/').replace(/^0/, '')}${e.house ? ` for ${e.house}` : ''}`
+      // Eastern date, not the UTC one in `received`: a 9:48 PM invoice would otherwise say "tomorrow" (Oct 29 2026).
+      : `the invoice sent on ${new Date(e.received).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'numeric', day: 'numeric' })}${e.house ? ` for ${e.house}` : ''}`
     const toResend = g.items
     const several = toResend.length > 1
     // A numbered list only earns its place when at least one invoice has a number. Two
     // unnumbered ARP invoices would otherwise read "1. the invoice from 10/08  2. the invoice from 10/08".
     const anyNumbered = toResend.some((e) => e.refs.length)
-    const us = (iso) => iso.slice(5, 10).replace('-', '/').replace(/^0/, '')
+    const us = (iso) => new Date(iso).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'numeric', day: 'numeric' })
     const dates = [...new Set(toResend.map((e) => us(e.received)))]
     const words = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
     const bunch = `the ${words[toResend.length] ?? toResend.length} invoices sent ${dates.length === 1 ? `on ${dates[0]}` : `between ${dates[dates.length - 1]} and ${dates[0]}`}`
