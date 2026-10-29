@@ -356,7 +356,7 @@
 }
 
 /* 🖨 INRB notice mini-form (Septic tab, INRB systems only): prefilled fields
-   → the official DOH form as a print-ready PDF. Inputs ride .form-grid. */
+   → the DEP 9-15-26 INRB notice as a print-ready PDF. Inputs ride .form-grid. */
 .inrb-card {
   border: 1px solid var(--border);
   background: var(--panel);

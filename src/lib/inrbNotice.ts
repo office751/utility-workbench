@@ -1,68 +1,57 @@
 /**
- * inrbNotice.ts — fill the Marion County DOH "In-ground Nitrogen-Reducing
- * Biofilter" written notice (the recorded-notice step for INRB septic systems).
+ * inrbNotice.ts — fill the DEP "Notice" for an In-ground Nitrogen-Reducing
+ * Biofilter (INRB) septic system (the recorded-notice step for INRB houses).
  *
- * The notice must be signed by the property owner + two witnesses, notarized,
- * and RECORDED at the courthouse before DOH grants final approval — so we fill
- * ONLY the five property/permit fields and leave every signature line blank for
- * wet ink. That includes the "Property Owner: ____" line: the owner prints AND
- * signs there by hand (Adam, Oct 21 2026), so we never type a name on it.
+ * The notice must be signed by the property owner, notarized, and RECORDED at
+ * the courthouse; the stamped copy then goes to DEP (via Georges Plumbing) for
+ * final approval. So we fill ONLY the property/permit fields and leave every
+ * owner signature, date, print-name and notary line blank for wet ink.
  *
- * We type onto the OFFICIAL blank form (public/templates/INRB_NOTICE_BLANK.pdf)
- * at the exact positions measured from a county-accepted filled example
- * (INRB_NOTICE_42-S1-5167182.pdf in the Construction Archive), so the printout
- * matches what has already worked. scanner/inrb-notice.py is the CLI twin of
- * this module and uses the same coordinate table — keep them in sync.
+ * FORM VERSION: the DEP form dated 9-15-26 ("New INRB notice 9-15-26.pdf",
+ * from Vicki at Georges Plumbing, Oct 29 2026). It replaced the old DOH form —
+ * no lot / block / subdivision and no witness lines any more. Blank lives at
+ * public/templates/INRB_NOTICE_DEP_BLANK.pdf (archived in OneDrive
+ * Operations/Templates). scanner/inrb-notice.py is the CLI twin of this module
+ * and uses the same coordinate table — keep them in sync.
  *
  * Spec: docs/BRAINS.md § inrbNotice.ts. Pure logic except fillInrbNotice(),
  * which fetches the template and lazy-loads pdf-lib (bundle size).
  */
 import type { Project, ProjectState } from '../types'
 
-/** The five fields we fill. Everything else on the form (owner, witnesses,
- *  notary) is written by hand. */
+/** The fields we fill. Everything else on the form (owner signatures, dates,
+ *  print names, notary) is written by hand. */
 export interface InrbValues {
-  permit: string // DOH septic construction permit #, e.g. "42-S1-5167182"
-  propertyId: string // county parcel #
-  lot: string
-  block: string
-  subdivision: string
+  address: string // street address, city, FL zip
+  parcel: string // county parcel # ("Parcel ID#")
+  permit: string // DEP septic construction permit #, e.g. "42-S1-5167182"
+  county: string // notary block "COUNTY OF ___" — Marion unless notarized elsewhere
 }
 
 /** Where each value gets typed (PDF points, origin bottom-left, US Letter).
- *  Measured from the county-accepted example — don't nudge these by eye. */
+ *  Measured from the label positions on the DEP 9-15-26 blank itself (no
+ *  county-accepted filled example of this version exists yet) and checked
+ *  against a render. Re-measure, don't nudge by eye. */
 const FIELD_POS: Record<keyof InrbValues, { x: number; y: number; size: number; maxW: number }> = {
-  propertyId: { x: 142.1, y: 638.5, size: 10, maxW: 135 }, // PROPERTY ID: ___ (stops at LOT:)
-  lot: { x: 311.8, y: 638.2, size: 11, maxW: 38 },
-  block: { x: 400.8, y: 638.2, size: 11, maxW: 55 },
-  subdivision: { x: 140.2, y: 623.8, size: 10, maxW: 405 },
-  permit: { x: 160.7, y: 607.2, size: 10, maxW: 385 },
-  // No owner entry on purpose — the "Property Owner:" line (x 155.6, y 348.4
-  // in the accepted example) is left blank for the owner to print + sign.
+  address: { x: 122, y: 685, size: 11, maxW: 380 }, // Address ____ (line runs to x≈507)
+  parcel: { x: 130, y: 660, size: 11, maxW: 375 }, // Parcel ID#____ (line runs to x≈510)
+  permit: { x: 126, y: 498.5, size: 11, maxW: 140 }, // "…permit number for the system is ____."
+  county: { x: 324, y: 217.5, size: 10, maxW: 46 }, // notary venue: COUNTY OF ____
 }
 
-/**
- * Marion platted-subdivision parcels read SECTION-BLOCK-LOT
- * (1801-015-006 → block 15, lot 6; 9024-0545-28 → block 545, lot 28).
- * A PRE-FILL GUESS for the form — the UI labels it "check against the plat",
- * never gospel: a wrong lot/block would get RECORDED at the courthouse.
- */
-export function lotBlockFromParcel(parcel: string | undefined): { lot: string; block: string } | null {
-  const m = /^\d{4,5}-(\d{3,4})-(\d{2,4})$/.exec((parcel ?? '').trim())
-  if (!m) return null
-  // String(Number(…)) strips leading zeros: "015" → "15", "006" → "6".
-  return { lot: String(Number(m[2])), block: String(Number(m[1])) }
+/** "20073 SW Rainbow Lakes Blvd, Dunnellon, FL 34431" — blanks dropped. */
+export function inrbAddressLine(p: Project): string {
+  const stateZip = ['FL', (p.zip ?? '').trim()].filter(Boolean).join(' ')
+  return [(p.address ?? '').trim(), (p.city ?? '').trim(), stateZip].filter(Boolean).join(', ')
 }
 
 /** Pre-fill the form from what the app already knows about the house. */
 export function inrbDefaults(p: Project, ps: ProjectState): InrbValues {
-  const lb = lotBlockFromParcel(p.parcel)
   return {
+    address: inrbAddressLine(p),
+    parcel: (p.parcel ?? '').trim(),
     permit: (ps.septicPermit ?? '').trim(),
-    propertyId: (p.parcel ?? '').trim(),
-    lot: lb?.lot ?? '',
-    block: lb?.block ?? '',
-    subdivision: (p.subdivision ?? '').trim(),
+    county: 'Marion',
   }
 }
 
@@ -75,7 +64,7 @@ export async function fillInrbNotice(values: InrbValues): Promise<Uint8Array> {
   // generated (same rule as SheetJS: keep it out of the main bundle).
   const { PDFDocument, StandardFonts } = await import('pdf-lib')
 
-  const res = await fetch('/templates/INRB_NOTICE_BLANK.pdf')
+  const res = await fetch('/templates/INRB_NOTICE_DEP_BLANK.pdf')
   if (!res.ok) throw new Error(`Couldn't load the blank INRB form (${res.status})`)
   const doc = await PDFDocument.load(await res.arrayBuffer())
   const font = await doc.embedFont(StandardFonts.Helvetica)

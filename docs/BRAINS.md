@@ -348,26 +348,28 @@ filtered `WATER='Yes'` (the layer mixes water and sewer rows).
   company → null → one-click set only via a matching Settings roster entry
   (kind 'water'), same never-guess rule as electric.
 
-## inrbNotice.ts — the recorded INRB notice, filled & print-ready (Aug 2026)
+## inrbNotice.ts — the recorded INRB notice, filled & print-ready (Aug 2026; DEP form Oct 2026)
 
-Fills the official Marion County DOH "In-ground Nitrogen-Reducing Biofilter"
-notice (public/templates/INRB_NOTICE_BLANK.pdf) for the Septic tab's
-"INRB notice — fill & print" card (INRB systems only). Rules:
+Fills the DEP "Notice" for In-ground Nitrogen-Reducing Biofilter systems —
+the **9-15-26 version** Vicki (Georges Plumbing) sent Oct 29 2026
+(public/templates/INRB_NOTICE_DEP_BLANK.pdf) — for the Septic tab's
+"INRB notice — fill & print" card (INRB systems only). The old DOH form
+(lot/block/subdivision + two witnesses) is retired. Rules:
 
-- Fill ONLY the five data fields (permit / property id / lot / block /
-  subdivision). The "Property Owner:" line stays BLANK — the owner prints
-  and signs it by hand (Adam, Oct 21 2026). Witness and notary lines stay
-  blank too — the document is wet-ink signed, notarized, then RECORDED.
-- Field coordinates were measured from a county-accepted filled example
-  (INRB_NOTICE_42-S1-5167182.pdf in the Construction Archive). Never nudge
-  them by eye; re-measure from a real accepted document.
+- Fill ONLY address / parcel / DEP permit # / notary county. Owner
+  signature, date and print-name lines (two owners) stay BLANK — owners
+  print and sign by hand (Adam, Oct 21 2026). The rest of the notary block
+  stays blank too — the document is signed, notarized, then RECORDED, and
+  the stamped copy goes to DEP via Georges Plumbing.
+- Address = street, city, "FL zip" with blanks dropped (`inrbAddressLine`).
+  Notary county defaults to "Marion" (the old form printed it); editable.
+- No guesses: missing data → blank field the user types.
+- Field coordinates were measured from the blank's own label positions and
+  checked against a render (no county-accepted filled example of the DEP
+  version yet — re-measure from one once it exists; never nudge by eye).
   scanner/inrb-notice.py is the CLI twin — keep the two tables in sync.
-- `lotBlockFromParcel`: parcels reading SECTION-BLOCK-LOT (1801-015-006 →
-  block 15, lot 6) pre-fill lot/block, leading zeros stripped. Anything
-  else → BLANK, never a guess — a wrong lot/block gets recorded at the
-  courthouse. The UI flags derived values for a human check.
-- `ps.septicPermit` holds the DOH permit # (backfilled from the SharePoint
-  list's "Septic Permit" column; generating a notice saves any edit back).
+- `ps.septicPermit` holds the septic permit # (generating a notice saves any
+  edit back; the CLI reads it too).
 - pdf-lib stays a lazy import (same rule as SheetJS).
 
 ## nocForm.ts — the Notice of Commencement, filled & print-ready (Aug 2026)

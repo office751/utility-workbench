@@ -63,9 +63,10 @@ import { GEORGES } from '../data/contacts'
 // SECO's real load form, pre-filled from this project — same helper Batch
 // Apply uses (lib/secoForm.ts); this just adds a second place to download it.
 import { SECO_BLANK_FORM_URL, fillSecoLoadForm } from '../lib/secoForm'
-// INRB recorded-notice: fills the official DOH form for this house and opens
-// it as a print-ready PDF (Septic tab, INRB systems only — lib/inrbNotice.ts).
-import { fillInrbNotice, inrbDefaults, lotBlockFromParcel, type InrbValues } from '../lib/inrbNotice'
+// INRB recorded-notice: fills the DEP notice form (9-15-26 version) for this
+// house and opens it as a print-ready PDF (Septic tab, INRB systems only —
+// lib/inrbNotice.ts).
+import { fillInrbNotice, inrbDefaults, type InrbValues } from '../lib/inrbNotice'
 // Notice of Commencement: same idea on the Permit tab — fills Marion County's
 // PMT 5 form from the roster + the county PA's deeded-owner record
 // (lib/nocForm.ts); signature/notary stay blank for wet ink, then recording.
@@ -1154,20 +1155,16 @@ function WaterBody({
 /**
  * 🖨 INRB notice — fill & print (INRB systems only).
  *
- * The DOH requires a written notice, signed by the property owner + two
- * witnesses and notarized, RECORDED at the courthouse before final approval.
- * This fills the five property/permit fields on the OFFICIAL blank form (the
- * same layout the county already accepted) and opens it as a PDF to print —
- * the owner (prints + signs), witness and notary lines stay blank for wet ink.
+ * DEP requires a written notice, signed by the property owner and notarized,
+ * RECORDED at the courthouse before final approval. This fills the address /
+ * parcel / permit fields (+ the notary's county) on the DEP 9-15-26 form Vicki
+ * sent Oct 29 2026 and opens it as a PDF to print — the owner signature, date,
+ * print-name and notary lines stay blank for wet ink.
  */
 function InrbNoticeCard({ p, ps, setField }: { p: Project; ps: ProjectState; setField: Props['setField'] }) {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [v, setV] = useState<InrbValues | null>(null)
-
-  // Lot & block are pre-filled by READING THE PARCEL # (SECTION-BLOCK-LOT).
-  // Good guess, but this document gets recorded — so we say it out loud below.
-  const derived = lotBlockFromParcel(p.parcel) != null
 
   async function generate() {
     if (!v) return
@@ -1211,38 +1208,32 @@ function InrbNoticeCard({ p, ps, setField }: { p: Project; ps: ProjectState; set
   return (
     <div className="inrb-card">
       <div className="form-grid">
+        <label className="span2">
+          Address
+          <input value={v.address} onChange={set('address')} />
+        </label>
         <label>
-          DOH septic permit #
+          Parcel ID#
+          <input value={v.parcel} onChange={set('parcel')} />
+        </label>
+        <label>
+          DEP septic permit #
           <input value={v.permit} onChange={set('permit')} placeholder="42-S1-…" />
         </label>
         <label>
-          Property ID (parcel)
-          <input value={v.propertyId} onChange={set('propertyId')} />
-        </label>
-        <label>
-          Lot
-          <input value={v.lot} onChange={set('lot')} />
-        </label>
-        <label>
-          Block
-          <input value={v.block} onChange={set('block')} />
-        </label>
-        <label className="span2">
-          Subdivision
-          <input value={v.subdivision} onChange={set('subdivision')} />
+          Notary county
+          <input value={v.county} onChange={set('county')} />
         </label>
       </div>
-      {derived && (
-        <p className="inrb-note">
-          <Icon name="info" size={13} /> Lot &amp; block were read from the parcel # — check them against
-          the plat / deed before recording.
-        </p>
-      )}
+      <p className="inrb-note">
+        <Icon name="info" size={13} /> DEP form 9-15-26. Owner signs + dates (up to two owners) in front of a
+        notary — record it, then send the stamped copy to Georges Plumbing.
+      </p>
       <div className="contact-row">
         <button
           className="contact tc-apply"
           disabled={busy || !v.permit.trim()}
-          title={v.permit.trim() ? undefined : 'Type the DOH septic permit # first — the notice must include it'}
+          title={v.permit.trim() ? undefined : 'Type the DEP septic permit # first — the notice must include it'}
           onClick={generate}
         >
           <Icon name="print" size={15} /> {busy ? 'Building…' : 'Generate & print'}

@@ -2,24 +2,21 @@
 """
 Iron Shield Construction LLC — INRB Notice generator
 
-Fills the Marion County DOH "In-ground Nitrogen-Reducing Biofilter" written
-notice (the one that must be signed by the property owner + two witnesses,
-notarized, and RECORDED at the courthouse before DOH grants final approval).
+Fills the DEP "Notice" for an In-ground Nitrogen-Reducing Biofilter (INRB)
+septic system — signed by the property owner, notarized, RECORDED at the
+courthouse, then the stamped copy goes to DEP (via Georges Plumbing) for final
+approval.
 
-It types onto the OFFICIAL blank form (scanner/templates/INRB_NOTICE_BLANK.pdf)
-at the exact spots of the hand-filled example that already went through the
-county (INRB_NOTICE_42-S1-5167182.pdf), so the output looks identical to what
-worked before. Only the five property/permit fields are filled — the owner
-(prints + signs by hand), witness and notary lines stay blank for wet ink.
+FORM VERSION: DEP form dated 9-15-26 (sent by Vicki at Georges Plumbing,
+Oct 29 2026), blank at scanner/templates/INRB_NOTICE_DEP_BLANK.pdf. It replaced
+the old DOH form: no lot / block / subdivision, no witnesses. We fill only
+address, parcel, DEP permit # and the notary's county — owner signatures,
+dates, print names and the rest of the notary block stay blank for wet ink.
 
 Where the data comes from:
-  - parcel, subdivision         -> the LIVE app roster (Supabase blob, READ-ONLY)
-  - septic (DOH) permit number  -> you, via --permit (the app doesn't store it)
-  - lot / block                 -> derived from the parcel number when it looks
-                                   like SECTION-BLOCK-LOT (e.g. 1801-015-006 ->
-                                   block 15, lot 6), or given via --lot/--block.
-                                   ALWAYS double-check these two on the confirm
-                                   screen — a wrong lot/block gets RECORDED.
+  - address, parcel             -> the LIVE app roster (Supabase blob, READ-ONLY)
+  - septic (DEP) permit number  -> the app's saved septicPermit, or --permit
+  - notary county               -> "Marion", or --county
 
 Usage (run from anywhere):
   python3 scanner/inrb-notice.py --list
@@ -27,12 +24,13 @@ Usage (run from anywhere):
       whether its "recorded notice" checklist step is done yet.
 
   python3 scanner/inrb-notice.py <address fragment> --permit 42-S1-XXXXXXX
-      e.g.  python3 scanner/inrb-notice.py "121st" --permit 42-S1-5167182
-      Optional: --lot 6 --block 15   (override the parcel-derived guess)
+      e.g.  python3 scanner/inrb-notice.py "Rainbow Lakes" --permit 42-SW-5167236
+      Optional: --county Sumter      (only if notarized outside Marion)
                 --yes                (skip the confirm prompt)
+      --permit can be left off when the app already has the house's permit #.
 
   python3 scanner/inrb-notice.py --demo
-      Regenerate the known-good Rainbow Lakes example (no Supabase needed) —
+      Fill a sample (20073 SW Rainbow Lakes Blvd, no Supabase needed) —
       useful to eyeball that the field positions still line up.
 
 Output: ~/Desktop/INRB_NOTICE_<permit>.pdf  (matches the archive's naming)
@@ -48,28 +46,26 @@ import urllib.request
 # ------------------------------------------------------------------ config ---
 HERE = os.path.dirname(os.path.abspath(__file__))
 ENV_PATH = os.path.join(HERE, ".env")
-TEMPLATE = os.path.join(HERE, "templates", "INRB_NOTICE_BLANK.pdf")
+TEMPLATE = os.path.join(HERE, "templates", "INRB_NOTICE_DEP_BLANK.pdf")
 
 # Where each value gets typed on the page (PDF points, origin = bottom-left).
-# Extracted from the flattened text of the county-accepted example, so the
-# output matches it exactly. Page is US Letter, 612 x 792.
-#           (x,     y,     font size, max width before we shrink the font)
+# Measured from the label positions on the DEP 9-15-26 blank (no county-accepted
+# filled example of this version yet). Page is US Letter, 612 x 792.
+# SAME TABLE as src/lib/inrbNotice.ts — keep them in sync.
+#           (x,   y,     font size, max width before we shrink the font)
 FIELD_POS = {
-    "property_id": (142.1, 638.5, 10, 135),  # PROPERTY ID: ____ (stops at LOT:)
-    "lot":         (311.8, 638.2, 11, 38),   # LOT: __
-    "block":       (400.8, 638.2, 11, 55),   # BLOCK: __
-    "subdivision": (140.2, 623.8, 10, 405),  # SUBDIVISION: ____
-    "permit":      (160.7, 607.2, 10, 385),  # PERMIT NUMBER: ____
-    # No "owner" on purpose: the "Property Owner: ____" line stays blank for the
-    # owner to print + sign by hand (Adam, Oct 21 2026).
+    "address": (122, 685,   11, 380),  # Address ____
+    "parcel":  (130, 660,   11, 375),  # Parcel ID#____
+    "permit":  (126, 498.5, 11, 140),  # "...permit number for the system is ____."
+    "county":  (324, 217.5, 10, 46),   # notary venue: COUNTY OF ____
+    # No owner name on purpose: owners print + sign by hand (Adam, Oct 21 2026).
 }
 
-DEMO = {  # the values from the known-good example
-    "property_id": "1801-015-006",
-    "lot": "6",
-    "block": "15",
-    "subdivision": "Rainbow Lakes Estates, Sec A",
-    "permit": "42-S1-5167182",
+DEMO = {  # a real recorded INRB house (Oct 29 2026), for eyeballing positions
+    "address": "20073 SW Rainbow Lakes Blvd, Dunnellon, FL 34431",
+    "parcel": "1801-015-076",
+    "permit": "42-SW-5167236",
+    "county": "Marion",
 }
 
 
@@ -121,18 +117,17 @@ def find_project(blob, fragment):
     return hits[0]
 
 
-def lot_block_from_parcel(parcel):
-    """Marion platted-subdivision parcels read SECTION-BLOCK-LOT
-    (1801-015-006 -> block 15, lot 6). A guess to confirm, never gospel."""
-    m = re.fullmatch(r"\d{4,5}-(\d{3,4})-(\d{2,4})", (parcel or "").strip())
-    if not m:
-        return None, None
-    return str(int(m.group(2))), str(int(m.group(1)))  # (lot, block)
+def address_line(p):
+    """"20073 SW Rainbow Lakes Blvd, Dunnellon, FL 34431" — blanks dropped.
+    Same rule as inrbAddressLine() in src/lib/inrbNotice.ts."""
+    state_zip = " ".join(x for x in ("FL", (p.get("zip") or "").strip()) if x)
+    parts = ((p.get("address") or "").strip(), (p.get("city") or "").strip(), state_zip)
+    return ", ".join(x for x in parts if x)
 
 
 # ------------------------------------------------------------------- PDF -----
 def build_pdf(values, out_path):
-    """Overlay the five values onto the official blank and save."""
+    """Overlay the values onto the official DEP blank and save."""
     import io
 
     from pypdf import PdfReader, PdfWriter
@@ -203,44 +198,38 @@ def main():
         list_inrb(blob)
         return
 
-    fragment = next((a for a in args if not a.startswith("--") and a != flag("--permit")
-                     and a not in (flag("--lot"), flag("--block"))), None)
+    fragment = next((a for a in args if not a.startswith("--")
+                     and a not in (flag("--permit"), flag("--county"))), None)
     if not fragment:
-        sys.exit("Give me part of the address, e.g.:  inrb-notice.py \"121st\" --permit 42-S1-...")
-
-    permit = flag("--permit")
-    if not permit:
-        sys.exit("--permit is required (the DOH septic construction permit, e.g. 42-S1-5167182).\n"
-                 "It's on the DOH construction permit / soil test paperwork — the app doesn't store it.")
+        sys.exit("Give me part of the address, e.g.:  inrb-notice.py \"Rainbow Lakes\" --permit 42-S1-...")
 
     p = find_project(blob, fragment)
     projects = blob.get("projects") or {}
     ps = projects.get(str(p["id"])) or projects.get(p["id"]) or {}
+
+    permit = flag("--permit") or (ps.get("septicPermit") or "").strip()
+    if not permit:
+        sys.exit("No permit # saved in the app for this house — pass --permit (the DEP septic\n"
+                 "construction permit, e.g. 42-S1-5167182, from the septic permit paperwork).")
 
     if ps.get("septicSystem") != "INRB":
         print(f"⚠️  {p['address']} is NOT marked INRB in the app "
               f"(septic system = {ps.get('septicSystem') or 'not set'}).")
         print("   Check the soil test — this notice is only for INRB systems.")
 
-    guess_lot, guess_block = lot_block_from_parcel(p.get("parcel"))
     values = {
-        "property_id": (p.get("parcel") or "").strip(),
-        "lot": flag("--lot") or guess_lot or "",
-        "block": flag("--block") or guess_block or "",
-        "subdivision": flag("--subdivision") or (p.get("subdivision") or "").strip(),
+        "address": address_line(p),
+        "parcel": (p.get("parcel") or "").strip(),
         "permit": permit.strip(),
+        "county": flag("--county") or "Marion",
     }
 
-    derived = not flag("--lot") and not flag("--block") and guess_lot
-    print(f"\nINRB notice for {p['address']}:")
-    print(f"   PERMIT NUMBER: {values['permit']}")
-    print(f"   PROPERTY ID:   {values['property_id']}")
-    print(f"   LOT: {values['lot'] or '(blank)'}    BLOCK: {values['block'] or '(blank)'}"
-          + ("   <- derived from the parcel #, DOUBLE-CHECK against the plat/deed" if derived else ""))
-    print(f"   SUBDIVISION:   {values['subdivision']}")
-    print("   OWNER:         (left blank — owner prints + signs by hand)")
-    if not values["lot"] or not values["block"]:
-        print("   (no lot/block — pass --lot and --block if the property has them)")
+    print(f"\nINRB notice (DEP form 9-15-26) for {p['address']}:")
+    print(f"   ADDRESS:       {values['address']}")
+    print(f"   PARCEL ID#:    {values['parcel']}")
+    print(f"   DEP PERMIT:    {values['permit']}")
+    print(f"   NOTARY COUNTY: {values['county']}")
+    print("   OWNER:         (left blank — owner prints, signs + dates by hand)")
 
     if "--yes" not in args:
         if input("\nGenerate the PDF? [y/N] ").strip().lower() not in ("y", "yes"):
@@ -251,8 +240,8 @@ def main():
     out = os.path.expanduser(f"~/Desktop/INRB_NOTICE_{safe}.pdf")
     build_pdf(values, out)
     print(f"\nWrote {out}")
-    print("Next: owner signs + 2 witnesses + notary, then record it at the courthouse")
-    print("and check off the 'Recorded INRB notice' step on the Septic tab.")
+    print("Next: owner signs + dates in front of a notary, record it at the courthouse,")
+    print("send the stamped copy to Georges Plumbing, and check off the step on the Septic tab.")
     subprocess.run(["open", out], check=False)
 
 
