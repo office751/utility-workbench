@@ -12,6 +12,8 @@
 //   node scanner/outlook-draft.mjs --forward-subject "Transaction Receipt" [--from-sender paytrace.com] --to data@ironshieldconstruction.com --body-file body.txt [--attach ...] [--subject "FW: ..."]
 // Reply to ONE exact message by its Graph id (used by invoice-scan.mjs, where several vendor emails share a subject):
 //   node scanner/outlook-draft.mjs --reply-to-id "<message id>" --body-file body.txt
+// Forward ONE exact message by its Graph id (receipts that share a subject):
+//   node scanner/outlook-draft.mjs --forward-id "<message id>" --to data@ironshieldconstruction.com --body-file body.txt
 // Options: --mailbox (default office@ironshieldconstruction.com), --cc a@b.com, --to a@b.com (on a reply: overrides the recipient — use it when following up on our own sent email)
 // Body text is plain text. Paragraphs are separated by blank lines.
 // Adam's Outlook signature (scanner/signature-office.html + signature-logo.png) is
@@ -107,18 +109,25 @@ if (args['reply-to-subject'] || args['reply-to-id']) {
   if (args.to) patch.toRecipients = rcpt(args.to)
   if (args.cc) patch.ccRecipients = rcpt(args.cc)
   await graph('PATCH', `/messages/${draft.id}`, patch)
-} else if (args['forward-subject']) {
+} else if (args['forward-subject'] || args['forward-id']) {
   // Forward the newest matching message (any folder) to --to; createForward keeps the original
   // body (and its attachments) quoted below our text. Same --from-sender filter as reply.
-  if (!args.to) throw new Error('--forward-subject needs --to')
-  const q = encodeURIComponent(`"subject:${args['forward-subject']}"`)
-  const found = await graph('GET', `/messages?$search=${q}&$top=25&$select=id,subject,from,receivedDateTime,isDraft`, null, { ConsistencyLevel: 'eventual' })
-  const hits = found.value
-    .filter((m) => !m.isDraft)
-    .filter((m) => !args['from-sender'] || (m.from?.emailAddress?.address ?? '').toLowerCase().includes(String(args['from-sender']).toLowerCase()))
-    .sort((a, b) => b.receivedDateTime.localeCompare(a.receivedDateTime))
-  if (!hits.length) throw new Error(`no message found with subject containing "${args['forward-subject']}"`)
-  const orig = hits[0]
+  if (!args.to) throw new Error('--forward-subject / --forward-id needs --to')
+  let orig
+  if (args['forward-id']) {
+    // Exact message by id, like --reply-to-id. Needed when receipts share a subject
+    // (Marion County's Tyler payment confirmations all read "...Payment Confirmation", Oct 29 2026).
+    orig = await graph('GET', `/messages/${encodeURIComponent(args['forward-id'])}?$select=id,subject,from,receivedDateTime,isDraft`)
+  } else {
+    const q = encodeURIComponent(`"subject:${args['forward-subject']}"`)
+    const found = await graph('GET', `/messages?$search=${q}&$top=25&$select=id,subject,from,receivedDateTime,isDraft`, null, { ConsistencyLevel: 'eventual' })
+    const hits = found.value
+      .filter((m) => !m.isDraft)
+      .filter((m) => !args['from-sender'] || (m.from?.emailAddress?.address ?? '').toLowerCase().includes(String(args['from-sender']).toLowerCase()))
+      .sort((a, b) => b.receivedDateTime.localeCompare(a.receivedDateTime))
+    if (!hits.length) throw new Error(`no message found with subject containing "${args['forward-subject']}"`)
+    orig = hits[0]
+  }
   console.log(`forwarding: "${orig.subject}" from ${orig.from?.emailAddress?.address} (${orig.receivedDateTime})`)
   draft = await graph('POST', `/messages/${orig.id}/createForward`, { comment: '', toRecipients: rcpt(args.to) })
   const full = await graph('GET', `/messages/${draft.id}?$select=body`)
