@@ -32,7 +32,7 @@ import { writeFileSync, mkdirSync, readFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { loadEnv, mondayQuery, createItem, setColumns, CJL_BOARD_ID, CJL } from './monday.mjs'
+import { loadEnv, mondayQuery, createItem, setColumns, createUpdate, CJL_BOARD_ID, CJL } from './monday.mjs'
 
 // ---- config -----------------------------------------------------------------
 const args = Object.fromEntries(process.argv.slice(2).map((a, i, all) => {
@@ -49,11 +49,12 @@ const WRITE = !!args.write
 // --write does nothing until id + column ids are filled in.
 const BOARD = {
   id: 18438166074, // https://the-network-empire.monday.com/boards/18438166074 (created Nov 2 2026)
-  cols: { status: 'color_mm8qw0sa', owner: 'color_mm8q7h2b', waitingOn: 'text_mm8qaz8r', whoAsked: 'text_mm8q5cnv', house: 'board_relation_mm8qyqbk', firstSeen: 'date_mm8qmqh5', source: 'link_mm8q2mer', evidence: 'text_mm8qtj7c', note: 'long_text_mm8qnkqp', key: 'text_mm8q6cs', days: 'numeric_mm8qn1zm' },
+  cols: { status: 'color_mm8qw0sa', owner: 'color_mm8q7h2b', waitingOn: 'text_mm8qaz8r', whoAsked: 'text_mm8q5cnv', house: 'board_relation_mm8qyqbk', firstSeen: 'date_mm8qmqh5', source: 'link_mm8q2mer', evidence: 'text_mm8qtj7c', note: 'long_text_mm8qnkqp', details: 'long_text_mm8q5wyr', key: 'text_mm8q6cs', days: 'numeric_mm8qn1zm' },
   status: { open: 'Open', auto: 'Closed (auto)', adam: 'Closed by Adam', notLoop: 'Not a loop' },
   groups: { open: 'topics', closed: 'group_mm8q3a4t' },
   archiveAfterDays: 7, // closed rows leave the board after a week
 }
+const POSTED = join(OUT_DIR, 'details-posted.json') // which cards already carry their full message as an update
 const LESSONS = join(OUT_DIR, 'lessons.json') // what Adam wrote in "Note to Claude" / marked "Not a loop" — read by the daily task
 
 const MAILBOXES = ['office@ironshieldconstruction.com', 'adam@ironshieldconstruction.com', 'cassidy@ironshieldconstruction.com']
@@ -137,10 +138,106 @@ const deCourtesy = (t) => String(t ?? '').replace(COURTESY_RE, ' ')
 const isAsk = (t) => { const c = deCourtesy(t); return ASK_RE.test(c) && !CLOSER_RE.test(c) }
 /** The sentence that holds the ask — what goes in the "What" column. */
 function askLine(text, fallback) {
-  const sents = deCourtesy(text).split(/(?<=[.?!])\s+|\n+/).map(squash).filter((s) => s.length > 3)
+  // a line break before a lowercase word is the email's hard wrap, not a new sentence ("photos below and\nlet us know")
+  const sents = deCourtesy(text).replace(/([^.?!:;\n])\n(?=[a-z])/g, '$1 ').split(/(?<=[.?!])\s+|\n+/).map(squash).filter((s) => s.length > 3)
   const hit = sents.find((s) => /\?/.test(s)) || sents.find((s) => ASK_RE.test(s)) || sents.find((s) => PROMISE_RE.test(s)) || sents[0]
-  return short(hit || fallback || '')
+  return short(hit || fallback || '', 300)
 }
+
+// Card titles (Adam, Nov 2 2026: "easier to see what the description is ... clunky clicking on it").
+// The title is the ask in plain words, short enough to read on the card without opening it;
+// the full message goes in the Details column.
+const FILLER_RE = /^((hi|hello|hey|good (morning|afternoon|evening))\b[^,.!]*[,.!]\s*|(also|and|so|ok(ay)?|great),?\s+|(could|can|would|will) (you|y'all|we|i) (please |kindly )?|(please|kindly) |if (we|you) could (please )?|whenever you get a chance,?\s*|i just wanted to |just (a )?(reminder|checking in)( that)?,?\s*)/i
+const TITLE_REWRITES = [
+  [/^have the following (order )?delivered to /i, 'Deliver order to '],
+  [/^have the following removed from (our )?/i, 'Pick up from '],
+  [/^\[\d{4}-\d{2}-\d{2}\]\s*/, ''], // "[2026-06-08] Water: …" (dated job-list notes)
+  [/,?\s*(that would be great|i would (greatly )?appreciate it|thank you|thanks)[!.]*$/i, ''],
+  [/,?\s*(Ocala|Dunnellon|Bronson|Belleview|Citra|Summerfield|Silver Springs),?\s*FL\s*\d{5}(-\d{4})?/gi, ''],
+]
+function titleOf(what) {
+  let t = squash(what).replace(/…$/, '')
+  for (let i = 0; i < 4 && FILLER_RE.test(t); i++) t = t.replace(FILLER_RE, '')
+  for (const [re, to] of TITLE_REWRITES) t = t.replace(re, to)
+  t = t.replace(/[?.!:,\s]+$/, '').replace(/\s+(and|or|but|so)$/i, '').trim() // "photos below and" once the courtesy tail is cut
+  t = t.charAt(0).toUpperCase() + t.slice(1)
+  if (t.length > 80) t = t.slice(0, 80).replace(/[\s,;:-]+\S*$/, '') + '…'
+  return t || short(squash(what), 80)
+}
+
+/** The card's Details column: their exact words first (the card shows the first two lines),
+ *  then who / when / subject underneath. Greetings are dropped so line one is the substance. */
+function detailOf(text, from) {
+  const body = String(text ?? '').replace(/\[(image|cid)[^\]]*\]/gi, '').replace(/\n{3,}/g, '\n\n').replace(/^\s*(hi|hello|hey|good (morning|afternoon|evening))\b[^\n]*\n+/i, '').trim()
+  return `${body.slice(0, 1500)}\n\n— ${from}`
+}
+
+// ---- people + companies --------------------------------------------------------
+// Adam, Nov 2 2026: "Who asked" (and Waiting on) must be a person or company he recognizes —
+// never "CJL Notes" or a bare email address. Name from the email's display name or a
+// first.last address, company from the domain; role inboxes (csr@, releases@) show the company.
+const COMPANIES = {
+  'marionfl.org': 'Marion County', 'floridaexpress.us': 'Florida Express', 'preferredmaterials.com': 'Preferred Materials',
+  'secoenergy.com': 'SECO', 'duke-energy.com': 'Duke Energy', 'floridadep.gov': 'Florida DEP', 'luminate.bank': 'Luminate Bank',
+  'ironshieldheatingandair.com': 'Iron Shield Heating & Air', 'jbwellsandwater.com': 'JB Wells & Water', 'alandsonsmw.com': 'Al & Sons',
+  'lamkadesign.com': 'Lamka Design', 'smyrnareadymix.com': 'Smyrna Ready Mix', 'ironshieldconstruction.com': 'Iron Shield',
+  'bldr.com': 'BFS', 'fgtcabinetry.com': 'FGT Cabinetry', 'stonebridgekitchenandbath.com': 'Stonebridge Kitchen & Bath',
+  'signaturetitleocala.com': 'Signature Title', 'ironshieldplumbing.com': 'Iron Shield Plumbing', 'blueskyocala.com': 'Blue Sky Ocala',
+}
+const FREEMAIL_RE = /^(gmail|yahoo|aol|outlook|hotmail|icloud|me|live|msn|comcast|att|bellsouth|earthlink)\./i
+const ROLE_RE = /^(csr|dispatch|releases?|calcs|info|office|admin|owner|sales|service|support|billing|accounts?|ap|ar|orders?|draws|engineering\w*|buildingsafety|mcbuildingsafety|osp_csa|eda-\w+|tssnorth|customerservice|permits?|scheduling|estimating|data|orlando|buildingsafetyforms|bsuccst)$/i
+const cap = (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+function companyOf(addr) {
+  const d = domainOf(addr || '').toLowerCase()
+  if (!d || !d.includes('.') || FREEMAIL_RE.test(d)) return ''
+  return COMPANIES[d] || COMPANIES[d.split('.').slice(-2).join('.')] || cap(d.split('.').slice(-2)[0])
+}
+function personOf(name, addr) {
+  const local = (addr || '').split('@')[0]
+  if (ROLE_RE.test(local)) return '' // a shared inbox's display name is a department ("Engineering MSA"), not a person
+  let n = squash(name).replace(/\s*\([^)]*\)\s*$/, '') // "Rusnak, Kimberly (Preferred Materials)"
+  if (n.includes('@')) n = ''
+  n = n.replace(/^([^,]+),\s*(.+)$/, '$2 $1') // "Portera, Joseph" → "Joseph Portera"
+  if (n && !/^[A-Z][A-Za-z'’.-]+( [A-Z][A-Za-z'’.-]+){0,3}$/.test(n)) n = '' // "EDA - Ocala", "OSP_CSA" aren't people
+  if (!n && /^[a-z]+[._][a-z]+$/i.test(local)) n = local.split(/[._]/).map(cap).join(' ')
+  const co = companyOf(addr).split(' ')[0]
+  if (n && co && n.toLowerCase().includes(co.toLowerCase())) n = '' // "Lamka Design Services" is the company again
+  return n
+}
+/** "Terry Roach, Donald Hanchar (Marion County)" · "Florida Express" · "Michelle Hirst" */
+function partyLabel(people) {
+  let persons = [...new Set(people.map(([n, a]) => personOf(n, a)).filter(Boolean))]
+  // our own people cc'd on the thread (William on a lender email) aren't the other side
+  if (persons.some((n) => !TEAM_NAMES.test(n))) persons = persons.filter((n) => !TEAM_NAMES.test(n))
+  const companies = [...new Set(people.map(([, a]) => companyOf(a)).filter(Boolean))]
+  const who = persons.length > 2 ? `${persons.slice(0, 2).join(', ')} +${persons.length - 2}` : persons.join(', ')
+  if (who && companies.length === 1) return `${who} (${companies[0]})`
+  return who || companies.join(', ') || people.map(([n, a]) => n || a).join(', ')
+}
+
+// Who a job-list note is about: the company/person named in it ("MCU (Jessie Richman)",
+// "Carrie Hyde (MCU)", "waiting on Davey (Taylor)"). Order matters: first match wins.
+const NOTE_PARTIES = [
+  [/\bMCU\b|marion county utilit/i, 'MCU'], [/JB Wells/i, 'JB Wells & Water'], [/\bDavey\b/i, 'Davey Tree'], [/\bComcast\b/i, 'Comcast'],
+  [/Zacour/i, 'Alfonso Zacour'], [/Lamka/i, 'Lamka Design'], [/Hirst/i, 'Hirst Surveying'], [/Florida Express|FL Express/i, 'Florida Express'],
+  [/\bFFB\b|First Federal/i, 'First Federal Bank'], [/\bDEP\b|septic/i, 'Florida DEP'], [/\bDuke\b/i, 'Duke Energy'], [/\bSECO\b/i, 'SECO'],
+  [/\bcounty\b|EnerGov|\bpermit\b|inspect/i, 'Marion County'],
+]
+const isCompanyWord = (s) => NOTE_PARTIES.some(([re]) => re.test(s))
+function noteParty(clause) {
+  const company = NOTE_PARTIES.find(([re]) => re.test(clause))?.[1] || ''
+  let person = ''
+  for (const [, a, b] of clause.matchAll(/([A-Z][A-Za-z&]+(?: [A-Z][a-z]+)?) \(([A-Z][A-Za-z&]+(?: [A-Z][a-z]+)?)\)/g)) {
+    if (isCompanyWord(a) && !isCompanyWord(b)) person = b
+    else if (isCompanyWord(b) && !isCompanyWord(a)) person = a
+    if (person) break
+  }
+  if (person && company && person !== company) return `${person} (${company})`
+  return company || person || 'Iron Shield team'
+}
+// A note that says we're waiting ON someone ("waiting on Davey", "sent to MCU", "well date TBD")
+// is theirs to move; one that says what WE still have to do ("re-file stop", "reschedule") is Adam's.
+const NOTE_THEIRS_RE = /\b(waiting on|awaiting|tbd|sent to|must come from|sending to|to pull|followed? up|said|emailed)\b/i
 
 // ---- houses (Monday CJL) ------------------------------------------------------
 let HOUSES = []
@@ -235,6 +332,9 @@ async function sweepMail(sinceIso) {
     }
   }
   const msgs = [...byId.values()].sort((a, b) => a.time - b.time)
+  // display name for every address we've seen, so cc'd people get names too
+  const nameBook = new Map()
+  for (const m of msgs) { nameBook.set(m.from, m.fromName); m.to.forEach((a, i) => m.toNames[i] && !nameBook.has(a) && nameBook.set(a, m.toNames[i])) }
   for (const m of msgs) m.house = matchHouse(m.subject + '\n' + m.text)
   // People we actually correspond with (anyone we sent to in the window) — cold inbound
   // from anyone else is treated as marketing unless it is a reply to us.
@@ -273,7 +373,9 @@ async function sweepMail(sinceIso) {
       const reply = msgs.find((x) => toThem(x) && x.time > last.time) ||
         (RESEND_RE.test(text) ? msgs.find((x) => toThem(x) && x.time < last.time && last.time - x.time < 2 * 86_400_000) : null)
       const billing = BILLING_RE.test(last.subject + ' ' + text)
-      loops.push({ ...base, kind: 'to-us', whoAsked: last.fromName + (internal ? ' (team)' : ''), whoAddr: last.from, owner: 'Adam', waitingOn: 'Adam',
+      const asker = internal ? `${personOf(last.fromName, last.from) || last.fromName} (team)` : partyLabel([[last.fromName, last.from]])
+      loops.push({ ...base, kind: 'to-us', whoAsked: asker, whoAddr: last.from, owner: 'Adam', waitingOn: 'Adam',
+        detail: detailOf(text, `${asker} → us · ${when(last.time)} · "${last.subject}"`),
         what: askLine(text, last.subject), consequence: consequence(last.subject + ' ' + text),
         evidence: billing ? BILLING_EVIDENCE : reply ? `we emailed ${last.fromName} ${ymd(reply.time)}${reply.time < last.time ? ' (before they asked — crossed in the mail)' : ''}: "${short(reply.subject, 60)}"` : null })
     } else {
@@ -284,8 +386,9 @@ async function sweepMail(sinceIso) {
       const ask = isAsk(text), promise = !ask && PROMISE_RE.test(text)
       if (!ask && !promise) continue
       const reply = msgs.find((x) => !x.outbound && x.time > last.time && them.includes(x.from) && sameMatter(x) && !AUTO_SUBJECT_RE.test(x.subject))
-      const who = themNames.join(', ') || them.join(', ')
+      const who = partyLabel(them.map((a) => [nameBook.get(a) || '', a]))
       loops.push({ ...base, kind: ask ? 'from-us' : 'promise', whoAsked: ask ? 'Adam' : who, whoAddr: last.from, whoAddrs: them.join(' '), askText: text.slice(0, 2000), owner: ask ? who : 'Adam', waitingOn: ask ? who : 'Adam',
+        detail: detailOf(text, `Us → ${who} · ${when(last.time)} · "${last.subject}"`),
         what: askLine(text, last.subject), consequence: ORDER_RE.test(text) ? 2 : consequence(last.subject + ' ' + text),
         evidence: promise && BILLING_RE.test(last.subject + ' ' + text) ? BILLING_EVIDENCE : reply ? `${reply.fromName} replied ${ymd(reply.time)}: "${short(reply.subject, 60)}"` : null })
     }
@@ -370,7 +473,7 @@ function sweepTexts(sinceMs) {
       if (/^(if you|this (is|was) an automated)/i.test(m.text)) continue
       const later = list.slice(i + 1)
       const house = matchHouse(m.text)
-      const base = { source: 'text', key: `text:${chat.id}:${m.rowid}`, chat: chat.name, house: house?.name || '', houseId: house?.id || null, firstSeen: ymd(m.time), ageDays: days(m.time), consequence: consequence(m.text), link: `Messages › ${chat.name} › ${when(m.time)}` }
+      const base = { source: 'text', key: `text:${chat.id}:${m.rowid}`, chat: chat.name, detail: detailOf(m.text, `${m.who} in ${chat.name} texts · ${when(m.time)}`), house: house?.name || '', houseId: house?.id || null, firstSeen: ymd(m.time), ageDays: days(m.time), consequence: consequence(m.text), link: `Messages › ${chat.name} › ${when(m.time)}` }
       if (!m.me) {
         // asks aimed at someone else by name are theirs, not Adam's
         const named = m.text.match(TEAM_NAMES)?.[1]
@@ -408,12 +511,15 @@ function sweepMonday() {
       // first seen = the newest M/D written inside the note (notes are hand-dated), else the row's last edit
       const dates = [...h.notes.matchAll(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/g)].map(([, mo, da, yr]) => new Date(yr ? (yr.length === 2 ? 2000 + +yr : +yr) : new Date().getFullYear(), mo - 1, da).getTime()).filter((t) => t <= Date.now())
       const seen = dates.length ? Math.max(...dates) : new Date(h.updatedAt).getTime()
-      loops.push({ source: 'monday', key: `monday:${h.id}:notes`, kind: 'to-us', whoAsked: 'CJL Notes', owner: 'Adam', waitingOn: 'Adam', house: h.name, houseId: h.id,
-        what: short(clause), firstSeen: ymd(seen), ageDays: days(seen), consequence: consequence(h.notes), evidence: null, link: h.url })
+      const party = noteParty(clause), theirs = NOTE_THEIRS_RE.test(clause)
+      loops.push({ source: 'monday', key: `monday:${h.id}:notes`, kind: theirs ? 'from-us' : 'to-us', whoAsked: theirs ? 'Adam' : party, owner: theirs ? party : 'Adam', waitingOn: theirs ? party : 'Adam', house: h.name, houseId: h.id,
+        detail: detailOf(h.notes, `Job list note on ${h.name}`),
+        what: short(clause, 300), firstSeen: ymd(seen), ageDays: days(seen), consequence: consequence(h.notes), evidence: null, link: h.url })
     }
     const u = h.updates?.[0]
     if (u && !/adam/i.test(u.creator?.name || '') && isAsk(u.text_body || '') && days(new Date(u.created_at).getTime()) >= 2) {
-      loops.push({ source: 'monday', key: `monday:${h.id}:update`, kind: 'to-us', whoAsked: `${u.creator?.name || '?'} (comment)`, owner: 'Adam', waitingOn: 'Adam', house: h.name, houseId: h.id,
+      loops.push({ source: 'monday', key: `monday:${h.id}:update`, kind: 'to-us', whoAsked: u.creator?.name || 'Iron Shield team', owner: 'Adam', waitingOn: 'Adam', house: h.name, houseId: h.id,
+        detail: detailOf(u.text_body, `${u.creator?.name || 'Someone'} commented on ${h.name} · ${ymd(u.created_at)}`),
         what: askLine(u.text_body, ''), firstSeen: ymd(u.created_at), ageDays: days(new Date(u.created_at).getTime()), consequence: consequence(u.text_body), evidence: null, link: h.url })
     }
   }
@@ -444,7 +550,9 @@ function mergeTwins(list) {
     if (l.houseId && !prev.houseIds.includes(l.houseId)) prev.houseIds.push(l.houseId)
     prev.house = prev.houses.join(', ')
     if (l.ageDays > prev.ageDays) { prev.ageDays = l.ageDays; prev.firstSeen = l.firstSeen }
-    if (!prev.evidence && l.evidence) prev.evidence = l.evidence
+    // the merged loop is answered only when EVERY twin is (one reply on one house's thread
+    // doesn't answer the same ask on another house's thread)
+    if (!l.evidence) prev.evidence = null
   }
   return [...out.values()]
 }
@@ -468,7 +576,7 @@ const dir = (l) => ({ 'to-us': '→ Adam', 'from-us': 'Adam →', promise: 'Adam
 const who = (l) => (l.kind === 'to-us' ? l.whoAsked : l.kind === 'from-us' ? l.waitingOn : l.whoAsked)
 const src = (l) => l.source + (l.subject ? ': ' + short(l.subject, 50) : l.chat ? ': ' + l.chat : '')
 const cell = (s) => String(s ?? '').replace(/\|/g, '/')
-const row = (l, i) => `| ${i + 1} | ${l.ageDays}d | ${dir(l)} | ${cell(who(l))} | ${cell(l.what)} | ${cell(l.house)} | ${cell(src(l))} |`
+const row = (l, i) => `| ${i + 1} | ${l.ageDays}d | ${dir(l)} | ${cell(who(l))} | ${cell(short(l.what, 110))} | ${cell(l.house)} | ${cell(src(l))} |`
 const table = (list) => ['| # | Age | Dir | Who | What | House | Source |', '|---|---|---|---|---|---|---|', ...list.map(row)].join('\n')
 const md = `# Open Loops — dry run ${stamp}
 
@@ -537,7 +645,7 @@ async function writeBoard() {
   const columnsFor = (l, status) => ({
     [C.status]: { label: status },
     [C.owner]: { label: l.kind === 'from-us' ? 'Them' : 'Adam' },
-    [C.waitingOn]: l.waitingOn, [C.whoAsked]: l.whoAsked,
+    [C.waitingOn]: l.waitingOn, [C.whoAsked]: l.whoAsked, [C.details]: { text: l.detail || l.what },
     [C.house]: { item_ids: [...new Set([l.houseId, ...(l.houseIds || [])].filter(Boolean).map(Number))] },
     [C.firstSeen]: { date: l.firstSeen },
     [C.days]: String(Math.round(l.ageDays)), // numbers column; a formula column doesn't show on Kanban cards
@@ -545,7 +653,22 @@ async function writeBoard() {
     [C.evidence]: l.evidence || '',
     [C.key]: (l.keys || [l.key]).join(' '),
   })
-  const stats = { created: 0, updated: 0, closed: 0, archived: 0, skipped: 0 }
+  const stats = { created: 0, updated: 0, closed: 0, archived: 0, skipped: 0, posted: 0 }
+  // The full message goes on the card as its first update, so opening a card shows it straight away
+  // (Adam, Nov 2 2026: clicking into the description was clunky). Posted once per card; again only
+  // if the thread brings a newer message. Posted as Adam's own update, so it doesn't notify anyone.
+  let posted = {}
+  try { posted = JSON.parse(readFileSync(POSTED, 'utf8')) } catch {}
+  const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  // newMessage: the card reopened because the thread brought a new unanswered message → post that one too
+  const postDetail = async (itemId, l, newMessage = false) => {
+    const sig = (l.detail || '').slice(0, 300)
+    if (!l.detail || (posted[itemId] && !newMessage) || posted[itemId] === sig) return
+    await createUpdate(itemId, l.detail.split(/\n{2,}/).map((p) => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join(''))
+    posted[itemId] = sig
+    writeFileSync(POSTED, JSON.stringify(posted, null, 2))
+    stats.posted++
+  }
 
   // 2. open loops → create or refresh
   for (const l of open) {
@@ -553,17 +676,20 @@ async function writeBoard() {
     if (mutedBy(r, l)) { stats.skipped++; continue }
     if (!r || manual(r)) {
       // no row yet — or the newest row is a hand-close older than this ask → a fresh card
-      await createItem(BOARD.id, BOARD.groups.open, l.what, columnsFor(l, BOARD.status.open))
+      const id = await createItem(BOARD.id, BOARD.groups.open, titleOf(l.what), columnsFor(l, BOARD.status.open))
       stats.created++
+      await postDetail(id, l)
     } else if (r.status !== BOARD.status.open || r.group !== BOARD.groups.open) {
       // it had closed (auto) earlier but the ask is back (a new unanswered message) → reopen
-      await setColumns(BOARD.id, r.id, columnsFor(l, BOARD.status.open))
+      await setColumns(BOARD.id, r.id, { ...columnsFor(l, BOARD.status.open), name: titleOf(l.what) })
       await mondayQuery(`mutation { move_item_to_group(item_id:${r.id}, group_id:"${BOARD.groups.open}") { id } }`)
       stats.updated++
+      await postDetail(r.id, l, true)
     } else {
       const c = columnsFor(l)
-      await setColumns(BOARD.id, r.id, { [C.waitingOn]: l.waitingOn, [C.house]: c[C.house], [C.key]: c[C.key], [C.days]: c[C.days] })
+      await setColumns(BOARD.id, r.id, { name: titleOf(l.what), [C.owner]: c[C.owner], [C.waitingOn]: l.waitingOn, [C.whoAsked]: l.whoAsked, [C.details]: c[C.details], [C.house]: c[C.house], [C.key]: c[C.key], [C.days]: c[C.days] })
       stats.updated++
+      await postDetail(r.id, l)
     }
   }
   // 3. loops with evidence → close the row if it is open
