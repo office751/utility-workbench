@@ -110,6 +110,21 @@ const BILLING_EVIDENCE = 'billing → data@ / accounting (Adam, 11/2: not his lo
 // what we sent that person on the same house/subject in the 2 days BEFORE it is the answer.
 const RESEND_RE = /\bre-?send\b|\b(don'?t|do not|didn'?t|did not|can'?t|cannot|haven'?t|have not) (see|have|find|get|got|receive)|\bnot (seeing|received|getting)\b|\bnever (got|received|came)\b/i
 const ORDER_RE = /^can i please have the following (order|removed)|^(swap out|remove|deliver) (dumpster|porta)/i
+// Adam, Nov 2 2026 (Florida Express dumpster, 7611 NE 130th Ct Bronson): "Since it's been well over a week and I haven't
+// gotten a text from Josh or an email from FL Express, I assume no news is good news with this." A delivery / swap /
+// removal order nobody complained about for a week is done; only a fresh order still waits for the yard's reply.
+const ORDER_QUIET_DAYS = 7
+// Adam, Nov 2 2026 (Stonebridge flooring, 4927 SW 157th St, "let me know a delivery date when you have it"): "this order
+// has already been delivered for a while now" — no delivery date exists in any mailbox or folder; Dylan confirms by
+// phone ("as per my phone conversation with Adam", 10/20), never by email. Asks to these vendors are answered off-line.
+const PHONE_VENDORS = /stonebridgekitchenandbath\.com$/i
+function quietDone(text, them, t) {
+  const age = Math.floor(days(t))
+  if (age < ORDER_QUIET_DAYS) return null
+  if (ORDER_RE.test(text) || ORDER_RE.test(askLine(text, ''))) return `order placed ${ymd(t)}, nothing heard back in ${age} days — no news is good news (Adam, 11/2)`
+  if (them.some((a) => PHONE_VENDORS.test(domainOf(a)))) return `Stonebridge answers by phone, not email (Adam, 11/2) — ${age} days, no written reply expected`
+  return null
+}
 const consequence = (s) => (ORDER_RE.test(s) ? 2 : CONSEQUENCE.find(([, re]) => re.test(s))?.[0] ?? 2)
 const scoreOf = (cons, ageDays) => cons * 10 + Math.min(Math.round(ageDays), 30)
 
@@ -220,11 +235,12 @@ function partyLabel(people) {
 
 // Who a job-list note is about: the company/person named in it ("MCU (Jessie Richman)",
 // "Carrie Hyde (MCU)", "waiting on Davey (Taylor)"). Order matters: first match wins.
+// [how the note names them, card label, their mail domain (so the note's loop can close on their email — see noteMailEvidence)]
 const NOTE_PARTIES = [
-  [/\bMCU\b|marion county utilit/i, 'MCU'], [/JB Wells/i, 'JB Wells & Water'], [/\bDavey\b/i, 'Davey Tree'], [/\bComcast\b/i, 'Comcast'],
-  [/Zacour/i, 'Alfonso Zacour'], [/Lamka/i, 'Lamka Design'], [/Hirst/i, 'Hirst Surveying'], [/Florida Express|FL Express/i, 'Florida Express'],
-  [/\bFFB\b|First Federal/i, 'First Federal Bank'], [/\bDEP\b|septic/i, 'Florida DEP'], [/\bDuke\b/i, 'Duke Energy'], [/\bSECO\b/i, 'SECO'],
-  [/\bcounty\b|EnerGov|\bpermit\b|inspect/i, 'Marion County'],
+  [/\bMCU\b|marion county utilit/i, 'MCU', /marionfl\.org$/i], [/JB Wells/i, 'JB Wells & Water', /jbwellsandwater\.com$/i], [/\bDavey\b/i, 'Davey Tree', /davey\.com$/i], [/\bComcast\b/i, 'Comcast', /comcast\.com$/i],
+  [/Zacour/i, 'Alfonso Zacour'], [/Lamka/i, 'Lamka Design', /lamkadesign\.com$/i], [/Hirst/i, 'Hirst Surveying', /hirst/i], [/Florida Express|FL Express/i, 'Florida Express', /floridaexpress\.us$/i],
+  [/\bFFB\b|First Federal/i, 'First Federal Bank', /ffbf\.com$/i], [/\bDEP\b|septic/i, 'Florida DEP', /floridadep\.gov$/i], [/\bDuke\b/i, 'Duke Energy', /duke-energy\.com$/i], [/\bSECO\b/i, 'SECO', /secoenergy\.com$/i],
+  [/\bcounty\b|EnerGov|\bpermit\b|inspect/i, 'Marion County', /marionfl\.org$/i],
 ]
 const isCompanyWord = (s) => NOTE_PARTIES.some(([re]) => re.test(s))
 function noteParty(clause) {
@@ -279,6 +295,7 @@ function matchHouse(text) {
 // ---- Graph -------------------------------------------------------------------
 const env = loadEnv()
 let TOKEN = null
+let MAIL_MSGS = [] // every message in the window, house-tagged — noteMailEvidence() reads it after sweepMail()
 async function token() {
   const r = await fetch(`https://login.microsoftonline.com/${env.GRAPH_TENANT_ID}/oauth2/v2.0/token`, {
     method: 'POST',
@@ -349,6 +366,7 @@ async function sweepMail(sinceIso) {
   const nameBook = new Map()
   for (const m of msgs) { nameBook.set(m.from, m.fromName); m.to.forEach((a, i) => m.toNames[i] && !nameBook.has(a) && nameBook.set(a, m.toNames[i])) }
   for (const m of msgs) m.house = matchHouse(m.subject + '\n' + m.text)
+  MAIL_MSGS = msgs
   // People we actually correspond with (anyone we sent to in the window) — cold inbound
   // from anyone else is treated as marketing unless it is a reply to us.
   const contacted = new Set()
@@ -416,7 +434,7 @@ async function sweepMail(sinceIso) {
       loops.push({ ...base, kind: ask ? 'from-us' : 'promise', whoAsked: ask ? 'Adam' : who, whoAddr: last.from, whoAddrs: them.join(' '), askText: text.slice(0, 2000), owner: ask ? who : 'Adam', waitingOn: ask ? who : 'Adam',
         detail: detailOf(text, `Us → ${who} · ${when(last.time)} · "${last.subject}"`),
         what: askLine(text, last.subject), consequence: ORDER_RE.test(text) ? 2 : consequence(last.subject + ' ' + text),
-        evidence: promise && BILLING_RE.test(last.subject + ' ' + text) ? BILLING_EVIDENCE : reply ? `${reply.fromName} replied ${ymd(reply.time)}: "${short(reply.subject, 60)}"` : null })
+        evidence: promise && BILLING_RE.test(last.subject + ' ' + text) ? BILLING_EVIDENCE : reply ? `${reply.fromName} replied ${ymd(reply.time)}: "${short(reply.subject, 60)}"` : ask ? quietDone(text, them, last.time) : null })
     }
   }
 
@@ -595,7 +613,9 @@ function sweepMonday() {
       const dates = [...h.notes.matchAll(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/g)].map(([, mo, da, yr]) => new Date(yr ? (yr.length === 2 ? 2000 + +yr : +yr) : new Date().getFullYear(), mo - 1, da).getTime()).filter((t) => t <= Date.now())
       const seen = dates.length ? Math.max(...dates) : new Date(h.updatedAt).getTime()
       const party = noteParty(clause), theirs = NOTE_THEIRS_RE.test(clause)
+      const pm = party.match(/^(.*) \((.*)\)$/) // "Taylor (Davey Tree)" → person Taylor, company Davey Tree
       loops.push({ source: 'monday', key: `monday:${h.id}:notes`, kind: theirs ? 'from-us' : 'to-us', whoAsked: theirs ? 'Adam' : party, owner: theirs ? party : 'Adam', waitingOn: theirs ? party : 'Adam', house: h.name, houseId: h.id,
+        partyPerson: pm ? pm[1] : '', partyCo: pm ? pm[2] : party,
         detail: detailOf(h.notes, `Job list note on ${h.name}`),
         what: short(clause, 300), firstSeen: ymd(seen), ageDays: days(seen), consequence: consequence(h.notes), evidence: null, link: h.url })
     }
@@ -609,6 +629,29 @@ function sweepMonday() {
   return loops
 }
 
+// CJL-note loops ("waiting on Davey (Taylor) to pull it") used to live on the note alone and never closed on mail.
+// Adam, Nov 2 2026: "I emailed Taylor today about the pole removal and even got an answer. Learn from this." and
+// "he responded recently saying that the water meter was installed last Friday. Find out how you missed this."
+// So: an email FROM the note's party about the same house, dated after the note, answers a "waiting on them" note;
+// an email from US to that party after the note is Adam's to-do done. Same-day mail doesn't count — that is
+// usually the message the note was written from.
+const PLEASANTRY_RE = /^(you'?re|you are) (very )?welcome|^no problem|^my pleasure|^(thanks|thank you)\b/i
+function noteMailEvidence(l) {
+  const dom = NOTE_PARTIES.find(([, label]) => label === l.partyCo)?.[2]
+  if (!dom || !l.houseId) return null
+  const person = (l.partyPerson || '').split(' ').pop().toLowerCase() // "Jessie Richman" → richman (MCU has many senders)
+  const fromThem = (m) => dom.test(domainOf(m.from)) && (!person || m.fromName.toLowerCase().includes(person) || m.from.toLowerCase().includes(person))
+  const toThem = (m) => [...m.to, ...m.cc].some((a) => dom.test(domainOf(a)))
+  const hits = MAIL_MSGS.filter((m) => m.house?.id === l.houseId && ymd(m.time) > l.firstSeen && !AUTO_SUBJECT_RE.test(m.subject) &&
+    (l.kind === 'from-us' ? !m.outbound && fromThem(m) && !CLOSER_RE.test(m.text) : m.outbound && toThem(m)))
+  // quote their last real sentence, not the "you're welcome" that followed Adam's thanks
+  const m = [...hits].reverse().find((x) => !PLEASANTRY_RE.test(x.text)) || hits[hits.length - 1]
+  if (!m) return null
+  return l.kind === 'from-us'
+    ? `${personOf(m.fromName, m.from) || m.fromName} (${l.partyCo}) replied ${when(m.time)}: "${short(squash(m.text), 140)}"`
+    : `we emailed ${l.partyCo} ${ymd(m.time)}: "${short(m.subject, 60)}"`
+}
+
 // ---- main ---------------------------------------------------------------------
 const since = Date.now() - DAYS * 86_400_000
 console.error(`Open Loops sweep: last ${DAYS} days (since ${ymd(since)})`)
@@ -619,7 +662,8 @@ console.error(`  mail: ${mail.length} candidate loops`)
 const texts = sweepTexts(since)
 console.error(`  texts: ${texts.length} candidate loops`)
 const monday = sweepMonday()
-console.error(`  monday: ${monday.length} candidate loops`)
+for (const l of monday) if (l.key.endsWith(':notes')) l.evidence = noteMailEvidence(l)
+console.error(`  monday: ${monday.length} candidate loops (${monday.filter((l) => l.evidence).length} answered by mail)`)
 
 // The same ask to the same party about several houses (TSSNorth UG ×3, the G-model affidavit ×4) is ONE loop.
 function mergeTwins(list) {
