@@ -95,6 +95,16 @@ const CONSEQUENCE = [
   [3, /\b(truss|window|cabinet|door|flooring|lvp|quartz|sod|dumpster|concrete|block|roof|order|deliver|delivery|quote|estimate|schedule|crew|plans|blueprints|calcs)\b/i],
   [3, /\b(w-?9|coi|insurance|certificate|notar|sign|invoice|payment)\b/i],
 ]
+// Adam, Nov 2 2026: "When it comes to invoices or late payments, all of that will go to data since
+// I'm not on the accounting team." Payment-reminder / overdue / "we'll mail a check" mail is closed
+// with that reason instead of landing on his board (the accounting team works data@).
+const BILLING_RE = /past due|overdue|payment reminder|outstanding (invoice|balance)|expect(ing)? (a )?payment|\b(making|make|made|mail(ed)?|sending|send) (a |the )?(payment|check)\b|balance (due|owed)|late (fee|payment)|statement of account|\bacct ?#/i
+const BILLING_EVIDENCE = 'billing → data@ / accounting (Adam, 11/2: not his loop)'
+// Adam, Nov 2 2026 (JB Wells, "Can you confirm or resend"): "already taken care of ... Make sure you have
+// all the context before adding this to my open cards." Carey had emailed the signed LOA for 24028 at 1:15;
+// their server delayed it, so at 1:41 they asked where it was. When an ask is "I don't see it / resend",
+// what we sent that person on the same house/subject in the 2 days BEFORE it is the answer.
+const RESEND_RE = /\bre-?send\b|\b(don'?t|do not|didn'?t|did not|can'?t|cannot|haven'?t|have not) (see|have|find|get|got|receive)|\bnot (seeing|received|getting)\b|\bnever (got|received|came)\b/i
 const ORDER_RE = /^can i please have the following (order|removed)|^(swap out|remove|deliver) (dumpster|porta)/i
 const consequence = (s) => (ORDER_RE.test(s) ? 2 : CONSEQUENCE.find(([, re]) => re.test(s))?.[0] ?? 2)
 const scoreOf = (cons, ageDays) => cons * 10 + Math.min(Math.round(ageDays), 30)
@@ -122,7 +132,7 @@ function cleanBody(text) {
   return out.join('\n').trim()
 }
 // Courtesy lines ("let me know if you have any questions") are not asks — blank them before testing.
-const COURTESY_RE = /\b(please )?(let (me|us) know|reach out|feel free to (reach out|contact|call|email))( to me)? if (you|there'?s| there is)[^.?!\n]*[.?!]?|\bif you have any (questions|concerns)[^.?!\n]*[.?!]?|\bshould you have any questions[^.?!\n]*[.?!]?/gi
+const COURTESY_RE = /\b(please )?(let (me|us) know|reach out|feel free to (reach out|contact|call|email))( to me)? if (you|there'?s| there is)[^.?!\n]*[.?!]?|\bif you have any (questions|concerns)[^.?!\n]*[.?!]?|\bshould you (have any questions|need (any |additional |further )?(assistance|help|anything))[^.?!\n]*[.?!]?|\b(please )?(do not|don'?t) hesitate to (contact|reach|call|email)[^.?!\n]*[.?!]?/gi
 const deCourtesy = (t) => String(t ?? '').replace(COURTESY_RE, ' ')
 const isAsk = (t) => { const c = deCourtesy(t); return ASK_RE.test(c) && !CLOSER_RE.test(c) }
 /** The sentence that holds the ask — what goes in the "What" column. */
@@ -259,10 +269,13 @@ async function sweepMail(sinceIso) {
       const known = contacted.has(last.from) || contacted.has(domainOf(last.from)) || /^(re|fw|fwd):/i.test(last.subject) || list.length > 1 || isOurs(last.from)
       if (!known) continue
       const internal = isOurs(last.from)
-      const reply = msgs.find((x) => x.outbound && x.time > last.time && (x.to.includes(last.from) || x.cc.includes(last.from)) && sameMatter(x))
+      const toThem = (x) => x.outbound && (x.to.includes(last.from) || x.cc.includes(last.from)) && sameMatter(x)
+      const reply = msgs.find((x) => toThem(x) && x.time > last.time) ||
+        (RESEND_RE.test(text) ? msgs.find((x) => toThem(x) && x.time < last.time && last.time - x.time < 2 * 86_400_000) : null)
+      const billing = BILLING_RE.test(last.subject + ' ' + text)
       loops.push({ ...base, kind: 'to-us', whoAsked: last.fromName + (internal ? ' (team)' : ''), whoAddr: last.from, owner: 'Adam', waitingOn: 'Adam',
         what: askLine(text, last.subject), consequence: consequence(last.subject + ' ' + text),
-        evidence: reply ? `we emailed ${last.fromName} ${ymd(reply.time)}: "${short(reply.subject, 60)}"` : null })
+        evidence: billing ? BILLING_EVIDENCE : reply ? `we emailed ${last.fromName} ${ymd(reply.time)}${reply.time < last.time ? ' (before they asked — crossed in the mail)' : ''}: "${short(reply.subject, 60)}"` : null })
     } else {
       if (PIPELINE_RE.test(text)) continue
       const them = [...last.to, ...last.cc].filter((a) => !isOurs(a))
@@ -274,7 +287,7 @@ async function sweepMail(sinceIso) {
       const who = themNames.join(', ') || them.join(', ')
       loops.push({ ...base, kind: ask ? 'from-us' : 'promise', whoAsked: ask ? 'Adam' : who, whoAddr: last.from, whoAddrs: them.join(' '), askText: text.slice(0, 2000), owner: ask ? who : 'Adam', waitingOn: ask ? who : 'Adam',
         what: askLine(text, last.subject), consequence: ORDER_RE.test(text) ? 2 : consequence(last.subject + ' ' + text),
-        evidence: reply ? `${reply.fromName} replied ${ymd(reply.time)}: "${short(reply.subject, 60)}"` : null })
+        evidence: promise && BILLING_RE.test(last.subject + ' ' + text) ? BILLING_EVIDENCE : reply ? `${reply.fromName} replied ${ymd(reply.time)}: "${short(reply.subject, 60)}"` : null })
     }
   }
 
