@@ -437,9 +437,11 @@ function mergeTwins(list) {
 }
 const everything = mergeTwins([...mail, ...texts, ...monday]).map((l) => ({ ...l, score: scoreOf(l.consequence, l.ageDays), ageDays: Math.round(l.ageDays * 10) / 10 }))
 // loops Adam marked "Not a loop" stay off the report and the digest too
-let muted = new Set()
-try { muted = new Set(JSON.parse(readFileSync(LESSONS, 'utf8')).filter((x) => x.status === 'Not a loop').flatMap((x) => x.keys)) } catch {}
-const open = everything.filter((l) => !l.evidence && l.ageDays >= MIN_AGE[l.kind] && !(l.keys || [l.key]).some((k) => muted.has(k))).sort((a, b) => b.score - a.score)
+// (only the ask as it stood when he marked it: a newer ask in the same thread still counts)
+let muted = []
+try { muted = JSON.parse(readFileSync(LESSONS, 'utf8')).filter((x) => x.status === 'Not a loop') } catch {}
+const isMuted = (l) => muted.some((x) => x.keys.some((k) => (l.keys || [l.key]).includes(k)) && !(x.firstSeen && l.firstSeen > x.firstSeen))
+const open = everything.filter((l) => !l.evidence && l.ageDays >= MIN_AGE[l.kind] && !isMuted(l)).sort((a, b) => b.score - a.score)
 const fresh = everything.filter((l) => !l.evidence && l.ageDays < MIN_AGE[l.kind])
 const closed = everything.filter((l) => l.evidence)
 const digest = open.slice(0, 5)
@@ -493,10 +495,15 @@ async function writeBoard() {
     const cv = Object.fromEntries(it.column_values.map((c) => [c.id, (c.text ?? '').trim()]))
     return { id: it.id, name: it.name, group: it.group.id, updatedAt: it.updated_at, status: cv[C.status], keys: cv[C.key].split(/\s+/).filter(Boolean), note: cv[C.note], firstSeen: cv[C.firstSeen], evidence: cv[C.evidence] }
   })
+  // A key can have several rows over time (a thread Adam closed by hand, then a NEW ask in the
+  // same thread later): the newest row (latest First seen) is the one that counts.
   const byKey = new Map()
-  for (const r of rows) for (const k of r.keys) byKey.set(k, r)
-  const findRow = (l) => (l.keys || [l.key]).map((k) => byKey.get(k)).find(Boolean)
+  for (const r of rows) for (const k of r.keys) (byKey.get(k) || byKey.set(k, []).get(k)).push(r)
+  const findRow = (l) => (l.keys || [l.key]).flatMap((k) => byKey.get(k) || []).sort((a, b) => (b.firstSeen || '').localeCompare(a.firstSeen || ''))[0]
+  // Adam's hand-close (Closed by Adam / Not a loop) mutes the ask as it stood on that day only.
+  // A later message in the same thread that is itself an unanswered ask is a new loop → new card.
   const manual = (r) => r && (r.status === BOARD.status.adam || r.status === BOARD.status.notLoop)
+  const mutedBy = (r, l) => manual(r) && !(l.firstSeen && r.firstSeen && l.firstSeen > r.firstSeen)
 
   // 1. lessons: anything Adam wrote or muted, saved once per row
   let lessons = []
@@ -506,7 +513,7 @@ async function writeBoard() {
     if (!r.note && r.status !== BOARD.status.notLoop) continue
     const sig = r.id + '|' + r.note + '|' + r.status
     if (have.has(sig)) continue
-    lessons.push({ rowId: r.id, keys: r.keys, what: r.name, status: r.status, note: r.note, seenAt: new Date().toISOString().slice(0, 10), folded: false })
+    lessons.push({ rowId: r.id, keys: r.keys, what: r.name, status: r.status, note: r.note, firstSeen: r.firstSeen, seenAt: new Date().toISOString().slice(0, 10), folded: false })
   }
   writeFileSync(LESSONS, JSON.stringify(lessons, null, 2))
 
@@ -530,8 +537,9 @@ async function writeBoard() {
   // 2. open loops → create or refresh
   for (const l of open) {
     const r = findRow(l)
-    if (manual(r)) { stats.skipped++; continue }
-    if (!r) {
+    if (mutedBy(r, l)) { stats.skipped++; continue }
+    if (!r || manual(r)) {
+      // no row yet — or the newest row is a hand-close older than this ask → a fresh card
       await createItem(BOARD.id, BOARD.groups.open, l.what, columnsFor(l, BOARD.status.open))
       stats.created++
     } else if (r.status !== BOARD.status.open || r.group !== BOARD.groups.open) {
