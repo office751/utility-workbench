@@ -26,19 +26,32 @@ export function mondayToken() {
 }
 
 /** Run one GraphQL query against api.monday.com. Throws on GraphQL errors. */
-export async function mondayQuery(query, variables = {}) {
-  const res = await fetch('https://api.monday.com/v2', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: mondayToken(),
-      'API-Version': '2025-01',
-    },
-    body: JSON.stringify({ query, variables }),
-  })
-  const json = await res.json()
-  if (json.errors?.length) throw new Error('Monday API: ' + JSON.stringify(json.errors))
-  return json.data
+export async function mondayQuery(query, variables = {}, tries = 4) {
+  // Monday's edge sometimes answers with a plain-text "upstream connect error" (Nov 2 2026, mid
+  // Open Loops write). Those are retried with a growing pause; real GraphQL errors are not.
+  for (let i = 1; ; i++) {
+    let json
+    try {
+      const res = await fetch('https://api.monday.com/v2', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: mondayToken(),
+          'API-Version': '2025-01',
+        },
+        body: JSON.stringify({ query, variables }),
+      })
+      const text = await res.text()
+      if (res.status === 429 || res.status >= 500 || !text.trim().startsWith('{')) throw new Error(`Monday ${res.status}: ${text.slice(0, 120)}`)
+      json = JSON.parse(text)
+    } catch (e) {
+      if (i >= tries) throw e
+      await new Promise((r) => setTimeout(r, 2000 * i))
+      continue
+    }
+    if (json.errors?.length) throw new Error('Monday API: ' + JSON.stringify(json.errors))
+    return json.data
+  }
 }
 
 // ---- boards + columns (Properties workspace) --------------------------------

@@ -78,7 +78,10 @@ const CHATS = [
 const TEAM_NAMES = /\b(pam|josh|diana|william|craig|andrea|tabby|carey|jessica|madison|jake)\b/i
 
 // ---- ask / closer / noise heuristics ----------------------------------------
-const ASK_RE = /\?|\bplease (?!see|find|note|refer|keep in mind|be advised|disregard|contact|reach out|log ?in|update your records|share your|feel free|remit)\w+|\b(can|could|would|will) (you|y'all|someone|anyone|we get)\b|\blet (me|us) know\b|\bsend (me|us|over|it|them)\b|\b(we|i|they) need(s)? (you|a|an|the)\b|\bneed(s|ed)? (you|from you)\b|\bconfirm\b|\bwhen (can|will|do|does|is|are)\b|\bapprov(e|al)\b|\bschedule\b|\bany update\b|\bstatus (on|of)\b|\bfollow(ing)? up\b|\bchecking in\b|\bwaiting (on|for)\b|\breminder\b|\basap\b/i
+// Nov 2 2026: bare "schedule" / "approval" dropped — once subfolders were read, SECO's status replies
+// ("placed back on the schedule", "as we work through the schedule") and MCU's availability letter
+// ("for inspection & approval") read as asks. Real ones say please / could you / let us know anyway.
+const ASK_RE = /\?|\bplease (?!see|find|note|refer|keep in mind|be advised|disregard|contact|reach out|log ?in|update your records|share your|feel free|remit)\w+|\b(can|could|would|will) (you|y'all|someone|anyone|we get)\b|\blet (me|us) know\b|\bsend (me|us|over|it|them)\b|\b(we|i|they) need(s)? (you|a|an|the)\b|\bneed(s|ed)? (you|from you)\b|\bconfirm\b|\bwhen (can|will|do|does|is|are)\b|\b(your|for) approval\b|\bany update\b|\bstatus (on|of)\b|\bfollow(ing)? up\b|\bchecking in\b|\bwaiting (on|for)\b|\breminder\b|\basap\b/i
 const PROMISE_RE = /\b(i|we)('ll| will) (send|get|reach|update|let|follow|have|call|check|circle|confirm|forward|look)\b|\bwill (update|send|get back|reach out|let you know|follow up)\b/i
 const CLOSER_RE = /^\s*(thank(s| you)|got it|perfect|sounds good|received|will do|ok(ay)?|great|awesome|noted|done|👍|you're welcome|no problem|yes|no)[\s!.,]*(thank(s| you)[!.]*)?\s*$/i
 const NOISE_RE = /unsubscribe|view (this email |it )?(in|online)|(in|web) browser|verification code|rewards|webinar|flyer|subscription|your receipt|your statement|statement from|password|received this (notice|email|message) in error|do not reply|automated (message|email)|survey|how likely are you|your package|your delivery|your order has|delivery schedule|sale\b|training|lots? (for sale|available)|funding|fudning|loan offer|off-market|builder-ready|change how you receive|still looking for|feel free to reach|here as a resource/i
@@ -310,7 +313,17 @@ async function sweepMail(sinceIso) {
   const sel = '$select=id,subject,from,toRecipients,ccRecipients,sentDateTime,receivedDateTime,conversationId,webLink,isDraft,body,internetMessageId'
   for (const mb of MAILBOXES) {
     const base = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(mb)}`
-    const folders = await all(`${base}/mailFolders?$top=100&$select=id,displayName,totalItemCount`)
+    // Every folder, subfolders included (Adam, Nov 2 2026: SECO's and Florida Express's replies were
+    // filed under Inbox subfolders, which the sweep never read, so answered asks stayed open).
+    const folders = []
+    const walk = async (url) => {
+      for (const f of await all(url)) {
+        if (SKIP_FOLDERS.test(f.displayName)) continue // and everything under it
+        folders.push(f)
+        if (f.childFolderCount) await walk(`${base}/mailFolders/${f.id}/childFolders?$top=100&$select=id,displayName,totalItemCount,childFolderCount`)
+      }
+    }
+    await walk(`${base}/mailFolders?$top=100&$select=id,displayName,totalItemCount,childFolderCount`)
     for (const f of folders) {
       if (SKIP_FOLDERS.test(f.displayName) || !f.totalItemCount) continue
       let msgs
@@ -364,12 +377,25 @@ async function sweepMail(sinceIso) {
     // A later message from the same party counts as the answer only when it is clearly the same matter.
     const sameMatter = (x) => (house && x.house?.id === house.id) || x.bare === last.bare || (!house && !x.house)
     if (!last.outbound) {
-      if (!isAsk(text) || CLOSER_RE.test(text)) continue
+      if (!isAsk(text) || CLOSER_RE.test(text)) {
+        // their non-ask reply closes OUR ask before it — say so with their words, so the card
+        // closes as "SECO replied 10/5: …" instead of a bare "thread moved on"
+        const ours = [...list].reverse().find((x) => x.outbound && x.time < last.time)
+        if (ours && (isAsk(ours.text) || PROMISE_RE.test(ours.text)) && !AUTOMATED_RE.test(last.from)) {
+          const them = partyLabel([[last.fromName, last.from]])
+          loops.push({ ...base, kind: 'from-us', whoAsked: 'Adam', owner: them, waitingOn: them, what: askLine(ours.text, ours.subject), consequence: 1,
+            evidence: `${them} replied ${when(last.time)}: "${short(squash(text), 140)}"` })
+        }
+        continue
+      }
       if (AUTOMATED_RE.test(last.from) || AUTOMATED_RE.test(last.fromName) || NOISE_RE.test(text) || NOISE_RE.test(last.subject)) continue
       const known = contacted.has(last.from) || contacted.has(domainOf(last.from)) || /^(re|fw|fwd):/i.test(last.subject) || list.length > 1 || isOurs(last.from)
       if (!known) continue
       const internal = isOurs(last.from)
-      const toThem = (x) => x.outbound && (x.to.includes(last.from) || x.cc.includes(last.from)) && sameMatter(x)
+      // Adam, Nov 2 2026 (Florida Express 2222 NW 64th): "I had already emailed FL Express" — dispatch@ asked,
+      // he answered csr@. Writing the same company about the same house/subject answers it.
+      const sameCo = (a) => a === last.from || (!internal && companyOf(a) && companyOf(a) === companyOf(last.from) && !FREEMAIL_RE.test(domainOf(a)))
+      const toThem = (x) => x.outbound && [...x.to, ...x.cc].some(sameCo) && sameMatter(x)
       const reply = msgs.find((x) => toThem(x) && x.time > last.time) ||
         (RESEND_RE.test(text) ? msgs.find((x) => toThem(x) && x.time < last.time && last.time - x.time < 2 * 86_400_000) : null)
       const billing = BILLING_RE.test(last.subject + ' ' + text)
