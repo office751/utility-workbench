@@ -304,7 +304,8 @@ if (args.draft && byVendor.size) {
     } else {
       paragraphs = [
         greeting,
-        `I need your help with a change to where Iron Shield receives invoices.`,
+        // Adam's edit on the RoMac statement reply (Nov 2 2026): statements get named too.
+        `I need your help with a change to where Iron Shield receives invoices${toResend.some((e) => /statement/i.test(e.subject)) ? ' & statements' : ''}.`,
         `Going forward, please send all invoices to ${DATA} only. That inbox goes straight to our bookkeeping team, and invoices sent to this address will no longer be forwarded over, so ${these} will need to be resent.`,
         ...(list ? [list] : []),
         `Could you please resend ${those} to ${DATA} and update your records so future invoices go there as well?`,
