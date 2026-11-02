@@ -49,7 +49,7 @@ const WRITE = !!args.write
 // --write does nothing until id + column ids are filled in.
 const BOARD = {
   id: 18438166074, // https://the-network-empire.monday.com/boards/18438166074 (created Nov 2 2026)
-  cols: { status: 'color_mm8qw0sa', owner: 'color_mm8q7h2b', waitingOn: 'text_mm8qaz8r', whoAsked: 'text_mm8q5cnv', house: 'board_relation_mm8qyqbk', firstSeen: 'date_mm8qmqh5', source: 'link_mm8q2mer', evidence: 'text_mm8qtj7c', note: 'long_text_mm8qnkqp', key: 'text_mm8q6cs' },
+  cols: { status: 'color_mm8qw0sa', owner: 'color_mm8q7h2b', waitingOn: 'text_mm8qaz8r', whoAsked: 'text_mm8q5cnv', house: 'board_relation_mm8qyqbk', firstSeen: 'date_mm8qmqh5', source: 'link_mm8q2mer', evidence: 'text_mm8qtj7c', note: 'long_text_mm8qnkqp', key: 'text_mm8q6cs', days: 'numeric_mm8qn1zm' },
   status: { open: 'Open', auto: 'Closed (auto)', adam: 'Closed by Adam', notLoop: 'Not a loop' },
   groups: { open: 'topics', closed: 'group_mm8q3a4t' },
   archiveAfterDays: 7, // closed rows leave the board after a week
@@ -520,6 +520,7 @@ async function writeBoard() {
     [C.waitingOn]: l.waitingOn, [C.whoAsked]: l.whoAsked,
     [C.house]: { item_ids: [...new Set([l.houseId, ...(l.houseIds || [])].filter(Boolean).map(Number))] },
     [C.firstSeen]: { date: l.firstSeen },
+    [C.days]: String(Math.round(l.ageDays)), // numbers column; a formula column doesn't show on Kanban cards
     [C.source]: linkFor(l),
     [C.evidence]: l.evidence || '',
     [C.key]: (l.keys || [l.key]).join(' '),
@@ -540,7 +541,7 @@ async function writeBoard() {
       stats.updated++
     } else {
       const c = columnsFor(l)
-      await setColumns(BOARD.id, r.id, { [C.waitingOn]: l.waitingOn, [C.house]: c[C.house], [C.key]: c[C.key] })
+      await setColumns(BOARD.id, r.id, { [C.waitingOn]: l.waitingOn, [C.house]: c[C.house], [C.key]: c[C.key], [C.days]: c[C.days] })
       stats.updated++
     }
   }
