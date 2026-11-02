@@ -394,43 +394,100 @@ async function sweepMail(sinceIso) {
     }
   }
 
-  // County asks that never get an email reply ("attach this to the permit", "invoice the final
-  // fees") close on the permit's EnerGov workflow step instead — public endpoint, no login.
+  // County asks that never get an email reply close on the permit's public EnerGov record instead
+  // (no login): "attach this" / "invoice the final fees" on the workflow step, "remove these
+  // inspections" on the permit's required-inspection list, "schedule X" on its existing inspections.
   for (const l of loops) {
     if (l.kind !== 'from-us' || !/marionfl\.org/i.test(l.whoAddrs || '')) continue
     const ev = await energovEvidence(l)
-    if (ev) l.evidence = ev
-    else if (ev === false) l.what += ' [EnerGov step still open]'
+    if (ev?.done) l.evidence = ev.done
+    else if (ev?.left) l.check = ev.left // still open: say what EnerGov still shows, on the card's Evidence
   }
   return loops
 }
 
-const ENERGOV = 'https://selfservice.marionfl.org/energov_prod/selfservice/api/energov/workflow/summary/activities/1/'
+const EG = 'https://selfservice.marionfl.org/energov_prod/selfservice/api/energov/'
+const EG_HEADERS = { accept: 'application/json', 'content-type': 'application/json;charset=utf-8', tenantId: '1', tenantName: 'Marion County EnerGov_Prod', 'Tyler-TenantUrl': 'home' }
 let CASE_IDS = null
-const workflowCache = new Map()
-/** true-ish evidence string when the matching step closed, false when it is still open, null when unknown. */
+const egCache = new Map()
+/** One permit's public record: workflow steps + the three inspection lists the Inspections tab shows. */
+async function permitRecord(caseId) {
+  if (egCache.has(caseId)) return egCache.get(caseId)
+  const list = (existing, optional) => fetch(EG + 'entity/inspections/search/search', { method: 'POST', headers: EG_HEADERS,
+    body: JSON.stringify({ PageNumber: 1, PageSize: 200, SortField: '', IsSortedInAscendingOrder: true, ModuleId: 1, EntityId: caseId, IsExistingInspection: existing, IsOptionalInspection: optional, IsFailed: false }) })
+    .then((r) => r.json()).then((j) => j.Result || [])
+  let rec
+  try {
+    const [steps, required, existing] = await Promise.all([
+      fetch(EG + 'workflow/summary/activities/1/' + caseId, { headers: { accept: 'application/json', tenantId: '1' } }).then((r) => r.json()).then((j) => j.Result || []),
+      list(false, false), // "Request Inspections": still required, not requested yet
+      list(true, false), // "Existing Inspections": requested / scheduled / resulted
+    ])
+    rec = { steps, required, existing }
+  } catch { rec = null }
+  egCache.set(caseId, rec)
+  return rec
+}
+const inspName = (n) => squash(n).replace(/\s*-\s*1\s*&\s*2\b.*$/i, '').replace(/^\(res\)\s*/i, '').toLowerCase()
+// Inspections that never apply to our block houses — the "remove everything above Final X" asks name
+// no list, so they're done when none of these is still required (see memory energov-extra-inspections-audit).
+const JUNK_INSPECTION_RE = /footing|final gas|rough gas|sub-?siding|wire lath|deck nailing|temporary electric|construction electrical service|fire wall|ceiling grid|no power|final irrigation|roofing dry-in\/in-progress/i
+// The ask names an inspection that was renamed since (Oct 21 2026 county guide: "Final Electric No Power"
+// and "w/ Power Release" retired → Power Release / Final Electric). Match the new names too.
+const SCHEDULE_ALIASES = [[/no power|power release/i, /power release|final electric/i], [/\brvi\b|roofing dry/i, /\brvi\b|roofing dry-in/i]]
+
+/** { done } when EnerGov shows the ask was handled, { left } when it's still showing, null when unknowable. */
 async function energovEvidence(l) {
   const hay = `${l.subject}\n${l.askText || ''}`
-  // only two ask shapes are verifiable here: "invoice the final fees" and "attach <DEP/septic letter>"
+  CASE_IDS ??= JSON.parse(readFileSync(new URL('permit-portals.json', import.meta.url), 'utf8'))
+  const permits = [...new Set([...hay.matchAll(/\b(BLDR-\d{2}-\d{2}-\d{5}|20\d{8})\b/g)].map((m) => m[1]))].filter((p) => CASE_IDS[p])
+  if (!permits.length) return null
+  const asked = new Date(l.firstSeen).getTime() - 86_400_000 // a same-day schedule counts
+  const recs = []
+  for (const p of permits) { const r = await permitRecord(CASE_IDS[p]); if (r) recs.push([p, r]) }
+  if (!recs.length) return null
+
+  // 1. "remove these inspections" — done when what we named is no longer required (removed or moved
+  //    to optional). Workflow steps are ignored on purpose (Adam, Nov 2 2026: "some of the workflow
+  //    items just don't get removed, but will not affect us getting a CO").
+  if (/\bremov/i.test(hay) && /inspection/i.test(hay)) {
+    const named = [...hay.matchAll(/^\s*\d+[.)]\s*(.+?)\s*(?:-\s*1\s*&\s*2.*)?$/gm)].map((m) => inspName(m[1])).filter((n) => n.length > 3 && !/workflow/.test(n))
+    const still = []
+    for (const [p, r] of recs) {
+      const req = r.required.map((i) => inspName(i.InspectionType))
+      // exact names: our lists are copied from EnerGov, and "final electrical" ≠ "final electrical for well pump"
+      const left = named.length ? named.filter((n) => req.includes(n)) : r.required.filter((i) => JUNK_INSPECTION_RE.test(i.InspectionType)).map((i) => inspName(i.InspectionType))
+      still.push(...left.map((n) => `${n} (${p})`))
+    }
+    if (!still.length) return { done: `EnerGov ${permits.join(', ')}: ${named.length ? `all ${named.length} inspections we asked about are off the required list` : 'no inspections we asked about are still required'}` }
+    return { left: `EnerGov still requires: ${[...new Set(still)].join('; ')}` }
+  }
+
+  // 2. "schedule the X inspection" — done when X (or its new name) shows up in Existing Inspections
+  //    requested on/after the ask, whatever the result (a fail is a new problem, not this ask).
+  // "help scheduling an inspection for … Could you please schedule the 152 RVI inspection" → the named one
+  const sched = [...hay.matchAll(/\bschedul\w* (?:the |an? |our )?(.+?) inspections?\b/gi)].map((m) => m[1].trim()).find((n) => !/^(an?|the|this|that|our|some|these|those|\d+)$/i.test(n) && n.length < 60)
+  if (sched) {
+    const want = sched.replace(/\b\d{2,4}\b/g, '').trim()
+    const generic = /^finals?$/i.test(want) // "the final inspections"
+    const alias = SCHEDULE_ALIASES.find(([re]) => re.test(want))?.[1]
+    const words = want.toLowerCase().split(/[^a-z]+/).filter((w) => w.length > 2 && !/^(the|and|for|res|residential|family)$/.test(w))
+    const matches = (n) => generic ? /^final/i.test(n) : alias ? alias.test(n) : words.length && words.every((w) => n.toLowerCase().includes(w))
+    for (const [p, r] of recs) {
+      const hit = r.existing.filter((i) => matches(i.InspectionType) && new Date(i.RequestedDate).getTime() >= asked).sort((x, y) => x.RequestedDate.localeCompare(y.RequestedDate))[0]
+      if (hit) return { done: `EnerGov ${p}: ${inspName(hit.InspectionType)} scheduled ${hit.RequestedDate.slice(0, 10)} (${hit.InspectionStatus})` }
+    }
+    return { left: `EnerGov: no ${want} inspection scheduled since ${l.firstSeen}` }
+  }
+
+  // 3. "attach <DEP/septic letter>" / "invoice the final fees" — the matching workflow step closed
   const step = /final fee/i.test(hay) ? /collection of final fee/i : /\battach/i.test(hay) && /dep|septic|health/i.test(hay) ? /dep final letter/i : null
   if (!step) return null
-  CASE_IDS ??= JSON.parse(readFileSync(new URL('permit-portals.json', import.meta.url), 'utf8'))
-  const permits = [...hay.matchAll(/\b(BLDR-\d{2}-\d{2}-\d{5}|20\d{8})\b/g)].map((m) => m[1])
-  for (const permit of permits) {
-    const caseId = CASE_IDS[permit]
-    if (!caseId) continue
-    let steps = workflowCache.get(caseId)
-    if (!steps) {
-      try {
-        const r = await fetch(ENERGOV + caseId, { headers: { accept: 'application/json', tenantId: '1' } })
-        steps = (await r.json()).Result || []
-      } catch { steps = [] }
-      workflowCache.set(caseId, steps)
-    }
-    const hit = steps.find((s) => step.test(s.Name || ''))
+  for (const [p, r] of recs) {
+    const hit = r.steps.find((s) => step.test(s.Name || ''))
     if (!hit) continue
-    if (hit.Status === 0) return `EnerGov ${permit}: "${hit.Name}" closed ${(hit.CompletedOn || '').slice(0, 10) || '(no date)'}`
-    return false
+    if (hit.Status === 0) return { done: `EnerGov ${p}: "${hit.Name}" closed ${(hit.CompletedOn || '').slice(0, 10) || '(no date)'}` }
+    return { left: `EnerGov ${p}: "${hit.Name}" still open` }
   }
   return null
 }
@@ -650,7 +707,7 @@ async function writeBoard() {
     [C.firstSeen]: { date: l.firstSeen },
     [C.days]: String(Math.round(l.ageDays)), // numbers column; a formula column doesn't show on Kanban cards
     [C.source]: linkFor(l),
-    [C.evidence]: l.evidence || '',
+    [C.evidence]: l.evidence || l.check || '',
     [C.key]: (l.keys || [l.key]).join(' '),
   })
   const stats = { created: 0, updated: 0, closed: 0, archived: 0, skipped: 0, posted: 0 }
@@ -687,7 +744,7 @@ async function writeBoard() {
       await postDetail(r.id, l, true)
     } else {
       const c = columnsFor(l)
-      await setColumns(BOARD.id, r.id, { name: titleOf(l.what), [C.owner]: c[C.owner], [C.waitingOn]: l.waitingOn, [C.whoAsked]: l.whoAsked, [C.details]: c[C.details], [C.house]: c[C.house], [C.key]: c[C.key], [C.days]: c[C.days] })
+      await setColumns(BOARD.id, r.id, { name: titleOf(l.what), [C.owner]: c[C.owner], [C.waitingOn]: l.waitingOn, [C.whoAsked]: l.whoAsked, [C.details]: c[C.details], [C.house]: c[C.house], [C.key]: c[C.key], [C.days]: c[C.days], [C.evidence]: c[C.evidence] })
       stats.updated++
       await postDetail(r.id, l)
     }
