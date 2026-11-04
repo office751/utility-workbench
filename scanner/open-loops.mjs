@@ -144,6 +144,9 @@ function cleanBody(text) {
     if (/^-{2,}\s*(original message|forwarded message)/i.test(l)) break
     if (/^on .{6,160} wrote:?$/i.test(l)) break
     if (SIG_RE.test(l) && out.length > 0) break
+    // Adam, Nov 4 2026 (Luminate Draw #3, 4256 SW Wisteria Ct): a bank's "Confidentiality Notice … please
+    // immediately notify the sender" footer became an open card. Legal footers end the new words.
+    if (/^(confidentiality notice|confidential(ity)? (statement|disclaimer)|this (e-?mail|message|communication)( and any (files|attachments)[^.]*)? (is|are|may be|contains?|may contain) (private|confidential|privileged|intended)|if you are not the intended recipient)/i.test(l.replace(/^[\u200b\s]+/, ''))) break
     if (/^>/.test(l) || URLISH_RE.test(l) || !l) continue
     if (/^(thanks|thank you|best|regards|sincerely|kind regards|respectfully|thanks again)[,!.]?\s*$/i.test(l) && out.length > 1) break
     out.push(l)
@@ -291,6 +294,16 @@ function matchHouse(text) {
   }
   return null
 }
+// Every house a message names (the Republic emails name Indian Hill AND Pensacola) — matchHouse keeps only the first.
+function matchHouses(text) {
+  const t = String(text ?? ''), tl = t.toLowerCase(), out = new Set()
+  for (const h of HOUSES) {
+    const p = h.permit?.toLowerCase().replace(/\(.*?\)/g, '').trim()
+    if ((h.parcel && h.parcel.length >= 8 && t.includes(h.parcel)) || (p && p.length >= 8 && tl.includes(p)) ||
+      (h.num && h.street && new RegExp(`\\b${h.num}\\b[^\\n]{0,25}\\b${h.street}(st|nd|rd|th)?\\b`, 'i').test(t))) out.add(h.id)
+  }
+  return out
+}
 
 // ---- Graph -------------------------------------------------------------------
 const env = loadEnv()
@@ -365,7 +378,7 @@ async function sweepMail(sinceIso) {
   // display name for every address we've seen, so cc'd people get names too
   const nameBook = new Map()
   for (const m of msgs) { nameBook.set(m.from, m.fromName); m.to.forEach((a, i) => m.toNames[i] && !nameBook.has(a) && nameBook.set(a, m.toNames[i])) }
-  for (const m of msgs) m.house = matchHouse(m.subject + '\n' + m.text)
+  for (const m of msgs) { m.house = matchHouse(m.subject + '\n' + m.text); m.houseIds = matchHouses(m.subject + '\n' + m.text) }
   MAIL_MSGS = msgs
   // People we actually correspond with (anyone we sent to in the window) — cold inbound
   // from anyone else is treated as marketing unless it is a reply to us.
@@ -393,7 +406,9 @@ async function sweepMail(sinceIso) {
     const house = last.house || list.map((x) => x.house).find(Boolean)
     const base = { source: 'mail', key: `mail:${last.conv}`, subject: last.subject, mailbox: last.mailbox, link: last.link, house: house?.name || '', houseId: house?.id || null, firstSeen: ymd(last.time), ageDays: days(last.time), thread: list.length }
     // A later message from the same party counts as the answer only when it is clearly the same matter.
-    const sameMatter = (x) => (house && x.house?.id === house.id) || x.bare === last.bare || (!house && !x.house)
+    // Adam, Nov 4 2026 (Jeff/Blue Sky, 23200 SW Indian Hill Dr): "taken care of via other emails I cc Jeff on" —
+    // those emails named both Republic houses, so match on ANY house a message names, not just the first.
+    const sameMatter = (x) => (house && (x.house?.id === house.id || x.houseIds?.has(house.id))) || x.bare === last.bare || (!house && !x.house)
     if (!last.outbound) {
       if (!isAsk(text) || CLOSER_RE.test(text)) {
         // their non-ask reply closes OUR ask before it — say so with their words, so the card
