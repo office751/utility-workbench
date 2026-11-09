@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Factura / Invoice</title>
+<!-- jsPDF draws the PDF invoice right on the phone (no server needed). -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root { --ink:#1f2328; --soft:#6a6f76; --line:#d9d4cc; --bg:#f6f3ee; --card:#fff; --rust:#b4532a; --rust-dark:#8f3f1e; --ok:#2e7d4f; --bad:#c0392b; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:18px/1.35 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .wrap { max-width:560px; margin:0 auto; padding:16px 16px 120px; }
+  h1 { font-size:26px; margin:4px 0 0; }
+  .en { display:block; color:var(--soft); font-size:14px; font-weight:400; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-top:14px; }
+  .who { font-weight:700; font-size:20px; }
+  .num { font-size:34px; font-weight:800; color:var(--rust); letter-spacing:.5px; }
+  .row { display:flex; gap:12px; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; }
+  label { display:block; font-weight:700; margin:14px 0 6px; }
+  input, textarea { width:100%; font:inherit; padding:14px 12px; border:2px solid var(--line); border-radius:10px; background:#fff; color:var(--ink); }
+  input:focus, textarea:focus { outline:none; border-color:var(--rust); }
+  .missing { border-color:var(--bad) !important; background:#fdf1ef; }
+  .chips { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .chip { font:inherit; font-weight:700; padding:14px 8px; border:2px solid var(--line); border-radius:10px; background:#fff; color:var(--ink); text-align:center; }
+  .chip small { display:block; font-weight:400; color:var(--soft); font-size:13px; }
+  .chip.on { border-color:var(--rust); background:#fbeee7; }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .linehead { display:flex; justify-content:space-between; align-items:center; font-weight:800; color:var(--rust-dark); }
+  .x { font:inherit; border:0; background:none; color:var(--bad); padding:6px; text-decoration:underline; }
+  .btn { display:block; width:100%; font:inherit; font-weight:800; font-size:20px; padding:18px; border-radius:14px; border:0; background:var(--rust); color:#fff; }
+  .btn.ghost { background:#fff; color:var(--rust-dark); border:2px dashed var(--rust); margin-top:14px; }
+  .btn.plain { background:#fff; color:var(--ink); border:2px solid var(--line); margin-top:10px; }
+  .total { font-size:30px; font-weight:800; }
+  .bar { position:fixed; left:0; right:0; bottom:0; background:var(--card); border-top:1px solid var(--line); padding:12px 16px calc(12px + env(safe-area-inset-bottom)); }
+  .bar .in { max-width:560px; margin:0 auto; }
+  .err { color:var(--bad); font-weight:700; margin:0 0 8px; display:none; }
+  .link { font:inherit; font-size:14px; border:0; background:none; color:var(--soft); text-decoration:underline; padding:4px 0; }
+  .hist { display:flex; justify-content:space-between; gap:10px; padding:12px 0; border-top:1px solid var(--line); align-items:center; }
+  .hist:first-of-type { border-top:0; }
+  .modal { position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; padding:16px; z-index:5; }
+  .modal .card { max-width:460px; width:100%; margin:0; }
+  .big { font-size:22px; font-weight:800; margin:0 0 6px; }
+  .okmsg { background:#e8f5ec; border:2px solid var(--ok); color:#1d5235; border-radius:12px; padding:14px; font-weight:700; margin-top:14px; display:none; }
+  a.pick { display:block; text-decoration:none; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<div class="bar" id="bar" style="display:none"><div class="in">
+  <p class="err" id="err"></p>
+  <button class="btn" id="send"><span id="sendTxt">Enviar factura</span> · <span id="barTotal">$0.00</span><span class="en" style="color:#fff" id="sendEn">Send invoice</span></button>
+</div></div>
+
+
+<script>
+/* ============================================================
+   SETTINGS — the only part that changes per sub.
+   Each sub opens the page with their own link:  .../factura/?v=jose&k=<their key>
+   (the keys live in the Supabase table sub_invoice_vendors, column link_key).
+   ============================================================ */
+const SEND_TO = "data@ironshieldconstruction.com";
+// The send service: emails the PDF to data@ and keeps the invoice numbers.
+// Its code is in supabase/functions/sub-invoice/index.ts.
+const API = "https://vldxennmrjnfhrvrlzuh.supabase.co/functions/v1/sub-invoice";
+const BILL_TO = ["Iron Shield Construction LLC", "4709 SE 102nd Pl, Unit 7", "Belleview, FL 34420"];
+
+const VENDORS = {
+  jose: {
+    name: "Jose Hernandez Maldonado",
+    lines: ["7865 W Hwy 40 #21", "Ocala, FL 34482"],
+    prefix: "JM",            // invoice numbers look like JM-001, JM-002 …
+    mode: "presets",         // tap a job type, the price fills in
+    presets: [
+      { es: "1er Rough",   en: "1st Rough Plumbing", amount: 2000 },
+      { es: "2do Rough",   en: "2nd Rough Plumbing", amount: 1100 },
+      { es: "Final / Trim", en: "Final Trim Plumbing", amount: 900 },
+    ],
+  },
+  aldali: {
+    name: "Aldali Flooring and Renovation",
+    lines: ["3101 SE 73rd St, Lot 864", "Ocala, FL 34480", "(786) 315-8748", "daineralmenaresc@gmail.com"],
+    prefix: "AF",
+    mode: "sqft",            // square feet × price per square foot
+    rate: 1.00,
+    work: { es: "Instalación de piso", en: "Flooring installation" },
+  },
+  test: { // for trying the page out — its emails say TEST
+    name: "TEST - please ignore",
+    lines: ["Iron Shield office test"],
+    prefix: "TEST",
+    mode: "presets",
+    presets: [{ es: "Prueba", en: "Test job", amount: 1 }],
+  },
+};
+
+// Houses with recent work, so they can pick instead of typing (they can still type a new one).
+const HOUSES = ["13 ALMOND PASS, OCALA","22 PINE COURSE RUN, OCALA","23 PINE COURSE RUN, OCALA","27 LAUREL DR, OCALA","55 NW 45TH LOOP, OCALA","130 DOGWOOD DRIVE CIR, OCALA","888 NE 95TH ST, OCALA","1665 NE 61ST ST, OCALA","2163 NW 65TH PL, OCALA","2177 NW 65TH PL, OCALA","2190 NW 65TH PL, OCALA","2222 NW 64TH ST, OCALA","2226 NW 64TH ST, OCALA","2230 NW 65TH ST, OCALA","2240 NW 65TH ST, OCALA","2276 NW 66TH ST, OCALA","2416 NW 66TH ST, OCALA","2512 SW 147TH PLACE RD, OCALA","4168 SW 112TH LN, OCALA","4256 SW WISTERIA CT, DUNNELLON","4358 SW EVERGREEN CT, DUNNELLON","4869 SE 24TH ST, OCALA","4923 SW 157TH ST, OCALA","4927 SW 157TH ST, OCALA","4973 SW VIOLA CT, DUNNELLON","5608 SW 136TH AVE, DUNNELLON","6577 SW 131ST PL, OCALA","7540 SW 121ST TER, DUNNELLON","7570 SW 121ST TER, DUNNELLON","7665 SW 121ST TER, DUNNELLON","7669 SW 121ST TER, DUNNELLON","7677 SW 121ST TER, DUNNELLON","8895 SW 135TH PL, OCALA","10530 SE 50TH AVE, BELLEVIEW","12817 SW 91ST LN, OCALA","13668 SW 112TH ST, DUNNELLON","13797 SE 40TH CT, BELLEVIEW","14145 SE 34TH TER, BELLEVIEW","14667 SW 79TH TERRACE RD, OCALA","14845 SW 77TH AVE, OCALA","19752 SW MARINE BLVD, DUNNELLON","19832 SW MARINE BLVD, DUNNELLON","20050 SW 80TH PLACE RD, DUNNELLON","20073 SW RAINBOW LAKES BLVD, DUNNELLON","20601 SW MARINE BLVD, DUNNELLON","20832 SW MARINE BLVD, DUNNELLON","21661 SW MARINE BLVD, DUNNELLON","21921 SW RAINBOW LAKES BLVD, DUNNELLON","22047 SW SURF BLVD, DUNNELLON","22262 SW MARINE BLVD, DUNNELLON","23200 SW INDIAN HILL DR, DUNNELLON","24028 SW NORTH BEACH RD, DUNNELLON","24854 SW PENSACOLA DR, DUNNELLON"];
+
+/* ============================================================
+   MEMORY
+   The invoice NUMBER and the list already sent live on our server, so a new
+   phone or a cleared browser can't reset them. The phone only remembers the
+   invoice being typed (and Aldali's price per square foot).
+   ============================================================ */
+const qs = new URLSearchParams(location.search);
+const key = qs.get("v") || "";
+const linkKey = qs.get("k") || "";
+const V = VENDORS[key];
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("inv." + key + "." + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem("inv." + key + "." + k, JSON.stringify(v)); } catch (e) {} },
+};
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const money = (n) => "$" + (Number(n) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const num = (s) => parseFloat(String(s).replace(/[^0-9.]/g, "")) || 0;
+const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+const invNo = (n) => V.prefix + "-" + String(n).padStart(3, "0");
+const showDate = (iso) => { const [y, m, d] = iso.split("-"); return m + "/" + d + "/" + y; };
+
+let nextNum, draft, sentList = [], busy = false;
+
+// Ask the send service something. Throws if the phone is offline or the link is wrong.
+async function api(body) {
+  const res = await fetch(API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ v: key, k: linkKey, ...body }) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "error");
+  return data;
+}
+function showErr(es, en) {
+  const e = $("err"); e.style.display = es ? "block" : "none";
+  e.innerHTML = es ? esc(es) + "<span class='en' style='color:inherit'>" + esc(en) + "</span>" : "";
+}
+const blankLine = () => ({ house: "", preset: -1, desc: "", sqft: "", rate: V.mode === "sqft" ? store.get("rate", V.rate) : "", boxes: "", amount: "" });
+
+// One line's description as it prints on the invoice (English first — that is what the office reads).
+function lineText(l) {
+  if (V.mode === "sqft" && l.preset !== "other") {
+    return V.work.en + " / " + V.work.es + " — " + (num(l.sqft) || 0).toLocaleString("en-US") + " sq ft × " + money(l.rate) + (l.boxes ? " — " + l.boxes + " boxes/cajas" : "");
+  }
+  if (V.mode === "presets" && l.preset >= 0) { const p = V.presets[l.preset]; return p.en + " / " + p.es; }
+  return l.desc.trim();
+}
+const lineAmount = (l) => (V.mode === "sqft" && l.preset !== "other") ? Math.round(num(l.sqft) * num(l.rate) * 100) / 100 : num(l.amount);
+const total = () => draft.lines.reduce((s, l) => s + lineAmount(l), 0);
+
+/* ============================================================
+   SCREEN
+   ============================================================ */
+async function start() {
+  const stop = (es, en) => { $("app").innerHTML = "<h1>Factura<span class='en'>Invoice</span></h1><div class='card'><b>" + es + "</b><span class='en'>" + en + "</span></div>"; };
+  if (!V || !linkKey) return stop("Este enlace no es correcto. Pide un enlace nuevo a la oficina.", "This link is not right. Ask the office for a new link.");
+  stop("Cargando…", "Loading…");
+  try {
+    const s = await api({ action: "next" });   // the server says which number is next
+    nextNum = s.next; sentList = s.sent;
+  } catch (e) {
+    return stop(e.message === "bad link" ? "Este enlace no es correcto. Pide un enlace nuevo a la oficina." : "No hay internet. Revisa tu señal y abre la página otra vez.",
+                e.message === "bad link" ? "This link is not right. Ask the office for a new link." : "No internet. Check your signal and open the page again.");
+  }
+  draft = store.get("draft", null) || { date: today(), lines: [blankLine()] };
+  $("bar").style.display = "block";
+  render();
+}
+
+function render() {
+  const sent = sentList.slice().reverse();   // oldest first; shown newest first below
+  $("app").innerHTML =
+    "<h1>Factura<span class='en'>Invoice</span></h1>" +
+    "<div class='okmsg' id='ok'></div>" +
+    "<div class='card'><div class='row'><div><div class='who'>" + esc(V.name) + "</div><div style='color:var(--soft);font-size:15px'>" + V.lines.map(esc).join("<br>") + "</div></div>" +
+      "<div style='text-align:right'><div class='en'>Factura # / Invoice #</div><div class='num'>" + invNo(nextNum) + "</div></div></div>" +
+      "<label>Fecha<span class='en'>Date</span></label><input type='date' id='date' value='" + esc(draft.date) + "'>" +
+      "<div style='margin-top:12px;color:var(--soft);font-size:15px'>Para / Bill to: <b>" + esc(BILL_TO[0]) + "</b></div></div>" +
+    draft.lines.map(lineHtml).join("") +
+    "<button class='btn ghost' id='add'>+ Agregar otra casa<span class='en'>Add another house</span></button>" +
+    "<div class='card row'><div>Total</div><div class='total' id='total'></div></div>" +
+    (sent.length ? "<div class='card'><b>Facturas enviadas</b><span class='en'>Invoices already sent</span>" + sent.slice().reverse().map((s, i) =>
+      "<div class='hist'><div><b>" + invNo(s.n) + "</b> · " + showDate(s.date) + "<div style='font-size:14px;color:var(--soft)'>" + esc(s.lines.map((l) => l.house).join(" · ")) + "</div></div>" +
+      "<div style='text-align:right'><b>" + money(s.total) + "</b><br><button class='link' data-pdf='" + (sent.length - 1 - i) + "'>ver PDF</button></div></div>").join("") + "</div>" : "") +
+    "<datalist id='houses'>" + HOUSES.map((h) => "<option value='" + esc(h) + "'>").join("") + "</datalist>";
+  totals();
+}
+
+function lineHtml(l, i) {
+  const head = "<div class='card' data-i='" + i + "'><div class='linehead'><span>Casa " + (i + 1) + "<span class='en' style='display:inline'> · House " + (i + 1) + "</span></span>" +
+    (draft.lines.length > 1 ? "<button class='x' data-del='" + i + "'>quitar / remove</button>" : "") + "</div>" +
+    "<label>Dirección de la casa<span class='en'>House address</span></label>" +
+    "<input data-f='house' list='houses' autocomplete='off' placeholder='888 NE 95th St' value='" + esc(l.house) + "'>";
+  const other = "<label>¿Qué trabajo hiciste?<span class='en'>What work did you do?</span></label><textarea data-f='desc' rows='2'>" + esc(l.desc) + "</textarea>" +
+    "<label>Precio $<span class='en'>Price</span></label><input data-f='amount' inputmode='decimal' placeholder='0.00' value='" + esc(l.amount) + "'>";
+  let body;
+  if (V.mode === "presets") {
+    body = "<label>Trabajo<span class='en'>Work done</span></label><div class='chips'>" +
+      V.presets.map((p, j) => "<button class='chip" + (l.preset === j ? " on" : "") + "' data-preset='" + j + "'>" + esc(p.es) + "<small>" + esc(p.en) + "</small></button>").join("") +
+      "<button class='chip" + (l.preset === "other" ? " on" : "") + "' data-preset='other'>Otro<small>Other</small></button></div>" +
+      (l.preset === "other" ? other : l.preset >= 0 ? "<label>Precio $<span class='en'>Price</span></label><input data-f='amount' inputmode='decimal' value='" + esc(l.amount) + "'>" : "");
+  } else {
+    body = "<div class='chips' style='margin-top:14px'><button class='chip" + (l.preset !== "other" ? " on" : "") + "' data-preset='-1'>" + esc(V.work.es) + "<small>" + esc(V.work.en) + "</small></button>" +
+      "<button class='chip" + (l.preset === "other" ? " on" : "") + "' data-preset='other'>Otro trabajo<small>Other work</small></button></div>" +
+      (l.preset === "other" ? other :
+        "<div class='two'><div><label>Pies cuadrados<span class='en'>Square feet installed</span></label><input data-f='sqft' inputmode='decimal' placeholder='1342' value='" + esc(l.sqft) + "'></div>" +
+        "<div><label>Precio por pie $<span class='en'>Price per sq ft</span></label><input data-f='rate' inputmode='decimal' value='" + esc(l.rate) + "'></div></div>" +
+        "<label>Cajas instaladas<span class='en'>Boxes installed (optional)</span></label><input data-f='boxes' inputmode='numeric' value='" + esc(l.boxes) + "'>" +
+        "<div class='row' style='margin-top:14px'><span>Esta casa / This house</span><b data-sub style='font-size:22px'></b></div>");
+  }
+  return head + body + "</div>";
+}
+
+function totals() {
+  document.querySelectorAll("[data-sub]").forEach((el) => { el.textContent = money(lineAmount(draft.lines[el.closest("[data-i]").dataset.i])); });
+  $("total").textContent = $("barTotal").textContent = money(total());
+  store.set("draft", draft);
+}
+
+// Typing: save what was typed without redrawing (so the keyboard stays open).
+document.addEventListener("input", (e) => {
+  const t = e.target;
+  if (t.id === "date") draft.date = t.value || today();
+  const card = t.closest("[data-i]");
+  if (card && t.dataset.f) {
+    draft.lines[card.dataset.i][t.dataset.f] = t.value;
+    if (t.dataset.f === "rate") store.set("rate", t.value);   // remember his price per sq ft
+    t.classList.remove("missing");
+  }
+  if (V) totals();
+});
+
+// Taps.
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("button"); if (!t || !V) return;
+  const card = t.closest("[data-i]"), d = t.dataset;
+  if (d.preset != null) {
+    const l = draft.lines[card.dataset.i];
+    l.preset = d.preset === "other" ? "other" : Number(d.preset);
+    if (V.mode === "presets") { l.amount = l.preset === "other" ? "" : String(V.presets[l.preset].amount); if (l.preset !== "other") l.desc = ""; }
+    render();
+  } else if (d.del != null) { draft.lines.splice(Number(d.del), 1); render(); }
+  else if (t.id === "add") { draft.lines.push(blankLine()); render(); window.scrollTo(0, document.body.scrollHeight); }
+  else if (d.pdf != null) { const s = sentList.slice().reverse()[d.pdf]; makePdf(s.n, s.date, s.lines, s.total).save(fileName(s.n, s.date)); }
+  else if (t.id === "send") send();
+});
+
+/* ============================================================
+   SEND
+   ============================================================ */
+async function send() {
+  if (busy) return;   // ignore a second tap while the first is still sending
+  // 1. Every house needs an address, a job, and a price.
+  let bad = false;
+  document.querySelectorAll("[data-i]").forEach((card) => {
+    const l = draft.lines[card.dataset.i];
+    const flag = (f, isBad) => { const el = card.querySelector("[data-f='" + f + "']"); if (el) el.classList.toggle("missing", isBad); bad = bad || isBad; };
+    flag("house", l.house.trim().length < 4);
+    if (V.mode === "sqft" && l.preset !== "other") { flag("sqft", num(l.sqft) <= 0); flag("rate", num(l.rate) <= 0); }
+    else {
+      if (V.mode === "presets" && l.preset === -1) { bad = true; card.querySelectorAll(".chip").forEach((c) => c.classList.add("missing")); }
+      if (l.preset === "other") flag("desc", !l.desc.trim());
+      flag("amount", num(l.amount) <= 0);
+    }
+  });
+  showErr(bad ? "Falta información en rojo." : "", "Fill in the red boxes.");
+  if (bad) { const m = document.querySelector(".missing"); if (m) m.scrollIntoView({ block: "center", behavior: "smooth" }); return; }
+
+  // 2. Freeze the invoice, build the PDF, and give both to the send service.
+  //    It emails the PDF to the office. If the number was already used (rare),
+  //    it tells us the right one and we rebuild the PDF once with that number.
+  const lines = draft.lines.map((l) => ({ house: l.house.trim().toUpperCase(), text: lineText(l), amount: lineAmount(l) }));
+  const date = draft.date, tot = total();
+  busy = true; $("send").style.opacity = ".6"; $("sendTxt").textContent = "Enviando…"; $("sendEn").textContent = "Sending…";
+  try {
+    let r;
+    for (let tries = 0; tries < 2; tries++) {
+      const pdf = makePdf(nextNum, date, lines, tot).output("datauristring").split("base64,")[1];
+      r = await api({ action: "send", n: nextNum, date, lines, pdf });
+      if (!r.conflict) break;
+      nextNum = r.next;
+    }
+    if (!r.ok) throw new Error("conflict");
+
+    // 3. Sent. Show the green message and start a fresh invoice with the next number.
+    nextNum = r.next; sentList = r.sent;
+    draft = { date: today(), lines: [blankLine()] }; store.set("draft", draft);
+    render(); window.scrollTo(0, 0);
+    const ok = $("ok"); ok.style.display = "block";
+    ok.innerHTML = "✓ Factura " + esc(r.sentNo) + " enviada a la oficina. No tienes que hacer nada más.<span class='en' style='color:inherit'>Invoice " + esc(r.sentNo) + " was sent to the office. Nothing else to do.</span>";
+  } catch (e) {
+    showErr("No se pudo enviar. Revisa tu internet e intenta otra vez.", "It did not send. Check your internet and try again.");
+  }
+  busy = false; $("send").style.opacity = "1"; $("sendTxt").textContent = "Enviar factura"; $("sendEn").textContent = "Send invoice";
+}
+
+const fileName = (n, date) => "Invoice-" + invNo(n) + "-" + V.name.split(" ")[0] + "-" + date + ".pdf";
+
+/* ============================================================
+   THE PDF (letter size, one page per ~12 houses)
+   ============================================================ */
+function makePdf(n, date, lines, tot) {
+  const doc = new jspdf.jsPDF({ unit: "pt", format: "letter" });
+  const L = 54, R = 558; let y = 70;
+  doc.setFont("helvetica", "bold").setFontSize(26).text("INVOICE", L, y);
+  doc.setFontSize(11).setFont("helvetica", "normal").setTextColor(110).text("FACTURA", L, y + 16).setTextColor(0);
+  doc.setFont("helvetica", "bold").setFontSize(18).text(invNo(n), R, y - 6, { align: "right" });
+  doc.setFont("helvetica", "normal").setFontSize(11).text("Date / Fecha: " + showDate(date), R, y + 12, { align: "right" });
+  y += 54;
+  doc.setFontSize(9).setTextColor(110).text("FROM / DE", L, y).text("BILL TO / PARA", 320, y).setTextColor(0);
+  doc.setFont("helvetica", "bold").setFontSize(12).text(V.name, L, y + 16).text(BILL_TO[0], 320, y + 16);
+  doc.setFont("helvetica", "normal").setFontSize(11);
+  V.lines.forEach((t, i) => doc.text(t, L, y + 32 + i * 14));
+  BILL_TO.slice(1).forEach((t, i) => doc.text(t, 320, y + 32 + i * 14));
+  y += 44 + Math.max(V.lines.length, BILL_TO.length - 1) * 14;
+
+  const head = () => {
+    doc.setFillColor(240, 236, 230).rect(L, y, R - L, 22, "F");
+    doc.setFont("helvetica", "bold").setFontSize(10).text("HOUSE / CASA", L + 8, y + 15).text("WORK / TRABAJO", 250, y + 15).text("AMOUNT", R - 8, y + 15, { align: "right" });
+    doc.setFont("helvetica", "normal").setFontSize(11); y += 22;
+  };
+  head();
+  lines.forEach((l) => {
+    const a = doc.splitTextToSize(l.house, 180), b = doc.splitTextToSize(l.text, 220), h = Math.max(a.length, b.length) * 14 + 12;
+    if (y + h > 700) { doc.addPage(); y = 60; head(); }
+    doc.text(a, L + 8, y + 17); doc.text(b, 250, y + 17); doc.text(money(l.amount), R - 8, y + 17, { align: "right" });
+    y += h; doc.setDrawColor(215).line(L, y, R, y);
+  });
+  y += 30;
+  doc.setFont("helvetica", "bold").setFontSize(16).text("TOTAL", 380, y).text(money(tot), R - 8, y, { align: "right" });
+  doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(110).text("Send to / Enviar a: " + SEND_TO, L, 750);
+  return doc;
+}
+
+start();
+</script>
+</body>
+</html>
