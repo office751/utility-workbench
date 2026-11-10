@@ -57,3 +57,18 @@ alter table public.sub_invoice_houses enable row level security;
 -- "presets":[{"es","en","amount"}]  or  "rate" + "work":{"es","en"}}. Kept in the database so
 -- one sub's link never carries another sub's details.
 alter table public.sub_invoice_vendors add column if not exists config jsonb not null default '{}'::jsonb;
+
+-- Added Nov 10 2026 (already applied): daily sync + duplicate flag.
+-- 'monday' house rows are owned by scanner/sub-invoice-sync.mjs; 'manual' rows are never touched by it.
+alter table public.sub_invoice_houses add column if not exists source text not null default 'manual';
+-- Bills already in QuickBooks for each sub, refreshed by "Invoice Red Flags/sub_invoice_prior.py".
+-- Only used to add POSSIBLE DUPLICATE to the email that goes to data@.
+create table if not exists public.sub_invoice_prior (
+  id bigint generated always as identity primary key,
+  vendor text not null, house_no text not null, parcel text not null default '', address text not null,
+  job text not null, cat text not null, txn_date date not null, amount numeric(12,2) not null, doc text not null default ''
+);
+create index if not exists sub_invoice_prior_lookup on public.sub_invoice_prior (vendor, house_no);
+alter table public.sub_invoice_prior enable row level security;
+alter table public.sub_invoice_vendors add column if not exists qbo_vendor_id text;   -- QuickBooks vendor Id (jose = 28, aldali = 729)
+alter table public.sub_invoice_vendors add column if not exists history_of text;      -- practice links: whose history to check

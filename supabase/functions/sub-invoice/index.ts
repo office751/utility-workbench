@@ -6,6 +6,8 @@
  *   2. hand out the next invoice number (kept HERE, so a new phone can't reset it),
  *   3. email the PDF from office@ to data@ through the Iron Shield mail app,
  *   4. record the invoice in the sub_invoices table.
+ * If a line looks like something the sub already billed (same house + same job), the
+ * email to the office says POSSIBLE DUPLICATE. The sub is never told.
  *
  * Setup lives in supabase/setup-sub-invoices.sql. The mail-app sign-in is in
  * the Supabase vault (names sub_invoice_graph_*), never in this file.
@@ -45,6 +47,43 @@ async function nextAndSent(vendor: string, startN: number) {
     next: rows.length ? rows[0].n + 1 : startN,
     sent: rows.filter((r: any) => r.emailed_at).map((r: any) => ({ n: r.n, date: r.invoice_date, total: Number(r.total), lines: r.lines })),
   };
+}
+
+// Boil a job description down to one label so "2nd Rough", "Rough 2nd Plumbing" and "2do Rough" all match.
+// KEEP IN STEP with job_cat() in Invoice Red Flags/sub_invoice_prior.py.
+const jobCat = (text: string) => {
+  const t = text.toUpperCase();
+  if (/2ND|2DO|SECOND/.test(t)) return "2nd rough";
+  if (/TRIM|FINAL/.test(t)) return "trim";
+  if (/1ST|1ER|FIRST|ROUGH/.test(t)) return "1st rough";
+  if (/FLOOR|PISO|LVP|LAMINATE/.test(t)) return "flooring";
+  return t.replace(/\s+/g, " ").trim().slice(0, 60);
+};
+const houseNo = (h: string) => (h.match(/^\d+/) || [""])[0];                               // "888 NE 95TH ST…" -> "888"
+const parcelOf = (h: string) => (h.match(/\(([^)]+)\)\s*$/) || ["", ""])[1].toUpperCase();  // "… (14101-000-01)" -> parcel
+
+// Has this sub already billed the same job on the same house? Looks in two places:
+// bills already in QuickBooks (table sub_invoice_prior, refreshed daily) and invoices
+// sent earlier from this page. Returns one entry per suspicious line.
+async function findDuplicates(v: any, lines: any[]) {
+  const who = v.history_of || v.vendor;                       // practice links use the real sub's history
+  const nos = [...new Set(lines.map((l) => houseNo(l.house)).filter((n) => /^\d+$/.test(n)))];
+  if (!nos.length) return [];
+  const prior = await (await db(`sub_invoice_prior?vendor=eq.${who}&house_no=in.(${nos.join(",")})&select=house_no,parcel,job,cat,txn_date,amount,doc`)).json();
+  const earlier = await (await db(`sub_invoices?vendor=in.(${v.vendor},${who})&emailed_at=not.is.null&select=n,invoice_date,lines`)).json();
+  const same = (no: string, p: string, c: string, no2: string, p2: string, c2: string) => no === no2 && c === c2 && (!p || !p2 || p === p2);
+  const out: { house: string; text: string; hits: string[] }[] = [];
+  lines.forEach((l, i) => {
+    const no = houseNo(l.house), p = parcelOf(l.house), c = jobCat(l.text), hits: string[] = [];
+    if (!no) return;
+    for (const r of prior) if (same(no, p, c, r.house_no, r.parcel, r.cat))
+      hits.push(`QuickBooks bill ${r.doc || "(no number)"} dated ${r.txn_date}, ${money(Number(r.amount))} ("${r.job}")`);
+    for (const inv of earlier) for (const el of inv.lines) if (same(no, p, c, houseNo(el.house), parcelOf(el.house), jobCat(el.text)))
+      hits.push(`invoice ${v.prefix}-${String(inv.n).padStart(3, "0")} dated ${inv.invoice_date}, ${money(Number(el.amount))}`);
+    if (lines.some((o, j) => j < i && same(no, p, c, houseNo(o.house), parcelOf(o.house), jobCat(o.text)))) hits.push("another line on this same invoice");
+    if (hits.length) out.push({ house: l.house, text: l.text, hits: hits.slice(0, 5) });
+  });
+  return out;
 }
 
 async function graphToken() {
@@ -96,6 +135,10 @@ Deno.serve(async (req) => {
   const today = await (await db(`sub_invoices?vendor=eq.${v.vendor}&created_at=gte.${since}&select=id`)).json();
   if (today.length >= DAILY_LIMIT) return reply({ error: "too many today" }, 429);
 
+  // Look for possible duplicates BEFORE saving this invoice (so it can't match itself).
+  let dupes: { house: string; text: string; hits: string[] }[] = [];
+  try { dupes = await findDuplicates(v, lines); } catch (e) { console.error("duplicate check failed: " + String(e)); }
+
   // 3. Claim the number. If the page's number is stale (or two phones race), tell it the right one.
   if (b.n !== state.next) return reply({ conflict: true, next: state.next });
   const clean = lines.map((l: any) => ({ house: l.house, text: l.text, amount: l.amount }));
@@ -109,8 +152,12 @@ Deno.serve(async (req) => {
 
   // 4. Email it. If the email fails, give the number back so nothing is skipped.
   const no = `${v.prefix}-${String(b.n).padStart(3, "0")}`;
-  const subject = `Invoice ${no} - ${v.name} - ${money(total)}`;
-  const html =
+  const subject = `Invoice ${no} - ${v.name} - ${money(total)}` + (dupes.length ? " - POSSIBLE DUPLICATE" : "");
+  const warn = !dupes.length ? "" :
+    `<div style="border:2px solid #c0392b;background:#fdf1ef;padding:10px 12px;margin-bottom:12px"><b>POSSIBLE DUPLICATE - please check before entering.</b> ` +
+    `The sub was not told.<ul style="margin:6px 0 0">` +
+    dupes.map((d) => `<li><b>${esc(d.house)}</b> - ${esc(d.text)}<br>Already billed on: ${d.hits.map(esc).join("; ")}</li>`).join("") + `</ul></div>`;
+  const html = warn +
     `<p><b>${esc(v.name)}</b> sent invoice <b>${no}</b> dated ${esc(b.date)} from the sub invoice page. The PDF is attached.</p>` +
     `<table cellpadding="6" style="border-collapse:collapse;border:1px solid #ccc">` +
     `<tr style="background:#f0ece6"><th align="left">House</th><th align="left">Work</th><th align="right">Amount</th></tr>` +
