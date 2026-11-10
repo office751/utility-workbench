@@ -53,6 +53,7 @@
   input[type=date] { -webkit-appearance:none; appearance:none; display:block; width:auto; min-width:0; max-width:60%; min-height:50px; padding:10px 12px; text-align:left; }
   input[type=date]::-webkit-date-and-time-value { text-align:left; }
   /* Suggested houses under the address box. */
+  .sugb small { display:block; font-weight:400; font-size:14px; color:var(--soft); }
   .sugb { display:block; width:100%; font:inherit; font-weight:700; text-align:left; padding:14px 12px; margin-top:6px; border:2px solid var(--rust); border-radius:10px; background:#fbeee7; color:var(--ink); }
   summary { cursor:pointer; padding:2px 0; }
   .modal { align-items:flex-end; padding:0; }
@@ -91,42 +92,12 @@ const SEND_TO = "data@ironshieldconstruction.com";
 const API = "https://vldxennmrjnfhrvrlzuh.supabase.co/functions/v1/sub-invoice";
 const BILL_TO = ["Iron Shield Construction LLC", "4709 SE 102nd Pl, Unit 7", "Belleview, FL 34420"];
 
-const VENDORS = {
-  jose: {
-    name: "Jose Hernandez Maldonado",
-    lines: ["7865 W Hwy 40 #21", "Ocala, FL 34482"],
-    prefix: "JM",            // invoice numbers look like JM-001, JM-002 …
-    mode: "presets",         // tap a job type, the price fills in
-    presets: [
-      { es: "1er Rough",   en: "1st Rough Plumbing", amount: 2000 },
-      { es: "2do Rough",   en: "2nd Rough Plumbing", amount: 1100 },
-      { es: "Final / Trim", en: "Final Trim Plumbing", amount: 900 },
-    ],
-  },
-  aldali: {
-    name: "Aldali Flooring and Renovation",
-    lines: ["3101 SE 73rd St, Lot 864", "Ocala, FL 34480", "(786) 315-8748", "daineralmenaresc@gmail.com"],
-    prefix: "AF",
-    mode: "sqft",            // square feet × price per square foot
-    rate: 1.00,
-    work: { es: "Instalación de piso", en: "Flooring installation" },
-  },
-  test: { // for trying the page out — its emails say TEST
-    name: "TEST - please ignore",
-    lines: ["Iron Shield office test"],
-    prefix: "TEST",
-    mode: "presets",
-    presets: [{ es: "Prueba", en: "Test job", amount: 1 }],
-  },
-};
-// Practice copies: they look EXACTLY like Jose's and Aldali's real pages (same name,
-// address, numbers JM-/AF-), but the send service emails them to Adam, never to data@,
-// and they keep their own practice numbering.
-VENDORS.testjose = { ...VENDORS.jose };
-VENDORS.testaldali = { ...VENDORS.aldali };
-
-// Houses with recent work, so they can pick instead of typing (they can still type a new one).
-const HOUSES = ["13 ALMOND PASS, OCALA","22 PINE COURSE RUN, OCALA","23 PINE COURSE RUN, OCALA","27 LAUREL DR, OCALA","55 NW 45TH LOOP, OCALA","130 DOGWOOD DRIVE CIR, OCALA","888 NE 95TH ST, OCALA","1665 NE 61ST ST, OCALA","2163 NW 65TH PL, OCALA","2177 NW 65TH PL, OCALA","2190 NW 65TH PL, OCALA","2222 NW 64TH ST, OCALA","2226 NW 64TH ST, OCALA","2230 NW 65TH ST, OCALA","2240 NW 65TH ST, OCALA","2276 NW 66TH ST, OCALA","2416 NW 66TH ST, OCALA","2512 SW 147TH PLACE RD, OCALA","4168 SW 112TH LN, OCALA","4256 SW WISTERIA CT, DUNNELLON","4358 SW EVERGREEN CT, DUNNELLON","4869 SE 24TH ST, OCALA","4923 SW 157TH ST, OCALA","4927 SW 157TH ST, OCALA","4973 SW VIOLA CT, DUNNELLON","5608 SW 136TH AVE, DUNNELLON","6577 SW 131ST PL, OCALA","7540 SW 121ST TER, DUNNELLON","7570 SW 121ST TER, DUNNELLON","7665 SW 121ST TER, DUNNELLON","7669 SW 121ST TER, DUNNELLON","7677 SW 121ST TER, DUNNELLON","8895 SW 135TH PL, OCALA","10530 SE 50TH AVE, BELLEVIEW","12817 SW 91ST LN, OCALA","13668 SW 112TH ST, DUNNELLON","13797 SE 40TH CT, BELLEVIEW","14145 SE 34TH TER, BELLEVIEW","14667 SW 79TH TERRACE RD, OCALA","14845 SW 77TH AVE, OCALA","19752 SW MARINE BLVD, DUNNELLON","19832 SW MARINE BLVD, DUNNELLON","20050 SW 80TH PLACE RD, DUNNELLON","20073 SW RAINBOW LAKES BLVD, DUNNELLON","20601 SW MARINE BLVD, DUNNELLON","20832 SW MARINE BLVD, DUNNELLON","21661 SW MARINE BLVD, DUNNELLON","21921 SW RAINBOW LAKES BLVD, DUNNELLON","22047 SW SURF BLVD, DUNNELLON","22262 SW MARINE BLVD, DUNNELLON","23200 SW INDIAN HILL DR, DUNNELLON","24028 SW NORTH BEACH RD, DUNNELLON","24854 SW PENSACOLA DR, DUNNELLON"];
+// Who this sub is (name, address, job buttons) and the houses they can pick are NOT in this
+// file. The send service hands them over when the page opens, based on the key in the link,
+// so one sub's link never carries another sub's details. To add a sub or a house, add a row
+// in Supabase (tables sub_invoice_vendors and sub_invoice_houses).
+let V = null;        // this sub: { name, lines, prefix, mode, presets | rate + work }
+let HOUSES = [];     // [{ address, parcel }]
 
 /* ============================================================
    MEMORY
@@ -137,7 +108,6 @@ const HOUSES = ["13 ALMOND PASS, OCALA","22 PINE COURSE RUN, OCALA","23 PINE COU
 const qs = new URLSearchParams(location.search);
 const key = qs.get("v") || "";
 const linkKey = qs.get("k") || "";
-const V = VENDORS[key];
 const store = {
   get(k, d) { try { const v = localStorage.getItem("inv." + key + "." + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem("inv." + key + "." + k, JSON.stringify(v)); } catch (e) {} },
@@ -181,11 +151,12 @@ const total = () => draft.lines.reduce((s, l) => s + lineAmount(l), 0);
    ============================================================ */
 async function start() {
   const stop = (es, en) => { $("app").innerHTML = "<h1>Factura<span class='en'>Invoice</span></h1><div class='card'><b>" + es + "</b><span class='en'>" + en + "</span></div>"; };
-  if (!V || !linkKey) return stop("Este enlace no es correcto. Pide un enlace nuevo a la oficina.", "This link is not right. Ask the office for a new link.");
+  if (!key || !linkKey) return stop("Este enlace no es correcto. Pide un enlace nuevo a la oficina.", "This link is not right. Ask the office for a new link.");
   stop("Cargando…", "Loading…");
   try {
     const s = await api({ action: "next" });   // the server says which number is next
     nextNum = s.next; sentList = s.sent;
+    V = { ...s.config, prefix: s.prefix }; HOUSES = s.houses;
   } catch (e) {
     return stop(e.message === "bad link" ? "Este enlace no es correcto. Pide un enlace nuevo a la oficina." : "No hay internet. Revisa tu señal y abre la página otra vez.",
                 e.message === "bad link" ? "This link is not right. Ask the office for a new link." : "No internet. Check your signal and open the page again.");
@@ -214,8 +185,8 @@ function render() {
 function lineHtml(l, i) {
   const head = "<div class='card' data-i='" + i + "'><div class='linehead'><span>Casa " + (i + 1) + "<span class='en' style='display:inline'> · House " + (i + 1) + "</span></span>" +
     (draft.lines.length > 1 ? "<button class='x' data-del='" + i + "'>quitar / remove</button>" : "") + "</div>" +
-    "<label>Número de la casa<span class='en'>Type the house number, then tap the house</span></label>" +
-    "<input data-f='house' autocomplete='off' autocapitalize='characters' placeholder='888…' value='" + esc(l.house) + "'><div class='sug'></div>";
+    "<label>Número de casa o parcela<span class='en'>Type the house number or parcel, then tap the house</span></label>" +
+    "<input data-f='house' autocomplete='off' autocapitalize='characters' placeholder='888… / 1328-016…' value='" + esc(l.house) + "'><div class='sug'></div>";
   const price = "<label>Precio $<span class='en'>Price</span></label><input data-f='amount' inputmode='decimal' placeholder='0.00' value='" + esc(l.amount) + "'>";
   const other = "<label>¿Qué trabajo hiciste?<span class='en'>What work did you do?</span></label><textarea data-f='desc' rows='2'>" + esc(l.desc) + "</textarea>" + price;
   let body;
@@ -242,11 +213,21 @@ function totals() {
   store.set("draft", draft);
 }
 
-// While they type a house number, show the matching houses as big buttons to tap.
+// While they type a house number OR a parcel ID, show the matching houses as big buttons to tap.
+// Parcels match with or without the dashes ("1328016" finds 1328-016-010A).
+const bare = (t) => String(t).toUpperCase().replace(/[^A-Z0-9]/g, "");
+const withParcel = (h) => h.address + (h.parcel ? " (" + h.parcel + ")" : "");
 function suggest(input) {
-  const box = input.nextElementSibling, q = input.value.trim().toUpperCase();
-  const hits = q.length < 2 ? [] : HOUSES.filter((h) => h.startsWith(q)).concat(HOUSES.filter((h) => !h.startsWith(q) && h.includes(q))).filter((h) => h !== q).slice(0, 4);
-  box.innerHTML = hits.map((h) => "<button class='sugb' data-pick='" + esc(h) + "'>" + esc(h) + "</button>").join("");
+  const box = input.nextElementSibling, q = input.value.trim().toUpperCase(), qb = bare(q);
+  let hits = [];
+  if (q.length >= 2) {
+    const starts = HOUSES.filter((h) => h.address.startsWith(q));
+    const parcel = HOUSES.filter((h) => qb.length >= 3 && bare(h.parcel).includes(qb));
+    const inside = HOUSES.filter((h) => h.address.includes(q));
+    hits = [...new Set([...starts, ...parcel, ...inside])].filter((h) => withParcel(h) !== q).slice(0, 5);
+  }
+  box.innerHTML = hits.map((h) => "<button class='sugb' data-pick='" + HOUSES.indexOf(h) + "'>" + esc(h.address) +
+    (h.parcel ? "<small>Parcela / Parcel " + esc(h.parcel) + "</small>" : "") + "</button>").join("");
 }
 
 // Typing: save what was typed without redrawing (so the keyboard stays open).
@@ -268,8 +249,9 @@ document.addEventListener("click", (e) => {
   const t = e.target.closest("button"); if (!t || !V) return;
   const card = t.closest("[data-i]"), d = t.dataset;
   if (d.pick != null) {                       // tapped a suggested house
-    draft.lines[card.dataset.i].house = d.pick;
-    const inp = card.querySelector("[data-f='house']"); inp.value = d.pick; inp.classList.remove("missing");
+    const picked = withParcel(HOUSES[d.pick]);   // the parcel rides along onto the invoice
+    draft.lines[card.dataset.i].house = picked;
+    const inp = card.querySelector("[data-f='house']"); inp.value = picked; inp.classList.remove("missing");
     t.parentElement.innerHTML = ""; totals();
   } else if (d.preset != null) {
     const l = draft.lines[card.dataset.i];

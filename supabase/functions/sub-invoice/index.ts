@@ -73,7 +73,11 @@ Deno.serve(async (req) => {
   if (!v || !sameText(String(b.k || ""), v.link_key)) return reply({ error: "bad link" }, 403);
 
   const state = await nextAndSent(v.vendor, v.start_n);
-  if (b.action === "next") return reply({ ok: true, prefix: v.prefix, ...state });
+  if (b.action === "next") {
+    // The page asks this when it opens: what to show for THIS sub, and the houses to pick from.
+    const houses = await (await db("sub_invoice_houses?active=eq.true&select=address,parcel&order=address")).json();
+    return reply({ ok: true, prefix: v.prefix, config: v.config, houses, ...state });
+  }
   if (b.action !== "send") return reply({ error: "bad request" }, 400);
 
   // 2. Check the invoice.

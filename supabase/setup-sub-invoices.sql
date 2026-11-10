@@ -43,3 +43,17 @@ language sql security definer set search_path = ''
 as $$ select s.name, s.decrypted_secret from vault.decrypted_secrets s where s.name like 'sub_invoice_graph_%' $$;
 revoke all on function public.sub_invoice_mail_keys() from public, anon, authenticated;
 grant execute on function public.sub_invoice_mail_keys() to service_role;
+
+-- Added Nov 10 2026 (also already applied):
+-- Houses the subs can pick, searchable by house number or parcel. To add a house, insert a row.
+create table if not exists public.sub_invoice_houses (
+  address text primary key,     -- '888 NE 95TH ST, OCALA'
+  parcel  text not null default '',
+  active  boolean not null default true
+);
+alter table public.sub_invoice_houses enable row level security;
+
+-- What each sub's page shows: {"name", "lines":[address lines], "mode":"presets"|"sqft",
+-- "presets":[{"es","en","amount"}]  or  "rate" + "work":{"es","en"}}. Kept in the database so
+-- one sub's link never carries another sub's details.
+alter table public.sub_invoice_vendors add column if not exists config jsonb not null default '{}'::jsonb;
