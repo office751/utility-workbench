@@ -43,6 +43,23 @@
   .big { font-size:22px; font-weight:800; margin:0 0 6px; }
   .okmsg { background:#e8f5ec; border:2px solid var(--ok); color:#1d5235; border-radius:12px; padding:14px; font-weight:700; margin-top:14px; display:none; }
   a.pick { display:block; text-decoration:none; }
+  /* Top card: name on the left, invoice number on the right, date on one line below. */
+  .top { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+  .addr { color:var(--soft); font-size:14px; }
+  .numbox { text-align:right; flex:none; }
+  .numbox .num { font-size:24px; white-space:nowrap; }
+  .daterow { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:14px; padding-top:12px; border-top:1px solid var(--line); }
+  /* iPhones draw date boxes wider than their container and centre the text — rein that in. */
+  input[type=date] { -webkit-appearance:none; appearance:none; display:block; width:auto; min-width:0; max-width:60%; min-height:50px; padding:10px 12px; text-align:left; }
+  input[type=date]::-webkit-date-and-time-value { text-align:left; }
+  /* Suggested houses under the address box. */
+  .sugb { display:block; width:100%; font:inherit; font-weight:700; text-align:left; padding:14px 12px; margin-top:6px; border:2px solid var(--rust); border-radius:10px; background:#fbeee7; color:var(--ink); }
+  summary { cursor:pointer; padding:2px 0; }
+  .modal { align-items:flex-end; padding:0; }
+  .modal .card { max-width:560px; border-radius:18px 18px 0 0; max-height:88vh; overflow:auto; padding-bottom:calc(16px + env(safe-area-inset-bottom)); }
+  .donecard { text-align:center; padding:28px 18px; margin-top:24px; }
+  .check { width:84px; height:84px; line-height:84px; margin:0 auto 14px; border-radius:50%; background:var(--ok); color:#fff; font-size:48px; font-weight:800; }
+  .donecard .btn { margin-top:14px; }
 </style>
 </head>
 <body>
@@ -50,7 +67,15 @@
 
 <div class="bar" id="bar" style="display:none"><div class="in">
   <p class="err" id="err"></p>
-  <button class="btn" id="send"><span id="sendTxt">Enviar factura</span> · <span id="barTotal">$0.00</span><span class="en" style="color:#fff" id="sendEn">Send invoice</span></button>
+  <button class="btn" id="send">Revisar y enviar · <span id="barTotal">$0.00</span><span class="en" style="color:#fff">Review and send</span></button>
+</div></div>
+
+<!-- Review sheet: shows the invoice back to them before it is sent. -->
+<div class="modal" id="modal"><div class="card">
+  <div id="mBody"></div>
+  <p class="err" id="mErr"></p>
+  <button class="btn" id="mYes" style="margin-top:14px"><span id="mYesTxt">Sí, enviar</span><span class="en" style="color:#fff" id="mYesEn">Yes, send it</span></button>
+  <button class="btn plain" id="mNo">Regresar<span class="en">Go back</span></button>
 </div></div>
 
 
@@ -94,6 +119,9 @@ const VENDORS = {
     presets: [{ es: "Prueba", en: "Test job", amount: 1 }],
   },
 };
+// Practice copies of the two real layouts. Their emails go to Adam, never to data@.
+VENDORS.testjose = { ...VENDORS.jose, name: "TEST - Jose layout", prefix: "TJ" };
+VENDORS.testaldali = { ...VENDORS.aldali, name: "TEST - Aldali layout", prefix: "TA" };
 
 // Houses with recent work, so they can pick instead of typing (they can still type a new one).
 const HOUSES = ["13 ALMOND PASS, OCALA","22 PINE COURSE RUN, OCALA","23 PINE COURSE RUN, OCALA","27 LAUREL DR, OCALA","55 NW 45TH LOOP, OCALA","130 DOGWOOD DRIVE CIR, OCALA","888 NE 95TH ST, OCALA","1665 NE 61ST ST, OCALA","2163 NW 65TH PL, OCALA","2177 NW 65TH PL, OCALA","2190 NW 65TH PL, OCALA","2222 NW 64TH ST, OCALA","2226 NW 64TH ST, OCALA","2230 NW 65TH ST, OCALA","2240 NW 65TH ST, OCALA","2276 NW 66TH ST, OCALA","2416 NW 66TH ST, OCALA","2512 SW 147TH PLACE RD, OCALA","4168 SW 112TH LN, OCALA","4256 SW WISTERIA CT, DUNNELLON","4358 SW EVERGREEN CT, DUNNELLON","4869 SE 24TH ST, OCALA","4923 SW 157TH ST, OCALA","4927 SW 157TH ST, OCALA","4973 SW VIOLA CT, DUNNELLON","5608 SW 136TH AVE, DUNNELLON","6577 SW 131ST PL, OCALA","7540 SW 121ST TER, DUNNELLON","7570 SW 121ST TER, DUNNELLON","7665 SW 121ST TER, DUNNELLON","7669 SW 121ST TER, DUNNELLON","7677 SW 121ST TER, DUNNELLON","8895 SW 135TH PL, OCALA","10530 SE 50TH AVE, BELLEVIEW","12817 SW 91ST LN, OCALA","13668 SW 112TH ST, DUNNELLON","13797 SE 40TH CT, BELLEVIEW","14145 SE 34TH TER, BELLEVIEW","14667 SW 79TH TERRACE RD, OCALA","14845 SW 77TH AVE, OCALA","19752 SW MARINE BLVD, DUNNELLON","19832 SW MARINE BLVD, DUNNELLON","20050 SW 80TH PLACE RD, DUNNELLON","20073 SW RAINBOW LAKES BLVD, DUNNELLON","20601 SW MARINE BLVD, DUNNELLON","20832 SW MARINE BLVD, DUNNELLON","21661 SW MARINE BLVD, DUNNELLON","21921 SW RAINBOW LAKES BLVD, DUNNELLON","22047 SW SURF BLVD, DUNNELLON","22262 SW MARINE BLVD, DUNNELLON","23200 SW INDIAN HILL DR, DUNNELLON","24028 SW NORTH BEACH RD, DUNNELLON","24854 SW PENSACOLA DR, DUNNELLON"];
@@ -166,42 +194,39 @@ async function start() {
 }
 
 function render() {
-  const sent = sentList.slice().reverse();   // oldest first; shown newest first below
+  $("bar").style.display = "block";
   $("app").innerHTML =
-    "<h1>Factura<span class='en'>Invoice</span></h1>" +
-    "<div class='okmsg' id='ok'></div>" +
-    "<div class='card'><div class='row'><div><div class='who'>" + esc(V.name) + "</div><div style='color:var(--soft);font-size:15px'>" + V.lines.map(esc).join("<br>") + "</div></div>" +
-      "<div style='text-align:right'><div class='en'>Factura # / Invoice #</div><div class='num'>" + invNo(nextNum) + "</div></div></div>" +
-      "<label>Fecha<span class='en'>Date</span></label><input type='date' id='date' value='" + esc(draft.date) + "'>" +
-      "<div style='margin-top:12px;color:var(--soft);font-size:15px'>Para / Bill to: <b>" + esc(BILL_TO[0]) + "</b></div></div>" +
+    // Top card: who is billing, the invoice number, and the date — all in one compact block.
+    "<div class='card'><div class='top'><div><div class='who'>" + esc(V.name) + "</div><div class='addr'>" + V.lines.map(esc).join("<br>") + "</div></div>" +
+      "<div class='numbox'><div class='en'>Factura #</div><div class='num'>" + invNo(nextNum) + "</div></div></div>" +
+      "<div class='daterow'><span><b>Fecha</b><span class='en'>Date</span></span><input type='date' id='date' value='" + esc(draft.date) + "'></div></div>" +
     draft.lines.map(lineHtml).join("") +
     "<button class='btn ghost' id='add'>+ Agregar otra casa<span class='en'>Add another house</span></button>" +
-    "<div class='card row'><div>Total</div><div class='total' id='total'></div></div>" +
-    (sent.length ? "<div class='card'><b>Facturas enviadas</b><span class='en'>Invoices already sent</span>" + sent.slice().reverse().map((s, i) =>
+    // Invoices already sent — folded shut so it stays out of the way.
+    (sentList.length ? "<details class='card'><summary><b>Facturas enviadas (" + sentList.length + ")</b><span class='en'>Invoices already sent</span></summary>" + sentList.map((s, i) =>
       "<div class='hist'><div><b>" + invNo(s.n) + "</b> · " + showDate(s.date) + "<div style='font-size:14px;color:var(--soft)'>" + esc(s.lines.map((l) => l.house).join(" · ")) + "</div></div>" +
-      "<div style='text-align:right'><b>" + money(s.total) + "</b><br><button class='link' data-pdf='" + (sent.length - 1 - i) + "'>ver PDF</button></div></div>").join("") + "</div>" : "") +
-    "<datalist id='houses'>" + HOUSES.map((h) => "<option value='" + esc(h) + "'>").join("") + "</datalist>";
+      "<div style='text-align:right'><b>" + money(s.total) + "</b><br><button class='link' data-pdf='" + i + "'>ver PDF</button></div></div>").join("") + "</details>" : "");
   totals();
 }
 
 function lineHtml(l, i) {
   const head = "<div class='card' data-i='" + i + "'><div class='linehead'><span>Casa " + (i + 1) + "<span class='en' style='display:inline'> · House " + (i + 1) + "</span></span>" +
     (draft.lines.length > 1 ? "<button class='x' data-del='" + i + "'>quitar / remove</button>" : "") + "</div>" +
-    "<label>Dirección de la casa<span class='en'>House address</span></label>" +
-    "<input data-f='house' list='houses' autocomplete='off' placeholder='888 NE 95th St' value='" + esc(l.house) + "'>";
-  const other = "<label>¿Qué trabajo hiciste?<span class='en'>What work did you do?</span></label><textarea data-f='desc' rows='2'>" + esc(l.desc) + "</textarea>" +
-    "<label>Precio $<span class='en'>Price</span></label><input data-f='amount' inputmode='decimal' placeholder='0.00' value='" + esc(l.amount) + "'>";
+    "<label>Número de la casa<span class='en'>Type the house number, then tap the house</span></label>" +
+    "<input data-f='house' autocomplete='off' autocapitalize='characters' placeholder='888…' value='" + esc(l.house) + "'><div class='sug'></div>";
+  const price = "<label>Precio $<span class='en'>Price</span></label><input data-f='amount' inputmode='decimal' placeholder='0.00' value='" + esc(l.amount) + "'>";
+  const other = "<label>¿Qué trabajo hiciste?<span class='en'>What work did you do?</span></label><textarea data-f='desc' rows='2'>" + esc(l.desc) + "</textarea>" + price;
   let body;
   if (V.mode === "presets") {
-    body = "<label>Trabajo<span class='en'>Work done</span></label><div class='chips'>" +
-      V.presets.map((p, j) => "<button class='chip" + (l.preset === j ? " on" : "") + "' data-preset='" + j + "'>" + esc(p.es) + "<small>" + esc(p.en) + "</small></button>").join("") +
+    body = "<label>Trabajo<span class='en'>Work done — tap one</span></label><div class='chips'>" +
+      V.presets.map((p, j) => "<button class='chip" + (l.preset === j ? " on" : "") + "' data-preset='" + j + "'>" + esc(p.es) + "<small>" + esc(p.en) + " · " + money(p.amount).replace(".00", "") + "</small></button>").join("") +
       "<button class='chip" + (l.preset === "other" ? " on" : "") + "' data-preset='other'>Otro<small>Other</small></button></div>" +
-      (l.preset === "other" ? other : l.preset >= 0 ? "<label>Precio $<span class='en'>Price</span></label><input data-f='amount' inputmode='decimal' value='" + esc(l.amount) + "'>" : "");
+      (l.preset === "other" ? other : l.preset >= 0 ? price : "");
   } else {
     body = "<div class='chips' style='margin-top:14px'><button class='chip" + (l.preset !== "other" ? " on" : "") + "' data-preset='-1'>" + esc(V.work.es) + "<small>" + esc(V.work.en) + "</small></button>" +
       "<button class='chip" + (l.preset === "other" ? " on" : "") + "' data-preset='other'>Otro trabajo<small>Other work</small></button></div>" +
       (l.preset === "other" ? other :
-        "<div class='two'><div><label>Pies cuadrados<span class='en'>Square feet installed</span></label><input data-f='sqft' inputmode='decimal' placeholder='1342' value='" + esc(l.sqft) + "'></div>" +
+        "<div class='two'><div><label>Pies cuadrados<span class='en'>Square feet</span></label><input data-f='sqft' inputmode='decimal' placeholder='1342' value='" + esc(l.sqft) + "'></div>" +
         "<div><label>Precio por pie $<span class='en'>Price per sq ft</span></label><input data-f='rate' inputmode='decimal' value='" + esc(l.rate) + "'></div></div>" +
         "<label>Cajas instaladas<span class='en'>Boxes installed (optional)</span></label><input data-f='boxes' inputmode='numeric' value='" + esc(l.boxes) + "'>" +
         "<div class='row' style='margin-top:14px'><span>Esta casa / This house</span><b data-sub style='font-size:22px'></b></div>");
@@ -211,8 +236,15 @@ function lineHtml(l, i) {
 
 function totals() {
   document.querySelectorAll("[data-sub]").forEach((el) => { el.textContent = money(lineAmount(draft.lines[el.closest("[data-i]").dataset.i])); });
-  $("total").textContent = $("barTotal").textContent = money(total());
+  $("barTotal").textContent = money(total());
   store.set("draft", draft);
+}
+
+// While they type a house number, show the matching houses as big buttons to tap.
+function suggest(input) {
+  const box = input.nextElementSibling, q = input.value.trim().toUpperCase();
+  const hits = q.length < 2 ? [] : HOUSES.filter((h) => h.startsWith(q)).concat(HOUSES.filter((h) => !h.startsWith(q) && h.includes(q))).filter((h) => h !== q).slice(0, 4);
+  box.innerHTML = hits.map((h) => "<button class='sugb' data-pick='" + esc(h) + "'>" + esc(h) + "</button>").join("");
 }
 
 // Typing: save what was typed without redrawing (so the keyboard stays open).
@@ -223,32 +255,43 @@ document.addEventListener("input", (e) => {
   if (card && t.dataset.f) {
     draft.lines[card.dataset.i][t.dataset.f] = t.value;
     if (t.dataset.f === "rate") store.set("rate", t.value);   // remember his price per sq ft
+    if (t.dataset.f === "house") suggest(t);
     t.classList.remove("missing");
   }
-  if (V) totals();
+  if (V && draft) totals();
 });
 
 // Taps.
 document.addEventListener("click", (e) => {
   const t = e.target.closest("button"); if (!t || !V) return;
   const card = t.closest("[data-i]"), d = t.dataset;
-  if (d.preset != null) {
+  if (d.pick != null) {                       // tapped a suggested house
+    draft.lines[card.dataset.i].house = d.pick;
+    const inp = card.querySelector("[data-f='house']"); inp.value = d.pick; inp.classList.remove("missing");
+    t.parentElement.innerHTML = ""; totals();
+  } else if (d.preset != null) {
     const l = draft.lines[card.dataset.i];
     l.preset = d.preset === "other" ? "other" : Number(d.preset);
     if (V.mode === "presets") { l.amount = l.preset === "other" ? "" : String(V.presets[l.preset].amount); if (l.preset !== "other") l.desc = ""; }
     render();
   } else if (d.del != null) { draft.lines.splice(Number(d.del), 1); render(); }
-  else if (t.id === "add") { draft.lines.push(blankLine()); render(); window.scrollTo(0, document.body.scrollHeight); }
-  else if (d.pdf != null) { const s = sentList.slice().reverse()[d.pdf]; makePdf(s.n, s.date, s.lines, s.total).save(fileName(s.n, s.date)); }
-  else if (t.id === "send") send();
+  else if (t.id === "add") { draft.lines.push(blankLine()); render(); document.querySelector("[data-i='" + (draft.lines.length - 1) + "']").scrollIntoView({ behavior: "smooth" }); }
+  else if (d.pdf != null) { const s = sentList[d.pdf]; makePdf(s.n, s.date, s.lines, s.total).save(fileName(s.n, s.date)); }
+  else if (t.id === "send") review();
+  else if (t.id === "mYes") send();
+  else if (t.id === "mNo") $("modal").style.display = "none";
+  else if (t.id === "again") { render(); window.scrollTo(0, 0); }
+  else if (t.id === "donePdf") makePdf(done.n, done.date, done.lines, done.total).save(fileName(done.n, done.date));
 });
 
 /* ============================================================
-   SEND
+   SEND — three steps: check, review, send.
    ============================================================ */
-async function send() {
-  if (busy) return;   // ignore a second tap while the first is still sending
-  // 1. Every house needs an address, a job, and a price.
+let frozen, done;   // frozen = the invoice being reviewed; done = the one just sent
+
+// Step 1: every house needs an address, a job, and a price. Then show the review sheet.
+function review() {
+  if (busy) return;
   let bad = false;
   document.querySelectorAll("[data-i]").forEach((card) => {
     const l = draft.lines[card.dataset.i];
@@ -258,38 +301,53 @@ async function send() {
     else {
       if (V.mode === "presets" && l.preset === -1) { bad = true; card.querySelectorAll(".chip").forEach((c) => c.classList.add("missing")); }
       if (l.preset === "other") flag("desc", !l.desc.trim());
-      flag("amount", num(l.amount) <= 0);
+      if (l.preset !== -1) flag("amount", num(l.amount) <= 0);
     }
   });
   showErr(bad ? "Falta información en rojo." : "", "Fill in the red boxes.");
   if (bad) { const m = document.querySelector(".missing"); if (m) m.scrollIntoView({ block: "center", behavior: "smooth" }); return; }
 
-  // 2. Freeze the invoice, build the PDF, and give both to the send service.
-  //    It emails the PDF to the office. If the number was already used (rare),
-  //    it tells us the right one and we rebuild the PDF once with that number.
-  const lines = draft.lines.map((l) => ({ house: l.house.trim().toUpperCase(), text: lineText(l), amount: lineAmount(l) }));
-  const date = draft.date, tot = total();
-  busy = true; $("send").style.opacity = ".6"; $("sendTxt").textContent = "Enviando…"; $("sendEn").textContent = "Sending…";
+  // Step 2: freeze the invoice and show it back to them before anything is sent.
+  frozen = { date: draft.date, total: total(), lines: draft.lines.map((l) => ({ house: l.house.trim().toUpperCase(), text: lineText(l), amount: lineAmount(l) })) };
+  $("mBody").innerHTML = "<p class='big'>¿Todo está bien?<span class='en'>Is everything right?</span></p>" +
+    frozen.lines.map((l) => "<div class='hist'><div><b>" + esc(l.house) + "</b><div style='font-size:14px;color:var(--soft)'>" + esc(l.text) + "</div></div><b>" + money(l.amount) + "</b></div>").join("") +
+    "<div class='hist'><div>Total · " + showDate(frozen.date) + "</div><div class='total'>" + money(frozen.total) + "</div></div>";
+  $("mErr").style.display = "none";
+  $("modal").style.display = "flex";
+}
+
+// Step 3: build the PDF and give it to the send service, which emails it to the office.
+// If the number was already used (rare), it tells us the right one and we rebuild the PDF once.
+async function send() {
+  if (busy) return;
+  busy = true; $("mYes").style.opacity = ".6"; $("mYesTxt").textContent = "Enviando…"; $("mYesEn").textContent = "Sending…";
   try {
     let r;
     for (let tries = 0; tries < 2; tries++) {
-      const pdf = makePdf(nextNum, date, lines, tot).output("datauristring").split("base64,")[1];
-      r = await api({ action: "send", n: nextNum, date, lines, pdf });
+      const pdf = makePdf(nextNum, frozen.date, frozen.lines, frozen.total).output("datauristring").split("base64,")[1];
+      r = await api({ action: "send", n: nextNum, date: frozen.date, lines: frozen.lines, pdf });
       if (!r.conflict) break;
       nextNum = r.next;
     }
     if (!r.ok) throw new Error("conflict");
 
-    // 3. Sent. Show the green message and start a fresh invoice with the next number.
+    // Sent. Show the big green "done" screen; the form comes back clean for next time.
+    done = { no: r.sentNo, n: r.next - 1, ...frozen };
     nextNum = r.next; sentList = r.sent;
     draft = { date: today(), lines: [blankLine()] }; store.set("draft", draft);
-    render(); window.scrollTo(0, 0);
-    const ok = $("ok"); ok.style.display = "block";
-    ok.innerHTML = "✓ Factura " + esc(r.sentNo) + " enviada a la oficina. No tienes que hacer nada más.<span class='en' style='color:inherit'>Invoice " + esc(r.sentNo) + " was sent to the office. Nothing else to do.</span>";
+    $("modal").style.display = "none"; $("bar").style.display = "none";
+    $("app").innerHTML = "<div class='card donecard'><div class='check'>✓</div>" +
+      "<p class='big'>Factura " + esc(done.no) + " enviada<span class='en'>Invoice " + esc(done.no) + " sent</span></p>" +
+      "<div class='total'>" + money(done.total) + "</div>" +
+      "<p>La oficina ya la recibió. No tienes que hacer nada más.<span class='en'>The office has it. Nothing else to do.</span></p>" +
+      "<button class='btn' id='again'>Hacer otra factura<span class='en' style='color:#fff'>Make another invoice</span></button>" +
+      "<button class='btn plain' id='donePdf'>Ver PDF<span class='en'>See the PDF</span></button></div>";
+    window.scrollTo(0, 0);
   } catch (e) {
-    showErr("No se pudo enviar. Revisa tu internet e intenta otra vez.", "It did not send. Check your internet and try again.");
+    const m = $("mErr"); m.style.display = "block";
+    m.innerHTML = "No se pudo enviar. Revisa tu internet e intenta otra vez.<span class='en' style='color:inherit'>It did not send. Check your internet and try again.</span>";
   }
-  busy = false; $("send").style.opacity = "1"; $("sendTxt").textContent = "Enviar factura"; $("sendEn").textContent = "Send invoice";
+  busy = false; $("mYes").style.opacity = "1"; $("mYesTxt").textContent = "Sí, enviar"; $("mYesEn").textContent = "Yes, send it";
 }
 
 const fileName = (n, date) => "Invoice-" + invNo(n) + "-" + V.name.split(" ")[0] + "-" + date + ".pdf";
