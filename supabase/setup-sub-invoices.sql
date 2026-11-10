@@ -72,3 +72,43 @@ create index if not exists sub_invoice_prior_lookup on public.sub_invoice_prior 
 alter table public.sub_invoice_prior enable row level security;
 alter table public.sub_invoice_vendors add column if not exists qbo_vendor_id text;   -- QuickBooks vendor Id (jose = 28, aldali = 729)
 alter table public.sub_invoice_vendors add column if not exists history_of text;      -- practice links: whose history to check
+
+-- Added Nov 10 2026 (already applied): the house sync also runs in the cloud, every day.
+-- Edge function supabase/functions/sub-invoice-sync does the same job as scanner/sub-invoice-sync.mjs.
+-- Vault secrets: sub_invoice_monday_token (copy of the Monday API token) and sub_invoice_cron_key
+-- (random key the timer must present; made with vault.create_secret, never written down anywhere).
+create extension if not exists pg_cron;
+create extension if not exists pg_net;
+
+create or replace function public.sub_invoice_sync_keys()
+returns table (name text, secret text)
+language sql security definer set search_path = ''
+as $$ select s.name, s.decrypted_secret from vault.decrypted_secrets s where s.name in ('sub_invoice_monday_token', 'sub_invoice_cron_key') $$;
+revoke all on function public.sub_invoice_sync_keys() from public, anon, authenticated;
+grant execute on function public.sub_invoice_sync_keys() to service_role;
+
+-- One row per run. Check it is alive:  select * from sub_invoice_sync_log order by id desc limit 5;
+create table if not exists public.sub_invoice_sync_log (
+  id bigint generated always as identity primary key,
+  ran_at timestamptz not null default now(),
+  ok boolean not null,
+  note text not null default ''
+);
+alter table public.sub_invoice_sync_log enable row level security;
+
+-- What the timer runs. Run it by hand any time:  select public.sub_invoice_run_sync();
+create or replace function public.sub_invoice_run_sync()
+returns bigint language sql security definer set search_path = ''
+as $$
+  select net.http_post(
+    url := 'https://vldxennmrjnfhrvrlzuh.supabase.co/functions/v1/sub-invoice-sync',
+    headers := jsonb_build_object('Content-Type', 'application/json',
+      'x-cron-key', (select decrypted_secret from vault.decrypted_secrets where name = 'sub_invoice_cron_key')),
+    body := '{}'::jsonb,
+    timeout_milliseconds := 30000)
+$$;
+revoke all on function public.sub_invoice_run_sync() from public, anon, authenticated;
+
+-- Every day at 10:30 UTC (5:30 am Eastern in winter, 6:30 am in summer).
+-- To stop it:  select cron.unschedule('sub-invoice-daily-sync');
+select cron.schedule('sub-invoice-daily-sync', '30 10 * * *', 'select public.sub_invoice_run_sync()');
