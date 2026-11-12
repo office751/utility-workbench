@@ -110,6 +110,8 @@ Deno.serve(async (req) => {
   const amount = b.amount === "" || b.amount == null ? null : Number(b.amount);
   if (amount != null && !(amount > 0 && amount < 1_000_000)) return reply({ error: "bad receipt" }, 400);
   let details: Record<string, unknown>, label: string, rows: [string, string][];
+  let sendTo: string = p.send_to;   // a company choice can send it somewhere else (config.send_to_by_company)
+  let coName: string = p.company;   // ...and is the company named in the email
 
   if (mode === "house") {
     const kind = String(b.kind || "");
@@ -118,6 +120,10 @@ Deno.serve(async (req) => {
     const companies: string[] = Array.isArray(p.config.companies) ? p.config.companies : [];
     const company = clean(b.company);
     if (companies.length && !companies.includes(company)) return reply({ error: "bad receipt" }, 400);
+    // Each company's receipts go to its own inbox, e.g. Mr. Ocala → data@mrocalabuyshouses.com.
+    const byCo = p.config.send_to_by_company || {};
+    if (companies.length && typeof byCo[company] === "string") sendTo = byCo[company];
+    if (companies.length) coName = company;
     const houses = Array.isArray(b.houses) ? b.houses.map(clean) : [];
     if (kind === "house" && (houses.length < 1 || houses.length > 10 || !houses.every((h: string) => h.length >= 4 && h.length <= 200)))
       return reply({ error: "bad receipt" }, 400);
@@ -145,19 +151,22 @@ Deno.serve(async (req) => {
   const subject = (isTest ? "TEST - " : "") + `Receipt - ${p.name} - ${label}`.slice(0, 220);
   const sentAt = new Date().toLocaleString("en-US", { timeZone: "America/New_York", dateStyle: "medium", timeStyle: "short" });
   const html =
-    `<p><b>${esc(p.name)}</b> (${esc(p.company)}) sent ${atts.length === 1 ? "a receipt" : atts.length + " receipt photos"} from the receipt page on ${esc(sentAt)}. ` +
+    `<p><b>${esc(p.name)}</b> (${esc(coName)}) sent ${atts.length === 1 ? "a receipt" : atts.length + " receipt photos"} from the receipt page on ${esc(sentAt)}. ` +
     `${atts.length === 1 ? "It is" : "They are"} attached.</p>` +
     `<table cellpadding="6" style="border-collapse:collapse;border:1px solid #ccc">` +
     rows.map(([k, v]) => `<tr><td style="background:#f0ece6"><b>${esc(k)}</b></td><td>${v}</td></tr>`).join("") + `</table>`;
+  // Practice links always mail Adam, but say where the real one would have gone.
+  const to = isTest ? p.send_to : sendTo;
+  const testNote = isTest ? `<p style="color:#8f3f1e"><b>TEST:</b> a real link would have sent this to ${esc(sendTo)}.</p>` : "";
   const day = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" }); // 2026-11-12
   atts.forEach((a, i) => { a.name = `Receipt-${p.name.replace(/[^A-Za-z]/g, "")}-${day}${atts.length > 1 ? "-" + (i + 1) : ""}.${a.ext}`; });
 
   // Practice links can ask for a dry run: everything above is checked, nothing is sent.
-  if (isTest && b.dry) return reply({ ok: true, dry: true, subject, to: p.send_to, files: atts.map((a) => a.name), html });
+  if (isTest && b.dry) return reply({ ok: true, dry: true, subject, to, realTo: sendTo, files: atts.map((a) => a.name), html: testNote + html });
 
   const ins = await db("receipt_uploads", {
     method: "POST", headers: { Prefer: "return=representation" },
-    body: JSON.stringify({ person: p.person, details, photo_count: atts.length, subject }),
+    body: JSON.stringify({ person: p.person, details: { ...details, sent_to: to }, photo_count: atts.length, subject }),
   });
   if (!ins.ok) return reply({ error: "could not save" }, 500);
   const row = (await ins.json())[0];
@@ -170,8 +179,8 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         saveToSentItems: true,
         message: {
-          subject, body: { contentType: "HTML", content: html },
-          toRecipients: [{ emailAddress: { address: p.send_to } }],
+          subject, body: { contentType: "HTML", content: testNote + html },
+          toRecipients: [{ emailAddress: { address: to } }],
           attachments: atts.map((a) => ({
             "@odata.type": "#microsoft.graph.fileAttachment", contentType: a.type, name: a.name, contentBytes: a.data,
           })),

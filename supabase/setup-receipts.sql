@@ -47,3 +47,9 @@ on conflict (person) do nothing;
 -- Houses to pick come from public.sub_invoice_houses (synced daily from Monday — see setup-sub-invoices.sql).
 -- Mail sign-in comes from public.sub_invoice_mail_keys() (vault secrets sub_invoice_graph_*).
 -- Links:  select person, 'https://ironshield-invoice.vercel.app/receipt/?p=' || person || '&k=' || link_key from receipt_people;
+
+-- Added Nov 12 2026 (already applied): Josh's Mr. Ocala receipts go to Mr. Ocala's own data@ inbox.
+-- (Iron Shield ones keep using send_to above. Practice link testis still mails Adam but says where it would have gone.)
+update public.receipt_people
+   set config = config || '{"send_to_by_company":{"Mr. Ocala Buys Houses LLC":"data@mrocalabuyshouses.com"}}'::jsonb
+ where person in ('josh', 'testis');
