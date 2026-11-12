@@ -91,7 +91,7 @@ const remember = (k, v) => { if (!v) return; store.set(k, [v, ...store.get(k, []
 
 let ME = null, HOUSES = [], recent = [], busy = false;
 let form;   // what they're filling in right now
-const blank = () => ({ files: [], kind: "", houses: [], q: "", amount: "", note: "", customer: "", category: "", store: "", card: store.get("cards", [])[0] || "" });
+const blank = () => ({ files: [], company: "", kind: "", houses: [], q: "", amount: "", note: "", customer: "", category: "", store: "", card: store.get("cards", [])[0] || "" });
 
 async function api(body) {
   const res = await fetch(API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ p: person, k: linkKey, ...body }) });
@@ -139,8 +139,13 @@ function render() {
 
 // Iron Shield (Josh, Pam): which house — or gas, or shop/general.
 function houseHtml() {
-  const k = form.kind;
-  return "<div class='card'><p class='step'>2. What was it for?</p><div class='chips three'>" +
+  const k = form.kind, cos = ME.companies || [];
+  let n = 2;   // step numbers shift when there's a company question
+  // Josh buys for more than one company — make him pick which one (list comes from the server).
+  const coHtml = !cos.length ? "" :
+    "<div class='card'><p class='step'>" + (n++) + ". Which company?</p><div class='chips' id='cos'>" +
+    cos.map((c) => "<button class='chip" + (form.company === c ? " on" : "") + "' data-co='" + esc(c) + "'>" + esc(c) + "</button>").join("") + "</div></div>";
+  return coHtml + "<div class='card'><p class='step'>" + (n++) + ". What was it for?</p><div class='chips three'>" +
       "<button class='chip" + (k === "house" ? " on" : "") + "' data-kind='house'><span class='ic'>🏠</span>A house</button>" +
       "<button class='chip" + (k === "gas" ? " on" : "") + "' data-kind='gas'><span class='ic'>⛽</span>Gas</button>" +
       "<button class='chip" + (k === "general" ? " on" : "") + "' data-kind='general'><span class='ic'>🧰</span>Shop / general</button></div>" +
@@ -149,7 +154,7 @@ function houseHtml() {
       "<label>" + (form.houses.length ? "Another house? <span class='opt'>(only if it was split)</span>" : "Type the house number or parcel, then tap the house") + "</label>" +
       "<input id='q' data-f='q' autocomplete='off' autocapitalize='characters' placeholder='888…  or  1328-016…' value='" + esc(form.q) + "'><div id='sug'></div>" : "") +
     "</div>" +
-    "<div class='card'><p class='step'>3. Anything else? <span class='opt'>(optional)</span></p>" +
+    "<div class='card'><p class='step'>" + n + ". Anything else? <span class='opt'>(optional)</span></p>" +
       "<label>Total $</label><input data-f='amount' inputmode='decimal' placeholder='0.00' value='" + esc(form.amount) + "'>" +
       "<label>Note</label><textarea data-f='note' rows='2' placeholder='e.g. drywall screws, truck 2'>" + esc(form.note) + "</textarea></div>";
 }
@@ -186,7 +191,8 @@ function suggest() {
     hits = [...new Set([...starts, ...parcel, ...inside])].filter((h) => !form.houses.includes(withParcel(h))).slice(0, 5);
   }
   box.innerHTML = hits.map((h) => "<button class='sugb' data-pick='" + HOUSES.indexOf(h) + "'>" + esc(h.address) + (h.parcel ? "<small>Parcel " + esc(h.parcel) + "</small>" : "") + "</button>").join("") +
-    (q.length >= 3 && !hits.length ? "<div class='opt' style='margin-top:6px'>No match. Check the number, or put the address in the note.</div>" : "");
+    // Not on the list (e.g. a Mr. Ocala Buys Houses property)? Let them use the address as typed.
+    (q.length >= 4 ? "<button class='sugb' style='border-style:dashed;background:#fff' data-typed='1'>Use “" + esc(form.q.trim().toUpperCase()) + "”<small>Not on the list — type the full address</small></button>" : "");
 }
 
 /* ============================================================
@@ -246,6 +252,8 @@ document.addEventListener("click", (e) => {
   if (d.kind) { form.kind = d.kind; render(); if (d.kind === "house" && !form.houses.length) $("q").focus(); }
   else if (d.pick != null) { form.houses.push(withParcel(HOUSES[d.pick])); form.q = ""; render(); }
   else if (d.unpick != null) { form.houses.splice(Number(d.unpick), 1); render(); }
+  else if (d.co) { form.company = d.co; document.querySelectorAll("[data-co]").forEach((b) => b.classList.toggle("on", b.dataset.co === d.co)); $("cos").classList.remove("missing"); }
+  else if (d.typed) { form.houses.push(form.q.trim().toUpperCase()); form.q = ""; render(); }
   else if (d.cat) { form.category = d.cat; document.querySelectorAll("[data-cat]").forEach((b) => b.classList.toggle("on", b.dataset.cat === d.cat)); $("cats").classList.remove("missing"); }
   else if (d.fill) { form[d.fill] = d.val; const inp = document.querySelector("[data-f='" + d.fill + "']"); inp.value = d.val; inp.classList.remove("missing"); }
   else if (d.rmfile != null) { form.files.splice(Number(d.rmfile), 1); drawThumbs(); }
@@ -267,6 +275,7 @@ function check() {
     flag("[data-f='amount']", num(form.amount) <= 0);
     flag("[data-f='card']", !form.card.trim());
   } else {
+    if ((ME.companies || []).length) flag("#cos", !form.company);
     flag(".chips.three", !form.kind);
     if (form.kind === "house") flag("#q", !form.houses.length);
     if (form.amount.trim() && num(form.amount) <= 0) flag("[data-f='amount']", true);
@@ -283,7 +292,7 @@ async function send() {
   const sb = ME.mode === "stonebridge";
   const body = { action: "send", files: form.files.map((f) => ({ data: f.data })), note: form.note.trim(), amount: form.amount.trim() ? num(form.amount) : "" };
   if (sb) Object.assign(body, { customer: form.customer.trim(), category: form.category, store: form.store.trim(), card: form.card.trim() });
-  else Object.assign(body, { kind: form.kind, houses: form.kind === "house" ? form.houses : [] });
+  else Object.assign(body, { company: form.company, kind: form.kind, houses: form.kind === "house" ? form.houses : [] });
   try {
     const r = await api(body);
     recent = r.recent || recent;

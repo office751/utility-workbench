@@ -114,13 +114,18 @@ Deno.serve(async (req) => {
   if (mode === "house") {
     const kind = String(b.kind || "");
     if (!["house", "gas", "general"].includes(kind)) return reply({ error: "bad receipt" }, 400);
+    // Some people (Josh) buy for more than one company — config.companies lists the choices.
+    const companies: string[] = Array.isArray(p.config.companies) ? p.config.companies : [];
+    const company = clean(b.company);
+    if (companies.length && !companies.includes(company)) return reply({ error: "bad receipt" }, 400);
     const houses = Array.isArray(b.houses) ? b.houses.map(clean) : [];
     if (kind === "house" && (houses.length < 1 || houses.length > 10 || !houses.every((h: string) => h.length >= 4 && h.length <= 200)))
       return reply({ error: "bad receipt" }, 400);
     const forWhat = kind === "gas" ? "GAS" : kind === "general" ? "Shop / general" : houses[0] + (houses.length > 1 ? ` + ${houses.length - 1} more` : "");
-    label = forWhat + (amount ? " - " + money(amount) : "");
-    details = { kind, houses: kind === "house" ? houses : [], amount, note };
+    label = (companies.length ? company + " - " : "") + forWhat + (amount ? " - " + money(amount) : "");
+    details = { ...(companies.length ? { company } : {}), kind, houses: kind === "house" ? houses : [], amount, note };
     rows = [["For", kind === "house" ? houses.map(esc).join("<br>") : esc(forWhat)]];
+    if (companies.length) rows.unshift(["Company", esc(company)]);
   } else {
     const cats: string[] = p.config.categories || [];
     const customer = clean(b.customer), category = clean(b.category), store = clean(b.store), card = clean(b.card);

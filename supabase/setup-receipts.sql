@@ -33,12 +33,13 @@ create index if not exists receipt_uploads_person on public.receipt_uploads (per
 alter table public.receipt_uploads enable row level security;
 
 insert into public.receipt_people (person, name, company, send_to, config) values
-  ('josh',  'Josh',  'Iron Shield Construction',    'data@ironshieldconstruction.com', '{"mode":"house"}'),
+  -- Josh buys for two companies, so his page asks which one (added Nov 12):
+  ('josh',  'Josh',  'Iron Shield Construction',    'data@ironshieldconstruction.com', '{"mode":"house","companies":["Iron Shield Construction LLC","Mr. Ocala Buys Houses LLC"]}'),
   ('pam',   'Pam',   'Iron Shield Construction',    'data@ironshieldconstruction.com', '{"mode":"house"}'),
   ('dylan', 'Dylan', 'Stonebridge Kitchen & Bath',  'data@stonebridgekitchenandbath.com',
      '{"mode":"stonebridge","categories":["Cabinets","Countertops","Hardware / supplies","Tools","Office","Gas","Other"]}'),
   -- Practice links: same pages, but the email goes to Adam with "TEST - " in the subject.
-  ('testis', 'TEST Josh/Pam page',  'Iron Shield Construction',   'adam@ironshieldconstruction.com', '{"mode":"house"}'),
+  ('testis', 'TEST Josh/Pam page',  'Iron Shield Construction',   'adam@ironshieldconstruction.com', '{"mode":"house","companies":["Iron Shield Construction LLC","Mr. Ocala Buys Houses LLC"]}'),
   ('testsb', 'TEST Dylan page',     'Stonebridge Kitchen & Bath', 'adam@ironshieldconstruction.com',
      '{"mode":"stonebridge","categories":["Cabinets","Countertops","Hardware / supplies","Tools","Office","Gas","Other"]}')
 on conflict (person) do nothing;
