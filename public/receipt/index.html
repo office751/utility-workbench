@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Send a Receipt</title>
+<style>
+  :root { --ink:#1f2328; --soft:#6a6f76; --line:#d9d4cc; --bg:#f6f3ee; --card:#fff; --rust:#b4532a; --rust-dark:#8f3f1e; --tint:#fbeee7; --ok:#2e7d4f; --bad:#c0392b; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:18px/1.35 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .wrap { max-width:560px; margin:0 auto; padding:16px 16px 130px; }
+  h1 { font-size:26px; margin:4px 0 0; }
+  .sub { color:var(--soft); font-size:15px; margin-top:2px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-top:14px; }
+  .step { font-weight:800; color:var(--rust-dark); margin:0 0 10px; }
+  .opt { font-weight:400; color:var(--soft); font-size:14px; }
+  label { display:block; font-weight:700; margin:14px 0 6px; }
+  label:first-of-type { margin-top:4px; }
+  input, textarea { width:100%; font:inherit; padding:14px 12px; border:2px solid var(--line); border-radius:10px; background:#fff; color:var(--ink); }
+  input:focus, textarea:focus { outline:none; border-color:var(--rust); }
+  .missing { border-color:var(--bad) !important; background:#fdf1ef !important; }
+  /* Groups of buttons have no border of their own — turn their buttons red instead. */
+  .chips.missing, .camrow.missing { background:none !important; }
+  .chips.missing .chip, .camrow.missing .cam { border-color:var(--bad); background:#fdf1ef; }
+  .chips { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .chips.three { grid-template-columns:1fr 1fr 1fr; }
+  .chip { font:inherit; font-weight:700; padding:14px 6px; border:2px solid var(--line); border-radius:10px; background:#fff; color:var(--ink); text-align:center; }
+  .chip .ic { display:block; font-size:26px; line-height:1.1; }
+  .chip.on { border-color:var(--rust); background:var(--tint); }
+  .mini { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .mini button { font:inherit; font-size:15px; padding:8px 12px; border:1px solid var(--line); border-radius:999px; background:#fff; color:var(--ink); }
+  .camrow { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .cam { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; min-height:96px; font-weight:800; border:2px dashed var(--rust); border-radius:12px; background:var(--tint); color:var(--rust-dark); text-align:center; padding:10px; }
+  .cam .ic { font-size:30px; }
+  .cam input { display:none; }
+  .thumbs { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-top:10px; }
+  .thumb { position:relative; aspect-ratio:3/4; border-radius:10px; overflow:hidden; border:1px solid var(--line); background:#eee; display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--soft); }
+  .thumb img { width:100%; height:100%; object-fit:cover; }
+  .thumb .rm { position:absolute; top:4px; right:4px; width:32px; height:32px; border-radius:50%; border:0; background:rgba(0,0,0,.65); color:#fff; font-size:18px; line-height:32px; padding:0; }
+  .sugb { display:block; width:100%; font:inherit; font-weight:700; text-align:left; padding:14px 12px; margin-top:6px; border:2px solid var(--rust); border-radius:10px; background:var(--tint); color:var(--ink); }
+  .sugb small, .picked small { display:block; font-weight:400; font-size:14px; color:var(--soft); }
+  .picked { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:12px; margin-top:8px; border-radius:10px; background:#e8f5ec; border:2px solid var(--ok); font-weight:700; }
+  .picked button { font:inherit; font-size:15px; border:0; background:none; color:var(--bad); text-decoration:underline; padding:4px; flex:none; }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .btn { display:block; width:100%; font:inherit; font-weight:800; font-size:20px; padding:18px; border-radius:14px; border:0; background:var(--rust); color:#fff; }
+  .btn.plain { background:#fff; color:var(--ink); border:2px solid var(--line); margin-top:10px; }
+  .bar { position:fixed; left:0; right:0; bottom:0; background:var(--card); border-top:1px solid var(--line); padding:12px 16px calc(12px + env(safe-area-inset-bottom)); }
+  .bar .in { max-width:560px; margin:0 auto; }
+  .err { color:var(--bad); font-weight:700; margin:0 0 8px; display:none; }
+  .hist { padding:10px 0; border-top:1px solid var(--line); font-size:15px; }
+  .hist:first-of-type { border-top:0; }
+  .hist small { color:var(--soft); display:block; }
+  summary { cursor:pointer; }
+  .donecard { text-align:center; padding:28px 18px; margin-top:24px; }
+  .check { width:84px; height:84px; line-height:84px; margin:0 auto 14px; border-radius:50%; background:var(--ok); color:#fff; font-size:48px; font-weight:800; }
+  .big { font-size:22px; font-weight:800; margin:0 0 6px; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="bar" id="bar" style="display:none"><div class="in">
+  <p class="err" id="err"></p>
+  <button class="btn" id="send">Send to accounting</button>
+</div></div>
+
+<script>
+/* ============================================================
+   RECEIPT PAGE — one page, three people.
+   Each person opens their own link:  .../receipt/?p=josh&k=<their key>
+   The key lives in Supabase (table receipt_people). WHO they are, WHERE their
+   receipts go (Iron Shield data@ or Stonebridge data@) and WHAT to ask comes
+   from the server when the page opens — nothing about any person is in this file.
+   The send service is supabase/functions/receipt-upload/index.ts.
+   ============================================================ */
+const API = "https://vldxennmrjnfhrvrlzuh.supabase.co/functions/v1/receipt-upload";
+const MAX_FILES = 6;
+const MAX_TOTAL = 3400000;   // all photos together (base64 characters) — email size limit
+
+const qs = new URLSearchParams(location.search);
+const person = qs.get("p") || "", linkKey = qs.get("k") || "";
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const money = (n) => "$" + (Number(n) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const num = (s) => parseFloat(String(s).replace(/[^0-9.]/g, "")) || 0;
+// The phone remembers a few handy things (Dylan's recent customers and cards). Never required.
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("rcpt." + person + "." + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem("rcpt." + person + "." + k, JSON.stringify(v)); } catch (e) {} },
+};
+const remember = (k, v) => { if (!v) return; store.set(k, [v, ...store.get(k, []).filter((x) => x.toLowerCase() !== v.toLowerCase())].slice(0, 6)); };
+
+let ME = null, HOUSES = [], recent = [], busy = false;
+let form;   // what they're filling in right now
+const blank = () => ({ files: [], kind: "", houses: [], q: "", amount: "", note: "", customer: "", category: "", store: "", card: store.get("cards", [])[0] || "" });
+
+async function api(body) {
+  const res = await fetch(API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ p: person, k: linkKey, ...body }) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "error");
+  return data;
+}
+function showErr(msg) { const e = $("err"); e.style.display = msg ? "block" : "none"; e.textContent = msg || ""; }
+
+async function start() {
+  const stop = (msg) => { $("app").innerHTML = "<h1>Send a receipt</h1><div class='card'><b>" + esc(msg) + "</b></div>"; };
+  if (!person || !linkKey) return stop("This link is not right. Ask the office for a new link.");
+  stop("Loading…");
+  try {
+    const s = await api({ action: "open" });
+    ME = { name: s.name, company: s.company, ...s.config }; HOUSES = s.houses || []; recent = s.recent || [];
+  } catch (e) {
+    return stop(e.message === "bad link" ? "This link is not right. Ask the office for a new link." : "No internet. Check your signal and open the page again.");
+  }
+  form = blank();
+  render();
+}
+
+/* ============================================================
+   SCREEN
+   ============================================================ */
+function render() {
+  $("bar").style.display = "block";
+  const sb = ME.mode === "stonebridge";
+  $("app").innerHTML =
+    "<h1>Send a receipt</h1><div class='sub'>" + esc(ME.name) + " · " + esc(ME.company) + "</div>" +
+    // 1. The photo(s)
+    "<div class='card'><p class='step'>1. Receipt photo</p>" +
+      "<div class='camrow'>" +
+        "<label class='cam' style='margin:0'><span class='ic'>📷</span>Take a photo<input type='file' accept='image/*' capture='environment' data-file></label>" +
+        "<label class='cam' style='margin:0'><span class='ic'>🖼️</span>Upload photo or PDF<input type='file' accept='image/*,application/pdf' multiple data-file></label>" +
+      "</div><div class='thumbs' id='thumbs'></div>" +
+      "<div class='opt' style='margin-top:8px'>Long receipt? Add more than one photo.</div></div>" +
+    (sb ? sbHtml() : houseHtml()) +
+    (recent.length ? "<details class='card'><summary><b>Sent recently (" + recent.length + ")</b></summary>" +
+      recent.map((r) => "<div class='hist'>" + esc(r.subject.replace(/^TEST - /, "").replace(/^Receipt - [^-]+ - /, "")) +
+        "<small>" + new Date(r.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) + " · " + r.photos + " photo" + (r.photos > 1 ? "s" : "") + "</small></div>").join("") + "</details>" : "");
+  drawThumbs();
+}
+
+// Iron Shield (Josh, Pam): which house — or gas, or shop/general.
+function houseHtml() {
+  const k = form.kind;
+  return "<div class='card'><p class='step'>2. What was it for?</p><div class='chips three'>" +
+      "<button class='chip" + (k === "house" ? " on" : "") + "' data-kind='house'><span class='ic'>🏠</span>A house</button>" +
+      "<button class='chip" + (k === "gas" ? " on" : "") + "' data-kind='gas'><span class='ic'>⛽</span>Gas</button>" +
+      "<button class='chip" + (k === "general" ? " on" : "") + "' data-kind='general'><span class='ic'>🧰</span>Shop / general</button></div>" +
+    (k === "house" ?
+      form.houses.map((h, i) => "<div class='picked'><span>" + esc(h) + "</span><button data-unpick='" + i + "'>remove</button></div>").join("") +
+      "<label>" + (form.houses.length ? "Another house? <span class='opt'>(only if it was split)</span>" : "Type the house number or parcel, then tap the house") + "</label>" +
+      "<input id='q' data-f='q' autocomplete='off' autocapitalize='characters' placeholder='888…  or  1328-016…' value='" + esc(form.q) + "'><div id='sug'></div>" : "") +
+    "</div>" +
+    "<div class='card'><p class='step'>3. Anything else? <span class='opt'>(optional)</span></p>" +
+      "<label>Total $</label><input data-f='amount' inputmode='decimal' placeholder='0.00' value='" + esc(form.amount) + "'>" +
+      "<label>Note</label><textarea data-f='note' rows='2' placeholder='e.g. drywall screws, truck 2'>" + esc(form.note) + "</textarea></div>";
+}
+
+// Stonebridge (Dylan): customer/job, category, store, amount, card.
+function sbHtml() {
+  const recentChips = (k, f) => { const list = store.get(k, []); return list.length ? "<div class='mini'>" + list.map((v) => "<button data-fill='" + f + "' data-val='" + esc(v) + "'>" + esc(v) + "</button>").join("") + "</div>" : ""; };
+  return "<div class='card'><p class='step'>2. Details</p>" +
+      "<label>Customer / job</label><input data-f='customer' autocomplete='off' placeholder='e.g. Smith kitchen' value='" + esc(form.customer) + "'>" + recentChips("customers", "customer") +
+      "<label>Category</label><div class='chips' id='cats'>" + ME.categories.map((c) => "<button class='chip" + (form.category === c ? " on" : "") + "' data-cat='" + esc(c) + "'>" + esc(c) + "</button>").join("") + "</div>" +
+      "<div class='two'><div><label>Store</label><input data-f='store' autocomplete='off' placeholder='Home Depot' value='" + esc(form.store) + "'></div>" +
+      "<div><label>Total $</label><input data-f='amount' inputmode='decimal' placeholder='0.00' value='" + esc(form.amount) + "'></div></div>" +
+      "<label>Card used</label><input data-f='card' autocomplete='off' placeholder='e.g. card ending 1234' value='" + esc(form.card) + "'>" + recentChips("cards", "card") +
+      "<label>Note <span class='opt'>(optional)</span></label><textarea data-f='note' rows='2'>" + esc(form.note) + "</textarea></div>";
+}
+
+function drawThumbs() {
+  const t = $("thumbs"); if (!t) return;
+  t.innerHTML = form.files.map((f, i) => "<div class='thumb'>" + (f.type === "pdf" ? "PDF" : "<img src='" + f.preview + "' alt='Receipt photo " + (i + 1) + "'>") +
+    "<button class='rm' data-rmfile='" + i + "' aria-label='Remove photo'>✕</button></div>").join("");
+}
+
+// House search: type a house number or parcel (dashes optional), tap the match.
+const bare = (t) => String(t).toUpperCase().replace(/[^A-Z0-9]/g, "");
+const withParcel = (h) => h.address + (h.parcel ? " (" + h.parcel + ")" : "");
+function suggest() {
+  const box = $("sug"); if (!box) return;
+  const q = form.q.trim().toUpperCase(), qb = bare(q);
+  let hits = [];
+  if (q.length >= 2) {
+    const starts = HOUSES.filter((h) => h.address.startsWith(q));
+    const parcel = HOUSES.filter((h) => qb.length >= 3 && bare(h.parcel).includes(qb));
+    const inside = HOUSES.filter((h) => h.address.includes(q));
+    hits = [...new Set([...starts, ...parcel, ...inside])].filter((h) => !form.houses.includes(withParcel(h))).slice(0, 5);
+  }
+  box.innerHTML = hits.map((h) => "<button class='sugb' data-pick='" + HOUSES.indexOf(h) + "'>" + esc(h.address) + (h.parcel ? "<small>Parcel " + esc(h.parcel) + "</small>" : "") + "</button>").join("") +
+    (q.length >= 3 && !hits.length ? "<div class='opt' style='margin-top:6px'>No match. Check the number, or put the address in the note.</div>" : "");
+}
+
+/* ============================================================
+   PHOTOS — shrink each one on the phone so the email stays small.
+   ============================================================ */
+function readB64(file) {
+  return new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split("base64,")[1]); r.onerror = no; r.readAsDataURL(file); });
+}
+function shrink(file) {
+  return new Promise((ok, no) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const scale = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.naturalWidth * scale); c.height = Math.round(img.naturalHeight * scale);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      const dataUrl = c.toDataURL("image/jpeg", 0.72);
+      ok({ type: "jpg", data: dataUrl.split("base64,")[1], preview: dataUrl });
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); no(new Error("unreadable")); };
+    img.src = url;
+  });
+}
+async function addFiles(list) {
+  showErr("");
+  for (const file of list) {
+    if (form.files.length >= MAX_FILES) { showErr("That's the most photos for one receipt (" + MAX_FILES + ")."); break; }
+    try {
+      if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) {
+        if (file.size > 2500000) { showErr("That PDF is too big. Take a photo of it instead."); continue; }
+        form.files.push({ type: "pdf", data: await readB64(file) });
+      } else {
+        form.files.push(await shrink(file));
+      }
+    } catch (e) { showErr("Couldn't read that picture. Try taking the photo again."); }
+  }
+  if (form.files.reduce((s, f) => s + f.data.length, 0) > MAX_TOTAL) { form.files.pop(); showErr("Too many photos for one email. Send this receipt, then the rest as another."); }
+  drawThumbs();
+  const cr = document.querySelector(".camrow"); if (cr && form.files.length) cr.classList.remove("missing");
+}
+
+/* ============================================================
+   TYPING + TAPS
+   ============================================================ */
+document.addEventListener("change", (e) => {
+  if (e.target.matches("[data-file]") && e.target.files.length) { addFiles([...e.target.files]); e.target.value = ""; }
+});
+document.addEventListener("input", (e) => {
+  const f = e.target.dataset && e.target.dataset.f; if (!f || !form) return;
+  form[f] = e.target.value; e.target.classList.remove("missing");
+  if (f === "q") suggest();
+});
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("button"); if (!t || !form) return;
+  const d = t.dataset;
+  if (d.kind) { form.kind = d.kind; render(); if (d.kind === "house" && !form.houses.length) $("q").focus(); }
+  else if (d.pick != null) { form.houses.push(withParcel(HOUSES[d.pick])); form.q = ""; render(); }
+  else if (d.unpick != null) { form.houses.splice(Number(d.unpick), 1); render(); }
+  else if (d.cat) { form.category = d.cat; document.querySelectorAll("[data-cat]").forEach((b) => b.classList.toggle("on", b.dataset.cat === d.cat)); $("cats").classList.remove("missing"); }
+  else if (d.fill) { form[d.fill] = d.val; const inp = document.querySelector("[data-f='" + d.fill + "']"); inp.value = d.val; inp.classList.remove("missing"); }
+  else if (d.rmfile != null) { form.files.splice(Number(d.rmfile), 1); drawThumbs(); }
+  else if (t.id === "send") send();
+  else if (t.id === "again") { form = blank(); render(); window.scrollTo(0, 0); }
+});
+
+/* ============================================================
+   SEND — check, then hand it to the send service, which emails it.
+   ============================================================ */
+function check() {
+  const miss = [];
+  const flag = (sel, bad) => { const el = document.querySelector(sel); if (el) el.classList.toggle("missing", bad); if (bad && el) miss.push(el); };
+  flag(".camrow", !form.files.length);
+  if (ME.mode === "stonebridge") {
+    flag("[data-f='customer']", !form.customer.trim());
+    flag("#cats", !form.category);
+    flag("[data-f='store']", !form.store.trim());
+    flag("[data-f='amount']", num(form.amount) <= 0);
+    flag("[data-f='card']", !form.card.trim());
+  } else {
+    flag(".chips.three", !form.kind);
+    if (form.kind === "house") flag("#q", !form.houses.length);
+    if (form.amount.trim() && num(form.amount) <= 0) flag("[data-f='amount']", true);
+  }
+  if (miss.length) { showErr(!form.files.length ? "Add a photo of the receipt." : form.kind === "house" && !form.houses.length ? "Type the house number, then tap the house." : "Fill in the red boxes."); miss[0].scrollIntoView({ block: "center", behavior: "smooth" }); }
+  return !miss.length;
+}
+
+async function send() {
+  if (busy) return;
+  showErr("");
+  if (!check()) return;
+  busy = true; $("send").textContent = "Sending…"; $("send").style.opacity = ".6";
+  const sb = ME.mode === "stonebridge";
+  const body = { action: "send", files: form.files.map((f) => ({ data: f.data })), note: form.note.trim(), amount: form.amount.trim() ? num(form.amount) : "" };
+  if (sb) Object.assign(body, { customer: form.customer.trim(), category: form.category, store: form.store.trim(), card: form.card.trim() });
+  else Object.assign(body, { kind: form.kind, houses: form.kind === "house" ? form.houses : [] });
+  try {
+    const r = await api(body);
+    recent = r.recent || recent;
+    if (sb) { remember("customers", body.customer); remember("cards", body.card); }
+    $("bar").style.display = "none";
+    $("app").innerHTML = "<div class='card donecard'><div class='check'>✓</div><p class='big'>Receipt sent</p>" +
+      "<p>Accounting has it. Nothing else to do.</p>" +
+      "<button class='btn' id='again'>Send another receipt</button></div>";
+    window.scrollTo(0, 0);
+  } catch (e) {
+    showErr(e.message === "too big" ? "Too many photos for one email. Remove one and try again." :
+            e.message === "too many today" ? "That's a lot of receipts today. Call the office." :
+            e.message === "bad link" ? "This link stopped working. Ask the office for a new link." :
+            "It did not send. Check your internet and try again.");
+  }
+  busy = false; $("send").textContent = "Send to accounting"; $("send").style.opacity = "1";
+}
+
+start();
+</script>
+</body>
+</html>
