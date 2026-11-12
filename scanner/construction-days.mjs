@@ -11,9 +11,9 @@
  * This script only keeps the county-sourced cells fresh:
  *   Permit Issued            <- the county's live issue date for the permit
  *   Lintel Passed            <- first Approved "Lintel or Tie Beam" inspection. Only filled when blank.
- *   TUG Release Passed       <- first Approved "(TUG) Preliminary Power Release" inspection
- *   Power Release Passed     <- first Approved full "Power Release" inspection (NOT the TUG one;
- *                               Adam asked Nov 12 2026 to see the two dates separately)
+ *   Power Release Passed     <- first Approved power release inspection, whichever comes first:
+ *                               "(TUG) Preliminary Power Release" or the full "Power Release".
+ *                               Adam decided Nov 12 2026 they count as the SAME milestone (one date).
  *   CO Date                  <- when the county's LIVE status is Certificate of Occupancy:
  *                               the county's Finalize date. Only filled when blank.
  *   Last Approved Inspection <- most recent Approved inspection + its date
@@ -45,8 +45,7 @@ const COL = {
   co: 'date_mm90wnh2',
   lastApproved: 'text_mm9071a4',
   progress: 'numeric_mm90kwde',
-  power: 'date_mm90tv45', // first Approved FULL "Power Release" inspection
-  tug: 'date_mm91xr0w', // first Approved "(TUG) Preliminary Power Release" inspection
+  power: 'date_mm90tv45', // first Approved power release, TUG or full (one milestone)
 }
 
 const EG = 'https://selfservice.marionfl.org/energov_prod/selfservice/api/energov/'
@@ -143,9 +142,9 @@ async function countyFacts(caseId) {
   const total = passed.size + open.size
   return {
     lintel: earliest(/lintel|tie beam/i),
-    // "Power Release - 1&2 Res Fam" is the full release; "(TUG) Preliminary Power Release" is the temporary one.
-    power: earliest(/^power release/i),
-    tug: earliest(/preliminary power release/i), // not the separate "Electrical Service/Tug" inspection
+    // One power date: the earliest of "(TUG) Preliminary Power Release" or the full "Power Release - 1&2 Res Fam".
+    // (/power release/ does NOT match the separate "Electrical Service/Tug" inspection, which is not a release.)
+    power: earliest(/power release/i),
     lastDate: last ? last[1] : '',
     lastApproved: last ? `${last[0]} (${Number(last[1].slice(5, 7))}/${Number(last[1].slice(8, 10))}/${last[1].slice(0, 4)})` : '',
     progress: total ? Math.round((100 * passed.size) / total) : null,
@@ -215,8 +214,8 @@ for (const h of houses) {
     if (facts.lintel && !h.cv[COL.lintel]) want[COL.lintel] = { date: facts.lintel }
     const coDate = portal.finalized || facts.lastDate
     if (/certificate of occupancy/i.test(portal.status || '') && !h.cv[COL.co] && coDate) want[COL.co] = { date: coDate }
-    // The two power release dates always mirror the county (null clears a date the county no longer shows).
-    for (const k of ['power', 'tug']) if ((h.cv[COL[k]] || '') !== facts[k]) want[COL[k]] = facts[k] ? { date: facts[k] } : null
+    // The power release date always mirrors the county (null clears a date the county no longer shows).
+    if ((h.cv[COL.power] || '') !== facts.power) want[COL.power] = facts.power ? { date: facts.power } : null
     if (facts.lastApproved && h.cv[COL.lastApproved] !== facts.lastApproved) want[COL.lastApproved] = facts.lastApproved
     if (facts.progress !== null && Number(h.cv[COL.progress] || -1) !== facts.progress) want[COL.progress] = String(facts.progress)
   }
