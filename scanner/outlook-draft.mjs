@@ -70,7 +70,13 @@ const bodyText = args['body-file'] ? readFileSync(args['body-file'], 'utf8') : S
 // that doubled the gap ("really spaced out") and he deleted every spacer before sending.
 // An explicit bottom margin on each <p> gives exactly one blank line whether or not
 // Outlook zeroes the default <p> margin, so no spacer paragraphs are needed.
-const bodyHtml = bodyText.trim().split(/\n\s*\n/).map((p) => `<p style="margin:0 0 1em 0">${esc(p).replace(/\n/g, '<br>')}</p>`).join('\n')
+// Font (Adam, Nov 25 2026): a <p> with no font-family renders in Outlook's fallback
+// serif (Times New Roman), while signature-office.html sets Aptos, so the body and
+// signature looked like two different emails. Use the signature's exact font stack.
+// No font-size on purpose: the signature doesn't set one either, so both inherit
+// Outlook's default size and match.
+const BODY_FONT = 'font-family:Aptos,Aptos_EmbeddedFont,Aptos_MSFontService,Calibri,Helvetica,sans-serif'
+const bodyHtml = bodyText.trim().split(/\n\s*\n/).map((p) => `<p style="margin:0 0 1em 0;${BODY_FONT}">${esc(p).replace(/\n/g, '<br>')}</p>`).join('\n')
 // Signature block + its inline logo (cid:ironshield-sig-logo)
 const useSig = !args['no-signature']
 const sigHtml = useSig ? readFileSync(new URL('signature-office.html', here), 'utf8') : ''
