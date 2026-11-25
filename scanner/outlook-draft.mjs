@@ -73,9 +73,13 @@ const bodyText = args['body-file'] ? readFileSync(args['body-file'], 'utf8') : S
 // Font (Adam, Nov 25 2026): a <p> with no font-family renders in Outlook's fallback
 // serif (Times New Roman), while signature-office.html sets Aptos, so the body and
 // signature looked like two different emails. Use the signature's exact font stack.
-// No font-size on purpose: the signature doesn't set one either, so both inherit
-// Outlook's default size and match.
-const BODY_FONT = 'font-family:Aptos,Aptos_EmbeddedFont,Aptos_MSFontService,Calibri,Helvetica,sans-serif'
+// Color/size/line-height are pinned too (Adam, Nov 25 2026): on a forward or reply our <p>s
+// sit INSIDE the original email's HTML, and Exchange applies that email's own <p> styles to
+// them. The Marion County receipt made our text grey rgb(116,120,126) with 1.5 line spacing.
+// Inline values win, so set every property a sender's stylesheet is likely to touch.
+// color:black matches the signature; Outlook dark mode flips both to white together.
+// 12pt = Outlook's default size, the size the signature renders at.
+const BODY_FONT = 'font-family:Aptos,Aptos_EmbeddedFont,Aptos_MSFontService,Calibri,Helvetica,sans-serif;font-size:12pt;line-height:normal;color:black;text-align:left'
 const bodyHtml = bodyText.trim().split(/\n\s*\n/).map((p) => `<p style="margin:0 0 1em 0;${BODY_FONT}">${esc(p).replace(/\n/g, '<br>')}</p>`).join('\n')
 // Signature block + its inline logo (cid:ironshield-sig-logo)
 const useSig = !args['no-signature']
